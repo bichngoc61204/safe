@@ -1,0 +1,27 @@
+{
+  "name": "safemap-an-thuong",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test src/lib/domain.test.js",
+    "test:ui": "node scripts/ui-check.mjs"
+  },
+  "dependencies": {
+    "@maplibre/maplibre-gl-leaflet": "^0.1.4",
+    "@tabler/icons-react": "^3.50.0",
+    "leaflet": "^1.9.4",
+    "maplibre-gl": "^6.16.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
+    "esbuild": "^0.28.2",
+    "jsdom": "^29.1.1",
+    "vite": "^6.4.1"
+  }
+}
