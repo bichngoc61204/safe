@@ -1,6 +1,7 @@
 import L from 'leaflet';
 import { regionalLabelStyle } from './cartography';
 
+export const DEFAULT_MAP_STYLE='light';
 export const MAP_STYLES = {
   light:'https://tiles.openfreemap.org/styles/positron',
   streets:'https://tiles.openfreemap.org/styles/bright',
@@ -18,7 +19,7 @@ async function loadCleanStyle(url,signal,labelsOnly=false){
   return structuredClone(style);
 }
 
-export function addBasemap(map,{style='streets',onStatus=()=>{}}={}) {
+export function addBasemap(map,{style=DEFAULT_MAP_STYLE,onStatus=()=>{}}={}) {
   let disposed=false,layer=null,rasterLayer=null,timer=null,attribution=null,vectorMap=null,labelsReady=false;
   const request=new AbortController();
   const report=value=>{if(!disposed)onStatus(value);};

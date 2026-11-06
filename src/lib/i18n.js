@@ -32,3 +32,62 @@ messages.en.mapCredits='Map sources and licenses';
 
 Object.assign(messages.vi,{mapSatellite:'Vệ tinh',mapStreets:'Bản đồ',vectorFallback:'Đang dùng ảnh vệ tinh vì nền vector không khả dụng.'});
 Object.assign(messages.en,{mapSatellite:'Satellite',mapStreets:'Map',vectorFallback:'Using satellite imagery because the vector map is unavailable.'});
+
+
+Object.assign(messages.vi, {
+ routeOnMap:'Chỉ đường trên bản đồ', routeMode:'Phương tiện', route_foot:'Đi bộ',
+ route_bike:'Xe đạp', route_car:'Ô tô', routePickOrigin:'Chọn điểm xuất phát trên bản đồ',
+ routeChangeOrigin:'Đổi điểm xuất phát', routeFromGps:'Tính từ vị trí của tôi',
+ routeFromPin:'Tính từ điểm đã chọn', routeGpsHint:'Bật định vị hoặc chọn điểm xuất phát trên bản đồ.',
+ routeClear:'Xóa tuyến', routeMinutes:'phút', routeFixMap:'Sửa bản đồ',
+ route_loading:'Đang tìm tuyến đường…', route_empty:'Không tìm thấy tuyến. Hãy thử điểm xuất phát khác.',
+ route_error:'Không tải được tuyến. Hãy thử lại hoặc mở Google Maps.',
+ routePickHint:'Chạm bản đồ để chọn điểm xuất phát.'
+});
+Object.assign(messages.en, {
+ routeOnMap:'Directions on map', routeMode:'Travel mode', route_foot:'Walk',
+ route_bike:'Cycle', route_car:'Drive', routePickOrigin:'Pick a starting point on the map',
+ routeChangeOrigin:'Change starting point', routeFromGps:'Route from my location',
+ routeFromPin:'Route from selected point', routeGpsHint:'Enable location or pick a starting point on the map.',
+ routeClear:'Clear route', routeMinutes:'min', routeFixMap:'Fix the map',
+ route_loading:'Finding a route…', route_empty:'No route found. Try another starting point.',
+ route_error:'Could not load a route. Try again or open Google Maps.',
+ routePickHint:'Tap the map to choose a starting point.'
+});
+
+Object.assign(messages.vi, {
+ route_motor_scooter:'Xe máy', routeOriginLabel:'Điểm xuất phát', routeOriginPin:'Điểm đã chọn trên bản đồ',
+ routeOriginGps:'Vị trí của tôi', routeOriginMissing:'Chưa chọn', routeCalculate:'Tính tuyến', routeEnableGps:'Bật định vị',
+ routePickOrigin:'Chọn trên bản đồ'
+});
+Object.assign(messages.en, {
+ route_motor_scooter:'Motorbike', routeOriginLabel:'Starting point', routeOriginPin:'Selected map point',
+ routeOriginGps:'My location', routeOriginMissing:'Not selected', routeCalculate:'Find route', routeEnableGps:'Enable location',
+ routePickOrigin:'Pick on map'
+});
+
+Object.assign(messages.vi, {
+ routeExit:'Thoát chỉ đường', routePrevStep:'Bước trước', routeNextStep:'Bước tiếp theo',
+ maneuver_depart:'Bắt đầu di chuyển', maneuver_arrive:'Đến nơi', maneuver_left:'Rẽ trái',
+ maneuver_right:'Rẽ phải', maneuver_uturn:'Quay đầu', maneuver_continue:'Đi tiếp',
+ maneuver_roundabout:'Qua vòng xuyến, ra lối số', maneuver_circle:'Đi qua vòng xuyến'
+});
+Object.assign(messages.en, {
+ routeExit:'Exit directions', routePrevStep:'Previous step', routeNextStep:'Next step',
+ maneuver_depart:'Start moving', maneuver_arrive:'Arrive at destination', maneuver_left:'Turn left',
+ maneuver_right:'Turn right', maneuver_uturn:'Make a U-turn', maneuver_continue:'Continue',
+ maneuver_roundabout:'At the roundabout, take exit', maneuver_circle:'Go through the roundabout'
+});
+
+Object.assign(messages.vi, {
+ navigationStart:'Bắt đầu dẫn đường', navigationResume:'Bám lại vị trí',
+ navigationWaiting:'Đang chờ GPS chính xác…', navigationGpsError:'Cần cấp quyền vị trí để dẫn đường.',
+ navigationRerouting:'Đang tính lại tuyến…', navigationRerouteError:'Chưa tính được tuyến mới.',
+ navigationArrived:'Bạn đã đến nơi.'
+});
+Object.assign(messages.en, {
+ navigationStart:'Start navigation', navigationResume:'Follow my location',
+ navigationWaiting:'Waiting for an accurate GPS fix…', navigationGpsError:'Location permission is required for navigation.',
+ navigationRerouting:'Finding a new route…', navigationRerouteError:'Could not find a new route yet.',
+ navigationArrived:'You have arrived.'
+});

@@ -6,6 +6,23 @@ import assert from 'node:assert/strict';
 const dom=new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>',{url:'http://localhost:5173/',pretendToBeVisual:true});
 for(const key of ['window','document','HTMLElement','HTMLInputElement','HTMLSelectElement','SVGElement','SVGSVGElement','Element','Node','Event','MouseEvent','getComputedStyle','localStorage','sessionStorage'])Object.defineProperty(globalThis,key,{value:dom.window[key],configurable:true});
 Object.defineProperty(globalThis,'navigator',{value:dom.window.navigator,configurable:true});
+const gpsPermission=new dom.window.EventTarget();
+gpsPermission.state='prompt';
+let gpsRequests=0;
+let gpsWatch;
+Object.defineProperties(navigator,{
+ permissions:{value:{query:async()=>gpsPermission}},
+ geolocation:{value:{getCurrentPosition(success){
+   gpsRequests++;
+   success({coords:{latitude:16.0512,longitude:108.241}});
+ },watchPosition(success){
+   gpsWatch=success;
+   return 1;
+ },clearWatch(){
+   gpsWatch=null;
+ }}},
+});
+
 globalThis.ResizeObserver=class{observe(){}unobserve(){}disconnect(){}};
 globalThis.requestAnimationFrame=dom.window.requestAnimationFrame.bind(dom.window);
 globalThis.cancelAnimationFrame=dom.window.cancelAnimationFrame.bind(dom.window);
@@ -28,6 +45,7 @@ try{
  const select=async(el,value)=>{await act(async()=>{el.value=value;el.dispatchEvent(new dom.window.Event('change',{bubbles:true}));});};
  const submit=async form=>act(async()=>form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true})));
  await render();
+ check(gpsRequests===0,'Opening SafeMap does not prompt for location automatically');
  check(document.querySelectorAll('.place-card').length===19,'Community shows 19 sample places');
  check(document.querySelectorAll('.place-category-icon svg').length===19,'Every list item uses a category icon');
  check(document.querySelectorAll('.marker-pin>svg').length===19,'Every map marker uses an icon instead of a number');
@@ -52,6 +70,45 @@ try{
  check(document.querySelector('.detail-metadata')?.open===false,'Technical metadata is collapsed by default');
  check(!document.querySelector('.leaflet-popup'),'Details are not duplicated in a map popup');
  check(document.querySelector('.detail-buttons a').href.includes('destination='),'Details provide coordinate directions');
+ const originalFetch=globalThis.fetch;
+ const routeRequests=[];
+ const destination=[108.243,16.0512];
+ globalThis.fetch=async (url,options)=>{
+   if(!String(url).startsWith('https://valhalla1.openstreetmap.de/route?'))return originalFetch(url,options);
+   const {locations}=JSON.parse(new URL(url).searchParams.get('json'));
+   const origin=[locations[0].lon,locations[0].lat];
+   routeRequests.push(origin);
+   return new Response(JSON.stringify({code:'Ok',routes:[{
+     distance:220,duration:60,
+     geometry:{type:'LineString',coordinates:[origin,destination]},
+     legs:[{steps:[{distance:75,maneuver:{type:'depart'}},{distance:145,maneuver:{type:'turn',modifier:'left'}},{distance:0,maneuver:{type:'arrive'}}]}],
+   }]}));
+ };
+ await click(button('Chỉ đường trên bản đồ'));
+ await click(button('Bật định vị'));
+ await click(button('Tính tuyến'));
+ await act(async()=>{await new Promise(resolve=>setTimeout(resolve,25));});
+ check(routeRequests.length===1&&!gpsWatch,'Route preview does not start continuous GPS');
+ await click(button('Bắt đầu dẫn đường'));
+ check(typeof gpsWatch==='function','Starting navigation subscribes to GPS');
+ await click(document.querySelector('.map-fabs button'));
+ check(button('Bám lại vị trí')&&gpsWatch,'Panning away through the map controls pauses the camera while GPS stays active');
+ await click(button('Bám lại vị trí'));
+ check(!button('Bám lại vị trí'),'The follow control resumes camera tracking');
+ const move=(latitude,longitude,accuracy=10)=>act(async()=>gpsWatch({coords:{latitude,longitude,accuracy}}));
+ await move(16.0512,108.242);
+ check(document.querySelector('.route-step-text').textContent.includes('Rẽ trái'),'Movement along the route advances the instruction');
+ await move(16.0522,108.242,90);
+ await move(16.0522,108.242);
+ check(routeRequests.length===1,'A poor GPS fix and a single deviation do not trigger a reroute');
+ await move(16.0523,108.242);
+ check(routeRequests.length===2&&routeRequests[1][1]===16.0523,'A confirmed deviation requests a new route from the current GPS fix');
+ await move(destination[1],destination[0]);
+ check(!gpsWatch&&document.querySelector('.route-navigation-actions').textContent.includes('Bạn đã đến nơi'),'Arrival stops continuous GPS');
+ await click(button('Thoát chỉ đường'));
+ check(!document.querySelector('.route-guide'),'Exiting navigation removes the route guide');
+ globalThis.fetch=originalFetch;
+
  await click(button('Quản trị',document.querySelector('.view-switch')));
  check(!!document.querySelector('.login-form'),'Admin opens demo login');
  await input(document.querySelector('input[type=email]'),'wrong@example.com');
@@ -96,6 +153,11 @@ try{
  await click(document.querySelector('.header-logout'));
  check(!sessionStorage.getItem('safemap-demo-session'),'Header sign-out clears demo session');
  check(!!document.querySelector('.public-tabs'),'Sign-out returns to public view');
+ await act(async()=>root.unmount());
+ gpsPermission.state='granted';
+ root=createRoot(document.getElementById('root'));
+ await render();
+ check(gpsRequests===2&&document.querySelector('.card-distance').textContent==='0m','Reload restores location when permission is already granted');
  console.log(`PASS: ${checks} React DOM integration checks. No visual/layout assertions were performed.`);
 }finally{
  if(root){const {act}=await import('react');await act(async()=>root.unmount());}

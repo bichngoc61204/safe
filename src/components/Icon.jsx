@@ -6,7 +6,7 @@ import {
   IconList, IconTags, IconLogout, IconPencil, IconTrash, IconPhone, IconAlertTriangle,
   IconCircleCheck, IconClock, IconWorld, IconDownload, IconMenu2, IconChevronDown,
   IconEye, IconEyeOff, IconPlant, IconBuilding, IconMail, IconLock, IconFlame,
-  IconHelpCircle, IconCircleOff, IconCrosshair, IconInfoCircle,
+  IconHelpCircle, IconCircleOff, IconCrosshair, IconInfoCircle, IconLayersIntersect,
 } from '@tabler/icons-react';
 
 // Keep these keys stable for categories saved by earlier versions.
@@ -22,7 +22,7 @@ const icons = {
   menu: IconMenu2, down: IconChevronDown, eye: IconEye, eyeoff: IconEyeOff,
   sprout: IconPlant, building: IconBuilding, mail: IconMail, lock: IconLock,
   fire: IconFlame, help: IconHelpCircle, off: IconCircleOff, crosshair: IconCrosshair,
-  info: IconInfoCircle,
+  info: IconInfoCircle, layers: IconLayersIntersect,
 };
 
 export default function Icon({name,size=18,...props}) {

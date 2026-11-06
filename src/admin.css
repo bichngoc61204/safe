@@ -6,7 +6,6 @@
   --admin-line: #dce8e0;
   --admin-soft: #eaf5ee;
   --admin-surface: #f5f8f6;
-  --admin-ease: cubic-bezier(.2,.65,.3,1);
   color: var(--admin-ink);
 }
 
@@ -23,7 +22,7 @@
   color: var(--admin-muted);
   font-size: 13px;
   border-radius: 9px;
-  transition: background-color 160ms, color 160ms;
+  transition: background-color var(--motion-feedback), color var(--motion-feedback);
 }
 .admin-sidebar nav > button.active,
 .admin-sidebar nav > button:hover {
@@ -60,7 +59,7 @@
   padding: 18px;
   border: 1px solid var(--admin-line) !important;
   border-radius: 13px;
-  transition: background-color 180ms, box-shadow 180ms, border-color 180ms;
+  transition: background-color var(--motion-feedback), box-shadow var(--motion-feedback), border-color var(--motion-feedback);
 }
 .admin-layout .stat-card:hover { box-shadow: 0 3px 12px #173a2b10; border-color: #a6cbb5 !important; }
 .admin-layout .stat-card > div { font-size: 13px; font-weight: 650; color: var(--admin-muted); }
@@ -104,11 +103,11 @@
 .admin-layout td:first-child { min-width: 0; }
 .admin-layout td strong { color: var(--admin-ink); font-size: 14px; font-weight: 650; }
 .admin-layout td small { color: var(--admin-muted); font-size: 12px; }
-.admin-layout tbody tr { transition: background-color 160ms; }
+.admin-layout tbody tr { transition: background-color var(--motion-feedback); }
 .admin-layout tbody tr:hover, .admin-layout tbody tr:focus-within { background: #f4f9f6; }
 .admin-layout .table-place > .category-icon { flex-shrink: 0; }
 .admin-layout .status { font-size: 11px; }
-.admin-layout .icon-button { transition: background-color 160ms, color 160ms; }
+.admin-layout .icon-button { transition: background-color var(--motion-feedback), color var(--motion-feedback); }
 .admin-layout .table-actions > .icon-button,
 .admin-layout td > .icon-button { width: 38px; height: 38px; }
 .admin-layout .table-actions > .icon-button:hover { background: var(--admin-soft); }
@@ -133,8 +132,8 @@
 .admin-layout .form-grid label > span { color: var(--admin-muted); font-size: 13px; }
 .admin-layout .modal-footer { border-color: var(--admin-line); }
 
-.admin-content, .login-form { animation: admin-enter 200ms var(--admin-ease) both; }
-.admin-layout .modal[open] { animation: admin-enter 220ms var(--admin-ease) both; }
+.admin-content, .login-form { animation: admin-enter var(--motion-feedback) var(--motion-ease) both; }
+.admin-layout .modal[open] { animation: admin-enter var(--motion-slide) var(--motion-ease) both; }
 @keyframes admin-enter {
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }
@@ -217,8 +216,8 @@
   border-color: var(--metric-edge) !important;
   color: var(--metric);
   isolation: isolate;
-  transition: transform 200ms var(--admin-ease), box-shadow 200ms var(--admin-ease),
-    border-color 180ms;
+  transition: transform var(--motion-feedback) var(--motion-ease), box-shadow var(--motion-feedback) var(--motion-ease),
+    border-color var(--motion-feedback);
 }
 .admin-layout .stat-1 { --metric: #255582; --metric-tint: #eaf3fd; --metric-edge: #c0d5eb; }
 .admin-layout .stat-2 { --metric: #176247; --metric-tint: #e7f5ec; --metric-edge: #b8dcc8; }
@@ -232,7 +231,7 @@
   pointer-events: none;
   opacity: 0;
   background: radial-gradient(145px circle at var(--highlight-x, 50%) var(--highlight-y, 50%), #ffffffdf, transparent);
-  transition: opacity 200ms var(--admin-ease);
+  transition: opacity var(--motion-feedback) var(--motion-ease);
 }
 .admin-layout .stat-card > div,
 .admin-layout .stat-card > strong,
@@ -250,7 +249,7 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  transition: background-color 180ms, color 180ms, transform 200ms var(--admin-ease);
+  transition: background-color var(--motion-feedback), color var(--motion-feedback), transform var(--motion-feedback) var(--motion-ease);
 }
 .admin-layout .stat-card:focus-visible {
   outline-color: var(--metric);
@@ -275,7 +274,7 @@
 .admin-layout .attention-panel .panel-heading { background: #fff6ea; }
 .admin-layout .attention-panel .section-kicker,
 .admin-layout .attention-panel .panel-heading .text-button { color: #844619; }
-.admin-layout .attention-row { transition: background-color 180ms; }
+.admin-layout .attention-row { transition: background-color var(--motion-feedback); }
 .admin-layout .status {
   padding: 3px 8px;
   border-radius: 999px;
@@ -289,7 +288,7 @@
 
 .admin-layout .category-card {
   border-top: 3px solid var(--category-color);
-  transition: transform 200ms var(--admin-ease), box-shadow 200ms var(--admin-ease), background-color 180ms;
+  transition: transform var(--motion-feedback) var(--motion-ease), box-shadow var(--motion-feedback) var(--motion-ease), background-color var(--motion-feedback);
 }
 .admin-layout .category-card > .category-icon,
 .admin-layout .table-place > .category-icon {
@@ -311,7 +310,7 @@
 }
 .admin-layout .distribution-row {
   border-radius: 8px;
-  transition: background-color 180ms;
+  transition: background-color var(--motion-feedback);
 }
 .admin-layout .distribution-row:focus-visible,
 .admin-layout .attention-row:focus-within,
