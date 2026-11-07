@@ -8,6 +8,7 @@ export default function useNavigation(preview, destination, mode) {
   const [following, setFollowing] = useState(false);
   const [position, setPosition] = useState(null);
   const [route, setRoute] = useState(null);
+  const [remaining, setRemaining] = useState(null);
   const [step, setStep] = useState(0);
   const [status, setStatus] = useState(null);
   const pause = useCallback(() => setFollowing(false), []);
@@ -22,6 +23,7 @@ export default function useNavigation(preview, destination, mode) {
 
     let currentRoute = preview;
     let currentStep = 0;
+    let acceptedProgress = 0;
     let offRouteSamples = 0;
     let lastReroute = 0;
     let request;
@@ -40,6 +42,8 @@ export default function useNavigation(preview, destination, mode) {
         active = false;
         request?.abort();
         gps.clearWatch(watch);
+        setRemaining({remainingCoordinates:[],remainingDistance:0});
+        setStep(progress.index);
         setStatus('navigationArrived');
         return;
       }
@@ -51,6 +55,10 @@ export default function useNavigation(preview, destination, mode) {
           request = null;
         }
         setStatus(null);
+        if (progress.progress > acceptedProgress) {
+          acceptedProgress = progress.progress;
+          setRemaining(progress);
+        }
         currentStep = Math.max(currentStep, progress.index);
         setStep(currentStep);
         return;
@@ -68,6 +76,8 @@ export default function useNavigation(preview, destination, mode) {
           if (next) {
             currentRoute = next;
             currentStep = 0;
+            acceptedProgress = 0;
+            setRemaining(null);
             offRouteSamples = 0;
             setRoute(next);
             setStep(0);
@@ -96,6 +106,7 @@ export default function useNavigation(preview, destination, mode) {
     setFollowing(false);
     setPosition(null);
     setRoute(null);
+    setRemaining(null);
     setStep(0);
     setStatus(null);
   }
@@ -104,6 +115,7 @@ export default function useNavigation(preview, destination, mode) {
     active: enabled,
     route: enabled && route ? route : preview,
     position, step, status, following,
+    remaining: enabled ? remaining : null,
     start: () => {
       stop();
       setStatus('navigationWaiting');

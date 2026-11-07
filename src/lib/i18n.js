@@ -7,6 +7,9 @@ community:'Community map',admin:'Admin',eyebrow:'A DIGITAL MAP FOR OUR COMMUNITY
 }};
 
 Object.assign(messages.vi, {
+  viewResults: 'Xem kết quả',
+  clearSupportFilter: 'Bỏ lọc điểm hỗ trợ',
+  invalidImageUrl: 'Đường dẫn ảnh không hợp lệ. Kiểm tra lại URL hoặc để trống trường ảnh.',
  title:'Khám phá An Thượng', safeTitle:'Điểm hỗ trợ cộng đồng', greenTitle:'Thu gom & tái chế', partnerTitle:'Đối tác địa phương',
  subtitle:'An toàn, tiện ích và môi trường quanh bạn.', localGuide:'BẢN ĐỒ CỘNG ĐỒNG', explore:'Khám phá', modules:'Các nhóm địa điểm', allCategories:'Tất cả danh mục',
  osmDirections:'Mở chỉ đường trên OpenStreetMap', mapLight:'Tối giản', mapStreets:'Chi tiết', mapStyle:'Nền bản đồ', vectorFallback:'Đang dùng nền cơ bản vì bản đồ vector không khả dụng.',
@@ -14,6 +17,9 @@ Object.assign(messages.vi, {
  loginTitle:'Quản trị SafeMap',loginSubtitle:'Quản lý dữ liệu địa điểm cộng đồng.', defaultSort:'Danh sách địa điểm'
 });
 Object.assign(messages.en, {
+  viewResults: 'Show results',
+  clearSupportFilter: 'Clear community support filter',
+  invalidImageUrl: 'The image link is invalid. Check the URL or leave the image field blank.',
  title:'Explore An Thuong', safeTitle:'Community support', greenTitle:'Collection & recycling', partnerTitle:'Local partners',
  subtitle:'Safety, local services and the environment around you.',localGuide:'COMMUNITY MAP',explore:'Explore',modules:'Location groups',allCategories:'All categories',
  osmDirections:'Open directions on OpenStreetMap',mapLight:'Minimal',mapStreets:'Detailed',mapStyle:'Map style',vectorFallback:'Using the basic map because vector maps are unavailable.',
@@ -90,4 +96,26 @@ Object.assign(messages.en, {
  navigationWaiting:'Waiting for an accurate GPS fix…', navigationGpsError:'Location permission is required for navigation.',
  navigationRerouting:'Finding a new route…', navigationRerouteError:'Could not find a new route yet.',
  navigationArrived:'You have arrived.'
+});
+
+Object.assign(messages.vi,{demoImage:'Ảnh minh họa',demoPhone:'Số minh họa'});
+Object.assign(messages.en,{demoImage:'Illustration',demoPhone:'Demo number'});
+
+Object.assign(messages.vi,{placePhotos:'Ảnh địa điểm',photoEnlarge:'Phóng to ảnh',photoPrevious:'Ảnh trước',routeRetry:'Thử lại',routeRemaining:'Còn',photoNext:'Ảnh tiếp theo',demoCall:'Đây là số demo, không thực hiện cuộc gọi.'});
+Object.assign(messages.en,{placePhotos:'Place photos',photoEnlarge:'Enlarge photo',photoPrevious:'Previous photo',routeRetry:'Try again',routeRemaining:'Remaining',photoNext:'Next photo',demoCall:'This is a demo number. No call was placed.'});
+Object.assign(messages.vi, {
+  welcomeArea: 'An Thượng · Đà Nẵng',
+  welcomeDescription: 'Bản đồ cộng đồng giúp bạn tìm điểm hỗ trợ, nơi thu gom tái chế và các cửa hàng đồng hành quanh An Thượng.',
+  welcomeSafe: 'Điểm hỗ trợ',
+  welcomeGreen: 'Điểm tái chế',
+  welcomeScroll: 'Cuộn xuống để vào bản đồ',
+  welcomeSwipe: 'Vuốt lên để vào bản đồ',
+});
+Object.assign(messages.en, {
+  welcomeArea: 'An Thượng · Da Nang',
+  welcomeDescription: 'Find community support, recycling points and participating local shops on this map of An Thượng.',
+  welcomeSafe: 'Community support',
+  welcomeGreen: 'Recycling points',
+  welcomeScroll: 'Scroll down to open the map',
+  welcomeSwipe: 'Swipe up to open the map',
 });

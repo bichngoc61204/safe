@@ -20,13 +20,22 @@ const raw = [
   ['9','Điểm hỗ trợ du khách An Thượng','safe','Khu phố du lịch An Thượng',16.0540,108.2465,'Tổ hỗ trợ du khách'],
   ['10','Tạp hóa Xanh – Đổi rác lấy quà','partner','Khu vực An Thượng',16.0490,108.2480,'Tạp hóa Xanh','Chai nhựa, Lon nhôm'],
   ['11','Cửa hàng tiện lợi An Thượng','service','Khu phố An Thượng',16.0480,108.2438,'Cửa hàng địa phương'],
-  ['12','Trạm tái chế cộng đồng số 2','green','Đường An Thượng 2',16.0530,108.2456,'Nhóm tình nguyện Xanh','Giấy, Carton','clean'],
-  ['13','Điểm thu gom chai thủy tinh','green','Đường An Thượng 4',16.0511,108.2472,'Tổ môi trường An Thượng 4','Chai thủy tinh','clean'],
-  ['14','Góc xanh khu dân cư số 5','green','Đường An Thượng 5',16.0489,108.2441,'Tổ dân phố số 5','Chai nhựa, Lon nhôm','warning'],
-  ['15','Điểm tiếp nhận dầu ăn đã qua sử dụng','green','Đường An Thượng 6',16.0478,108.2468,'Nhóm tái chế cộng đồng','Dầu ăn đã qua sử dụng','clean'],
-  ['16','Trạm thu gom quần áo cũ','green','Khu dân cư phía Tây An Thượng',16.0526,108.2401,'Nhóm chia sẻ cộng đồng','Quần áo, Vải','clean'],
-  ['17','Điểm thu hồi bao bì tái chế','green','Đường An Thượng 8',16.0543,108.2437,'Tổ môi trường An Thượng 8','Bao bì, Chai nhựa','inactive'],
-  ['18','Điểm phân loại rác hữu cơ','green','Khu dân cư phía Nam An Thượng',16.0466,108.2421,'Tổ dân phố phía Nam','Rác hữu cơ','clean'],
-  ['19','Trạm tái chế ven khu phố du lịch','green','Khu phố du lịch An Thượng',16.0502,108.2485,'Tổ môi trường du lịch','Chai nhựa, Giấy, Lon nhôm','clean'],
+
 ];
-export const defaultPlaces = raw.map(([id,name,category,address,lat,lng,owner,waste='',status='active'])=>({id,name,category,address:address+', Đà Nẵng',lat,lng,owner,waste,status,phone:'',image:'',hours:'',description:'',source:'Dữ liệu minh họa',updatedAt:'2026-11-05'}));
+const photoIds={
+  sorting:'pKlYOOLNX2g', cafe:'q5EilynfZuo', cafeGreen:'YTCPj1wGIDg',
+  clinic:'Ytcp0r7SIE4', market:'JqnEXIy9Xuc', police:'3rx2-APuDeQ',
+  shop:'dYsvv_RrYEc', bins:'RkIsyD_AVvc', medical:'Z3SNdaI8mkc',
+  recycle:'LNXN8NgK3HQ', campus:'PXoUUAtHTbw',
+};
+const photoSets=[
+  ['police','campus','clinic'], ['clinic','medical','campus'], ['campus','clinic','market'],
+  ['recycle','sorting','bins'], ['bins','sorting','recycle'], ['cafeGreen','cafe','market'],
+  ['campus','clinic','market'], ['medical','clinic','shop'], ['market','cafe','police'],
+  ['market','shop','sorting'], ['shop','market','cafe'],
+];
+export const demoPlacePhotos=Object.fromEntries(raw.map(([id],index)=>[
+  id, photoSets[index].map(key=>({src:`/demo-places/${key}.jpg`,credit:`https://unsplash.com/photos/${photoIds[key]}`})),
+]));
+export const demoPhotoPaths=new Set(Object.values(demoPlacePhotos).flat().map(photo=>photo.src));
+export const defaultPlaces = raw.map(([id,name,category,address,lat,lng,owner,waste='',status='active'])=>({id,name,category,address:address+', Đà Nẵng',lat,lng,owner,waste,status,phone:`000 000 ${id.padStart(4,'0')}`,image:demoPlacePhotos[id][0].src,hours:'',description:'',source:'Dữ liệu minh họa',updatedAt:'2026-11-05'}));

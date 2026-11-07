@@ -5,6 +5,8 @@ export function routeProgress(route, position) {
   let nearest = Infinity;
   let traveled = 0;
   let distanceAlong = 0;
+  let segmentEnd = 1;
+  let snapped = route.geometry.coordinates[0];
   const points = route.geometry.coordinates;
   for (let i = 1; i < points.length; i++) {
     const [a, b] = [points[i - 1], points[i]].map(([lng, lat]) => ({
@@ -20,6 +22,10 @@ export function routeProgress(route, position) {
     if (distance < nearest) {
       nearest = distance;
       traveled = distanceAlong + length * fraction;
+      segmentEnd = i;
+      const [startLng, startLat] = points[i - 1];
+      const [endLng, endLat] = points[i];
+      snapped = [startLng + (endLng - startLng) * fraction, startLat + (endLat - startLat) * fraction];
     }
     distanceAlong += length;
   }
@@ -34,5 +40,10 @@ export function routeProgress(route, position) {
     index++;
   }
   const [lng, lat] = points.at(-1);
-  return { distance: nearest, index, arrived: progress >= route.distance - 25 && haversine(position, {lat,lng}) < 25 };
+  const arrived = progress >= route.distance - 25 && haversine(position, {lat,lng}) < 25;
+  return {
+    distance: nearest, index, progress, arrived,
+    remainingDistance: arrived ? 0 : Math.max(0, route.distance - progress),
+    remainingCoordinates: arrived ? [] : [snapped, ...points.slice(segmentEnd)],
+  };
 }

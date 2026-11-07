@@ -1,4 +1,4 @@
-import { defaultCategories, defaultPlaces } from './data.js';
+import { defaultCategories, defaultPlaces, demoPhotoPaths } from './data.js';
 export const STORAGE_KEY = 'safemap-react-v2';
 export const statuses = ['active','clean','warning','overloaded','inactive'];
 export const cloneDefaults = () => structuredClone({ categories: defaultCategories, places: defaultPlaces });
@@ -23,15 +23,35 @@ export function validData(data) {
 export function loadData(storage) {
   try {
     const raw=storage.getItem(STORAGE_KEY);
-    if(raw){const data=JSON.parse(raw);if(!validData(data))throw Error('invalid');return {data,error:false};}
+    if(raw){
+      const data=JSON.parse(raw);
+      if(!validData(data))throw Error('invalid');
+      // Refresh only untouched sample entries from the previous seed.
+      const samples=new Map(defaultPlaces.map(place=>[place.id,place]));
+      const places=data.places.flatMap(place=>{
+        const oldSample=place.updatedAt==='2026-11-05' && place.source==='Dữ liệu minh họa'
+          && /^(?:[1-9]|1[0-9])$/.test(place.id) && !place.phone && !place.image;
+        const sample=samples.get(place.id);
+        if(sample && place.image===`/demo-places/${place.category}.svg` && isDemoPhone(place.phone)){
+          return [{...place,image:sample.image}];
+        }
+        if(!oldSample)return [place];
+        return sample?[{...place,phone:sample.phone,image:sample.image}]:[];
+      });
+      return {data:{...data,places},error:false};
+    }
     const legacy=storage.getItem('safemap-anthuong-v1');
     if(legacy){const old=JSON.parse(legacy);const candidate={categories:structuredClone(defaultCategories),places:old};if(!validData(candidate))throw Error('invalid legacy');return {data:candidate,error:false,migrated:true};}
     return {data:cloneDefaults(),error:false};
   } catch {return {data:cloneDefaults(),error:true};}
 }
 export function saveData(storage,data) { if(!validData(data))throw Error('Invalid data');storage.setItem(STORAGE_KEY,JSON.stringify(data)); }
-export function safeImage(url) {try{return ['https:','http:'].includes(new URL(url).protocol)?url:'';}catch{return '';}}
+export function safeImage(url) {
+ if(demoPhotoPaths.has(url))return url;
+ if(typeof url==='string'&&/^\/demo-places\/(safe|health|admin|education|green|partner|service)\.svg$/.test(url))return url;
+ try{return ['https:','http:'].includes(new URL(url).protocol)?url:'';}catch{return '';}}
 export const directionsUrl = p => `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}`;
+export const isDemoPhone = phone => /^000 000 \d{4}$/.test(phone || '');
 export const phoneHref = phone => `tel:${String(phone||'').replace(/[^+\d]/g,'')}`;
 
 export function osmDirectionsUrl(place,position=null) {

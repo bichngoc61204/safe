@@ -187,7 +187,7 @@
   .admin-layout .table-scroll td:nth-child(3) { grid-row: 3; }
   .admin-layout .table-scroll td:last-child { grid-column: 2; grid-row: 2 / span 2; justify-self: end; }
   .admin-layout .table-actions > .icon-button,
-  .admin-layout td > .icon-button { width: 40px; height: 44px; }
+  .admin-layout td > .icon-button { width: 44px; height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

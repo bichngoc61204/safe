@@ -45,15 +45,15 @@ Có nút điền tài khoản mẫu ngay trên màn hình đăng nhập. Đây l
 
 ## Dữ liệu
 
-- 19 địa điểm minh họa, gồm 10 GreenPoint, 6 địa điểm thuộc nhóm hỗ trợ cộng đồng, 2 đối tác xanh và 1 dịch vụ.
-- Địa chỉ, tọa độ, đơn vị và trạng thái là dữ liệu phục vụ duyệt FE, chưa được xác minh thực địa. Số liên hệ địa phương chưa xác minh để trống.
+- 11 địa điểm minh họa, gồm 2 GreenPoint, 6 địa điểm thuộc nhóm hỗ trợ cộng đồng, 2 đối tác xanh và 1 dịch vụ.
+- Địa chỉ, tọa độ, đơn vị và trạng thái là dữ liệu phục vụ duyệt FE, chưa được xác minh thực địa. Ảnh và số điện thoại minh họa có ghi chú trong chi tiết. Chạm ảnh để mở khung xem lớn và chuyển qua các ảnh khác.
 - SOS hiển thị đầu số khẩn cấp toàn quốc 113 / 115 / 114, không giả làm số trực tiếp của phường.
 - Lưu dữ liệu địa điểm và danh mục chung dưới khóa `safemap-react-v2` trong localStorage. Không lưu GPS vào localStorage.
 - Nếu cùng origin có dữ liệu khóa `safemap-anthuong-v1`, ứng dụng ưu tiên giữ dữ liệu cũ; không tự thêm điểm mẫu mới vào danh sách đã chỉnh sửa.
-- Muốn dùng lại bộ 19 điểm: xuất JSON nếu cần giữ bản sao; xóa cả hai khóa dữ liệu ở Developer Tools → Application → Local Storage rồi tải lại. Trình duyệt/origin khác nhau có kho dữ liệu riêng.
-- Không có đồng bộ thiết bị, cơ sở dữ liệu, tài khoản cán bộ thật, import OSM POI tự động hay tuyến đường nội bộ. OSM hiện chỉ cung cấp nền bản đồ.
-- Nền mặc định: bản đồ OpenFreeMap Bright có địa danh và tên đường. Có thể đổi sang Tối giản (Positron) hoặc ảnh vệ tinh kèm lớp địa danh. Chỉ lọc nhãn nền trong hai vùng hiển thị Hoàng Sa–Trường Sa. Không cần API key. Nếu thiết bị không hỗ trợ WebGL hoặc dịch vụ vector lỗi, ứng dụng dùng ảnh vệ tinh không nhãn; không quay lại nền OSM có chữ.
-- Chỉ đường mặc định mở Google Maps; có thêm liên kết mở OpenStreetMap, điền cả điểm xuất phát khi đã bật GPS. Chưa vẽ tuyến đường trực tiếp trong SafeMap.
+- Muốn dùng lại bộ 11 điểm: xuất JSON nếu cần giữ bản sao; xóa cả hai khóa dữ liệu ở Developer Tools → Application → Local Storage rồi tải lại. Trình duyệt/origin khác nhau có kho dữ liệu riêng.
+- Không có đồng bộ thiết bị, cơ sở dữ liệu, tài khoản cán bộ thật, import OSM POI tự động.
+- Nền mặc định: Tối giản (OpenFreeMap Positron). Có thể đổi sang bản đồ màu hoặc ảnh vệ tinh. Chỉ lọc nhãn nền trong hai vùng hiển thị Hoàng Sa–Trường Sa. Không cần API key. Nếu thiết bị không hỗ trợ WebGL hoặc dịch vụ vector lỗi, ứng dụng dùng ảnh vệ tinh không nhãn; không quay lại nền OSM có chữ.
+- Bấm **Chỉ đường trên bản đồ** để xem ngay tuyến xe máy từ GPS. Nếu GPS không khả dụng, chạm bản đồ để chọn điểm xuất phát. Đổi phương tiện trong bảng tuyến, rồi bấm **Bắt đầu dẫn đường**. Đường xanh thu ngắn theo phần đường đã đi và ứng dụng tính lại tuyến nếu GPS xác nhận bạn đi lệch. Google Maps vẫn là lựa chọn thay thế.
 - Cần Internet cho bản đồ vector/OSM, font và ảnh URL tùy chọn. React, Leaflet và biểu tượng được cài bằng npm, đóng gói khi build.
 
 ## Cấu trúc
