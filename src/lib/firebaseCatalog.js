@@ -2,6 +2,11 @@ import { initializeApp } from 'firebase/app';
 import { doc, getFirestore, onSnapshot, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { safeImage, validData } from './domain.js';
 import { organizeCatalog } from './catalogGroups.js';
+import { isClockTime } from './placeHours.js';
+
+// Older Firestore records may still refer to retired bundled illustrations.
+const validStoredImage = url => Boolean(safeImage(url)) ||
+  (typeof url==='string' && /^\/demo-places\/[a-z]+\.(jpg|svg)$/i.test(url));
 
 const optionalPlaceText = ['phone', 'owner', 'waste', 'hours', 'description', 'source', 'updatedAt'];
 
@@ -15,9 +20,10 @@ export function validateCatalog(data) {
   try {
     if (!validData(data) || data.places.some(place =>
       optionalPlaceText.some(key => place[key] != null && typeof place[key] !== 'string') ||
-      (place.image != null && place.image !== '' && !safeImage(place.image)) ||
+      ((place.opensAt || place.closesAt) && (!isClockTime(place.opensAt) || !isClockTime(place.closesAt) || place.opensAt===place.closesAt)) ||
+      (place.image != null && place.image !== '' && !validStoredImage(place.image)) ||
       (place.images != null && (!Array.isArray(place.images) ||
-        place.images.length > 5 || place.images.some(url => typeof url !== 'string' || !safeImage(url))))
+        place.images.length > 5 || place.images.some(url => typeof url !== 'string' || !validStoredImage(url))))
     )) throw new Error();
   } catch {
     throw new Error('catalogInvalid');

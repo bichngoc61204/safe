@@ -3,16 +3,15 @@ import { deleteApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { catalogRefs, validateCatalog, writeCatalog } from '../src/lib/firebaseCatalog.js';
 import { readFirebaseConfig } from '../src/lib/firebaseConfig.js';
-import { cloneDefaults } from '../src/lib/domain.js';
 
 async function main() {
   const args = process.argv.slice(2);
   const write = args.includes('--write');
   const files = args.filter(arg => arg !== '--write');
-  if (files.length > 1 || files.some(arg => arg.startsWith('-'))) {
-    throw new Error('Cú pháp: npm run seed:firebase -- [--write] [backup.json]');
+  if (files.length !== 1 || files.some(arg => arg.startsWith('-'))) {
+    throw new Error('Cú pháp: npm run seed:firebase -- [--write] backup.json');
   }
-  const source = files.length ? JSON.parse(await readFile(files[0], 'utf8')) : cloneDefaults();
+  const source = JSON.parse(await readFile(files[0], 'utf8'));
   const data = { categories: source.categories, places: source.places };
   validateCatalog(data);
 

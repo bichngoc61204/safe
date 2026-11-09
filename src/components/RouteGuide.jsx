@@ -54,7 +54,7 @@ export default function RouteGuide({route, mode, destination, navigation, onExit
     </div>}
     <div className="route-navigation-actions">
       {!navigation.active&&<>
-        <Dropdown className="route-mode-picker" triggerClass="route-mode-trigger" menuClass="route-mode-options"
+        <Dropdown className="route-mode-picker" triggerClass="route-mode-trigger" menuClass="route-mode-options" compact
           value={mode} onChange={onModeChange} label={t('routeMode')}>
           {routeModes.map(id=><option key={id} value={id}>{t(`route_${id}`)}</option>)}
         </Dropdown>

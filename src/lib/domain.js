@@ -1,8 +1,4 @@
-import { defaultCategories, defaultPlaces, demoPhotoPaths } from './data.js';
-import { organizeCatalog } from './catalogGroups.js';
-export const STORAGE_KEY = 'safemap-react-v2';
 export const statuses = ['active','clean','warning','overloaded','inactive'];
-export const cloneDefaults = () => organizeCatalog(structuredClone({ categories: defaultCategories, places: defaultPlaces }));
 export const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase();
 export const isAlert = p => ['warning','overloaded'].includes(p.status);
 export function haversine(a,b) {
@@ -21,46 +17,15 @@ export function filterPlaces(places,categories,{query='',category='all',scope='m
 export function validData(data) {
   return data && Array.isArray(data.categories) && Array.isArray(data.places) && data.categories.length>0 && new Set(data.categories.map(c=>c.id)).size===data.categories.length && new Set(data.places.map(p=>p.id)).size===data.places.length && data.categories.every(c=>typeof c.id==='string'&&typeof c.name==='string'&&c.name.trim()&&typeof c.nameEn==='string'&&/^#[0-9a-f]{6}$/i.test(c.color)&&['safe','green','partner','service'].includes(c.kind)) && data.places.every(p=>typeof p.id==='string'&&typeof p.name==='string'&&p.name.trim()&&typeof p.address==='string'&&p.address.trim()&&getCategory(data.categories,p.category)&&Number.isFinite(p.lat)&&Math.abs(p.lat)<=90&&Number.isFinite(p.lng)&&Math.abs(p.lng)<=180&&statuses.includes(p.status));
 }
-export function loadData(storage) {
-  try {
-    const raw=storage.getItem(STORAGE_KEY);
-    if(raw){
-      const data=JSON.parse(raw);
-      if(!validData(data))throw Error('invalid');
-      // Refresh only untouched sample entries from the previous seed.
-      const samples=new Map(defaultPlaces.map(place=>[place.id,place]));
-      const places=data.places.flatMap(place=>{
-        const oldSample=place.updatedAt==='2026-11-05' && place.source==='Dữ liệu minh họa'
-          && /^(?:[1-9]|1[0-9])$/.test(place.id) && !place.phone && !place.image;
-        const sample=samples.get(place.id);
-        if(sample && place.image===`/demo-places/${place.category}.svg` && isDemoPhone(place.phone)){
-          return [{...place,image:sample.image}];
-        }
-        if(!oldSample)return [place];
-        return sample?[{...place,phone:sample.phone,image:sample.image}]:[];
-      });
-      return {data:organizeCatalog({...data,places}),error:false};
-    }
-    const legacy=storage.getItem('safemap-anthuong-v1');
-    if(legacy){const old=JSON.parse(legacy);const candidate={categories:structuredClone(defaultCategories),places:old};if(!validData(candidate))throw Error('invalid legacy');return {data:organizeCatalog(candidate),error:false,migrated:true};}
-    return {data:cloneDefaults(),error:false};
-  } catch {return {data:cloneDefaults(),error:true};}
-}
-export function saveData(storage,data) { if(!validData(data))throw Error('Invalid data');storage.setItem(STORAGE_KEY,JSON.stringify(data)); }
 export function safeImage(url) {
- if(demoPhotoPaths.has(url))return url;
- if(typeof url==='string'&&/^\/demo-places\/(safe|health|admin|education|green|partner|service)\.svg$/.test(url))return url;
  try{return ['https:','http:'].includes(new URL(url).protocol)?url:'';}catch{return '';}}
+export function placePhotoUrls(place) {
+  const gallery=Array.isArray(place.images)?place.images:[];
+  return [...new Set([place.image,...gallery].map(safeImage).filter(Boolean))];
+}
 export const directionsUrl = p => `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}`;
 export const isDemoPhone = phone => /^000 000 \d{4}$/.test(phone || '');
 export const phoneHref = phone => `tel:${String(phone||'').replace(/[^+\d]/g,'')}`;
-
-export function osmDirectionsUrl(place,position=null) {
- const params=new URLSearchParams({engine:'fossgis_osrm_car'});
- if(position) params.set('route',`${position.lat},${position.lng};${place.lat},${place.lng}`);
- else params.set('to',`${place.lat},${place.lng}`);
- return `https://www.openstreetmap.org/directions?${params.toString()}`;
-}
 
 // Keep custom admin colors; map the sample palette to recognizable functional groups.
 export function markerColor(category) {

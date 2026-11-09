@@ -1,4 +1,5 @@
 import { catalogGroups } from './catalogGroups.js';
+import { readPlaceHours } from './placeHours.js';
 
 export function catalogWorkbook({ places, categories }, t, lang) {
   const names = new Map(categories.map(category=>[category.id,category]));
@@ -14,12 +15,13 @@ export function catalogWorkbook({ places, categories }, t, lang) {
 
   return [
     makeSheet('places',
-      ['name','kind','category','address','phone','status','owner','waste','hours','latitude','longitude','image','galleryUrls','description','source','updated'],
-      [38,20,24,46,19,20,26,28,21,15,15,40,40,40,22,24],
+      ['name','kind','category','address','phone','status','owner','waste','opensAt','closesAt','hours','latitude','longitude','image','galleryUrls','description','source','updated'],
+      [38,20,24,46,19,20,26,28,15,15,21,15,15,40,40,40,22,24],
       places.map(place=>{
         const category=names.get(place.category);
+        const {opensAt,closesAt,hours}=readPlaceHours(place);
         return [place.name,groupName(category.kind),label(category),place.address,place.phone??'',t(place.status),
-          place.owner??'',place.waste??'',place.hours??'',place.lat,place.lng,place.image??'',(place.images??[]).join('\n'),
+          place.owner??'',place.waste??'',opensAt,closesAt,hours,place.lat,place.lng,place.image??'',(place.images??[]).join('\n'),
           place.description??'',place.source??'',place.updatedAt??''];
       })),
     makeSheet('categories',['category','kind','placeCount'],[34,22,18],

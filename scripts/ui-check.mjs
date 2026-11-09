@@ -1,4 +1,5 @@
 // Component integration checks in a simulated DOM, not a visual browser test.
+import { makeTestCatalog } from './catalog.fixture.mjs';
 import { JSDOM } from 'jsdom';
 import { build } from 'esbuild';
 import { writeFile, unlink } from 'node:fs/promises';
@@ -37,9 +38,36 @@ dom.window.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('o
 dom.window.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;
 const output=new URL('../.ui-check-generated.mjs',import.meta.url);
-const cloudOutput=new URL('../.ui-check-cloud-generated.mjs',import.meta.url);
-const result=await build({entryPoints:['src/App.jsx'],bundle:true,format:'esm',platform:'node',packages:'external',jsx:'automatic',write:false});
+const result=await build({
+ entryPoints:['src/App.jsx'],bundle:true,format:'esm',platform:'node',packages:'external',jsx:'automatic',write:false,
+ define:{'import.meta.env':JSON.stringify({
+   VITE_FIREBASE_API_KEY:'fixture',VITE_FIREBASE_AUTH_DOMAIN:'example.invalid',
+   VITE_FIREBASE_PROJECT_ID:'fixture',VITE_FIREBASE_APP_ID:'fixture',
+ })},
+ plugins:[{name:'firebase-fixture',setup(builder){
+   builder.onResolve({filter:/firebaseBackend\.js$/},()=>({path:'fixture',namespace:'firebase-fixture'}));
+   builder.onLoad({filter:/.*/,namespace:'firebase-fixture'},()=>({contents:'export const connectFirebase = () => window.firebaseFixture;'}));
+ }}],
+});
 await writeFile(output,result.outputFiles[0].text);
+let cloudData=makeTestCatalog(),revision=1,publishCatalog,publishEditor;
+let failSave=false;
+window.firebaseFixture={
+ observeCatalog(receive){publishCatalog=receive;receive({data:cloudData,revision});return ()=>{};},
+ observeEditor(receive){publishEditor=receive;receive({status:'signedOut'});return ()=>{};},
+ async login(email,password){
+   if(password!=='fixture')throw Error('invalid credentials');
+   publishEditor(email==='editor@example.invalid'?{status:'editor',email}:{status:'denied'});
+ },
+ async logout(){publishEditor({status:'signedOut'});},
+ async getIdToken(){return 'fixture-editor-token';},
+ async save(next,expectedRevision){
+   assert.equal(expectedRevision,revision);
+   if(failSave)throw Error('catalogConflict');
+   cloudData=next;
+   publishCatalog({data:cloudData,revision:++revision});
+ },
+};
 let root;let checks=0;
 const check=(value,message)=>{assert.ok(value,message);checks++;};
 try{
@@ -84,7 +112,7 @@ try{
  check(document.querySelectorAll('.marker-pin>svg').length===11,'Every map marker uses an icon instead of a number');
  check(document.querySelectorAll('.archipelago-label').length===2,'Both archipelagos retain ordinary map text');
  check(!document.querySelector('.map-region-button'),'No island-navigation action remains');
- check([...document.querySelectorAll('.map-style-control button')].map(b=>b.textContent).join(',')==='Bản đồ,Tối giản,Vệ tinh','All three map modes are available');
+ check([...document.querySelectorAll('.map-style-control button')].map(b=>b.textContent).join(',')==='Bản đồ,Tiêu chuẩn,Nền tối,Vệ tinh','All four map modes are available');
  check(!!document.querySelector('.map-credits-button svg'),'Source info icon uses an aligned SVG');
  check(document.querySelector('.custom-marker')?.getAttribute('aria-label')==='Công an Phường Mỹ An / An Thượng','Markers expose the actual place name to assistive technology');
  await input(document.querySelector('.public-toolbar input'),'phuoc thien');
@@ -115,7 +143,7 @@ try{
  await click(button('Tất cả',document.querySelector('.category-chips')));
  await click(button('GreenPoint',document.querySelector('.public-tabs')));
  check(document.querySelectorAll('.place-card').length===2,'GreenPoint screen has two points');
- await select(document.querySelector('.public-status'),'alerts');
+ await click(document.querySelector('.status-chips [data-status=alerts]'));
  check(document.querySelectorAll('.place-card').length===1,'Green alert filter works');
  await click(button('Đối tác xanh',document.querySelector('.public-tabs')));
  check(document.querySelectorAll('.place-card').length===3,'Partner screen includes the service category');
@@ -180,6 +208,10 @@ try{
  const compass=document.querySelector('.map-north');
  check(compass&&resumeButton()&&gpsWatch,'A two-finger rotation shows north and pauses camera follow without stopping GPS');
  check(!document.querySelector('.map-rotation-viewport .leaflet-control-zoom'),'Zoom controls stay outside the rotating viewport');
+ const rotatedViewport=document.querySelector('.map-rotation-viewport');
+ check(Math.abs(parseFloat(rotatedViewport.style.getPropertyValue('--map-bearing'))+
+   parseFloat(rotatedViewport.style.getPropertyValue('--map-upright')))<.001 &&
+   !!rotatedViewport.querySelector('.marker-upright'),'Markers counter-rotate around their map anchor');
  await click(compass);
  check(!document.querySelector('.map-north'),'The north control restores the original orientation');
  await click(resumeButton());
@@ -232,14 +264,18 @@ try{
 
  check(!button('Quản trị',document.querySelector('.site-header')),'The public header contains no Admin link');
  await goAdmin();
- check(!!document.querySelector('.login-form'),'Admin opens demo login');
+ check(!!document.querySelector('.login-form'),'Admin opens Firebase login');
  await input(document.querySelector('input[type=email]'),'wrong@example.com');
  await input(document.querySelector('input[type=password]'),'wrong');
  await submit(document.querySelector('.login-form'));
  check(!!document.querySelector('.form-error'),'Incorrect credentials show an error');
- await click(button('Điền tài khoản demo'));
+ await input(document.querySelector('input[type=email]'),'viewer@example.invalid');
+ await input(document.querySelector('input[type=password]'),'fixture');
  await submit(document.querySelector('.login-form'));
- check(document.querySelectorAll('.stat-card').length===4,'Demo login opens dashboard');
+ check(!!document.querySelector('.login-form [role=alert]')&&!document.querySelector('.admin-layout'),'An account without editor access stays outside Admin');
+ await input(document.querySelector('input[type=email]'),'editor@example.invalid');
+ await submit(document.querySelector('.login-form'));
+ check(document.querySelectorAll('.stat-card').length===4,'Firebase editor login opens dashboard');
  check([...document.querySelectorAll('.admin-sidebar nav [data-section]')].map(button=>button.dataset.section).join(',')==='overview,places,safe,green,partner,categories','The admin sidebar exposes all three groups separately');
  check([...document.querySelectorAll('.stat-card>strong')].map(x=>x.textContent).join(',')==='11,06,02,03','Dashboard uses shared data');
  await click(document.querySelector('.stat-1'));
@@ -247,7 +283,7 @@ try{
  await click([...document.querySelectorAll('.admin-sidebar nav button')].find(b=>b.textContent==='Địa điểm'));
  check(document.querySelectorAll('tbody tr').length===7,'Admin table paginates');
  await click(document.querySelector('.admin-place-name'));
- check(!!document.querySelector('.admin-place-preview .coordinate-map')&&document.querySelectorAll('tbody tr').length===7,'Admin opens a map preview alongside the current table');
+ check(document.querySelectorAll('.admin-map-canvas .custom-marker').length===11&&!!document.querySelector('.admin-preview-content')&&document.querySelectorAll('tbody tr').length===7,'Admin shows all filtered pins alongside the table and opens the selected place sheet');
  await click(document.querySelector('.admin-preview-header button'));
  await click(button('Thêm địa điểm'));
  const form=document.querySelector('dialog form');
@@ -256,8 +292,25 @@ try{
  const field=name=>labels.find(l=>l.querySelector('span')?.textContent.startsWith(name))?.querySelector('input');
  await input(field('Tên địa điểm'),'Điểm test React');
  await input(field('Địa chỉ'),'An Thượng test');
+ await input(field('Giờ mở cửa'),'20:00');
  await submit(form);
- check(JSON.parse(localStorage.getItem('safemap-react-v2')).places.some(p=>p.name==='Điểm test React'),'Creating a place persists data');
+ check(!!form.querySelector('[role=alert]'),'An opening time requires a closing time');
+ await input(field('Giờ đóng cửa'),'02:00');
+ const photos=['https://example.com/first.jpg','https://example.com/second.jpg'];
+ const extraFields=()=>[...form.querySelectorAll('.extra-image-row input')];
+ await click(button('Thêm ảnh phụ',form));
+ await input(extraFields()[0],photos[0]);
+ await click(button('Thêm ảnh phụ',form));
+ await input(extraFields()[1],photos[0]);
+ await submit(form);
+ check(extraFields()[1].getAttribute('aria-invalid')==='true'&&form.isConnected,'Duplicate gallery links are marked on the conflicting row and prevent saving');
+ await input(extraFields()[1],photos[1]);
+ await click(button('Thêm ảnh phụ',form));
+ await input(extraFields()[2],'https://example.com/removed.jpg');
+ await click(form.querySelectorAll('.extra-image-remove')[2]);
+ await submit(form);
+ check(cloudData.places.find(p=>p.name==='Điểm test React')?.images.join(',')===photos.join(','),'Gallery saves the remaining URLs in the order shown');
+ check(cloudData.places.some(p=>p.name==='Điểm test React'&&p.opensAt==='20:00'&&p.closesAt==='02:00'),'Creating a place persists separate opening and closing times');
  check(!document.querySelector('dialog'),'Successful save closes the form');
  await input(document.querySelector('.table-toolbar input'),'Điểm test React');
  check(document.querySelectorAll('tbody tr').length===1,'Admin live search finds created record');
@@ -266,12 +319,12 @@ try{
  const nameLabel=[...editForm.querySelectorAll('label')].find(l=>l.querySelector('span')?.textContent.startsWith('Tên địa điểm'));
  await input(nameLabel.querySelector('input'),'Điểm test đã sửa');
  await submit(editForm);
- check(JSON.parse(localStorage.getItem('safemap-react-v2')).places.some(p=>p.name==='Điểm test đã sửa'),'Editing persists changes');
+ check(cloudData.places.some(p=>p.name==='Điểm test đã sửa'),'Editing persists changes');
  await input(document.querySelector('.table-toolbar input'),'Điểm test đã sửa');
  await click(document.querySelector('button[title="Xóa"]'));
  check(!!document.querySelector('.delete-content'),'Delete requires confirmation');
  await click(button('Xóa',document.querySelector('dialog')));
- check(!JSON.parse(localStorage.getItem('safemap-react-v2')).places.some(p=>p.name==='Điểm test đã sửa'),'Confirmed delete persists');
+ check(!cloudData.places.some(p=>p.name==='Điểm test đã sửa'),'Confirmed delete persists');
  await click([...document.querySelectorAll('.admin-sidebar nav button')].find(b=>b.textContent==='Danh mục'));
  check(document.querySelectorAll('.category-card').length===7,'Category management renders');
  check(document.querySelectorAll('.category-group-panel').length===3,'Categories are grouped under the three primary groups');
@@ -280,7 +333,6 @@ try{
  await select(document.querySelector('.language-control'),'en');
  check(document.documentElement.lang==='en'&&document.querySelector('.admin-heading h1').textContent==='Manage categories','English updates the dashboard');
  await click(document.querySelector('.header-logout'));
- check(!sessionStorage.getItem('safemap-demo-session'),'Header sign-out clears demo session');
  check(window.location.pathname==='/admin'&&!!document.querySelector('.login-form'),'Sign-out stays on the admin route');
  await click(document.querySelector('.login-form-area > button'));
  check(window.location.pathname==='/'&&!!document.querySelector('.public-tabs'),'The community link returns to the map');
@@ -295,63 +347,44 @@ try{
  await act(async()=>reloadedWelcome.dispatchEvent(new dom.window.WheelEvent('wheel',{bubbles:true,deltaY:80})));
  check(reloadedWelcome.classList.contains('is-leaving'),'Scrolling down starts the transition on desktop');
 
- await act(async()=>root.unmount());
- root=null;
- const cloudBuild=await build({
-   entryPoints:['src/App.jsx'],bundle:true,format:'esm',platform:'node',packages:'external',jsx:'automatic',write:false,
-   define:{'import.meta.env':JSON.stringify({
-     VITE_FIREBASE_API_KEY:'fixture',VITE_FIREBASE_AUTH_DOMAIN:'example.invalid',
-     VITE_FIREBASE_PROJECT_ID:'demo-safemap',VITE_FIREBASE_APP_ID:'fixture',
-   })},
-   plugins:[{name:'firebase-fixture',setup(builder){
-     builder.onResolve({filter:/firebaseBackend\.js$/},()=>({path:'fixture',namespace:'firebase-fixture'}));
-     builder.onLoad({filter:/.*/,namespace:'firebase-fixture'},()=>({contents:'export const connectFirebase = () => window.firebaseFixture;'}));
-   }}],
- });
- await writeFile(cloudOutput,cloudBuild.outputFiles[0].text);
- const storedDemo=localStorage.getItem('safemap-react-v2');
- const cloudData=JSON.parse(storedDemo);
- cloudData.places=[{...cloudData.places[0],name:'Điểm Firebase kiểm thử'}];
- let publishCatalog,publishEditor,cloudSave;
- window.firebaseFixture={
-   observeCatalog(receive){publishCatalog=receive;receive({data:cloudData,revision:1});return ()=>{};},
-   observeEditor(receive){publishEditor=receive;receive({status:'signedOut'});return ()=>{};},
-   async login(){publishEditor({status:'denied'});},
-   async logout(){publishEditor({status:'signedOut'});},
-   async save(next,revision){return cloudSave(next,revision);},
- };
- const {default:CloudApp}=await import(cloudOutput.href);
- root=createRoot(document.getElementById('root'));
- await act(async()=>root.render(React.createElement(CloudApp)));
- check(document.querySelectorAll('.place-card').length===1&&document.querySelector('.place-card h3').textContent==='Điểm Firebase kiểm thử','Configured Firebase mode reads the cloud catalog instead of local data');
- await act(async()=>document.querySelector('.map-welcome').dispatchEvent(new dom.window.Event('cancel',{cancelable:true})));
- await act(async()=>{await new Promise(resolve=>setTimeout(resolve,750));});
- check(!button('Quản trị',document.querySelector('.site-header')),'The public header contains no Admin link');
  await goAdmin();
- check(!document.querySelector('.demo-account'),'Firebase mode hides demo credentials');
  await input(document.querySelector('input[type=email]'),'editor@example.invalid');
  await input(document.querySelector('input[type=password]'),'fixture');
  await submit(document.querySelector('.login-form'));
- check(!!document.querySelector('.login-form [role=alert]')&&!document.querySelector('.admin-layout'),'A signed-in account without editor access stays outside Admin');
- await act(async()=>publishEditor({status:'editor',email:'editor@example.invalid'}));
+ const actualFetch=globalThis.fetch;
+ let trafficResponse=new Response('<html></html>',{headers:{'Content-Type':'text/html'}});
+ globalThis.fetch=(url,options)=>{
+   if(url!=='/api/traffic')return actualFetch(url,options);
+   assert.equal(options.headers.Authorization,'Bearer fixture-editor-token');
+   return Promise.resolve(trafficResponse);
+ };
+ try {
+   await click(button('Lượt truy cập'));
+   check(document.querySelector('.traffic-message').textContent.includes('chưa có dịch vụ báo cáo'),'Traffic identifies the local SPA fallback as a missing endpoint');
+   trafficResponse=Response.json({error:'setup'},{status:503});
+   await click(button('Làm mới'));
+   check(document.querySelector('.traffic-message').textContent.includes('ID thuộc tính GA4'),'Traffic identifies missing server reporting configuration');
+   trafficResponse=Response.json({views:12,users:8,days:[{date:'20261108',views:12}]});
+   await click(button('Làm mới'));
+   check(document.querySelector('.traffic-bars li time').dateTime==='2026-11-08'&&document.querySelector('.traffic-metrics strong').textContent==='12','Traffic retry renders the reporting response');
+ } finally {
+   globalThis.fetch=actualFetch;
+ }
  await click(button('Thêm địa điểm'));
  const cloudForm=document.querySelector('dialog form');
  await input(cloudForm.querySelector('input[required]'),'Điểm được đồng bộ');
  await input([...cloudForm.querySelectorAll('label')].find(label=>label.textContent.startsWith('Địa chỉ')).querySelector('input'),'An Thượng');
- cloudSave=async()=>{throw Error('catalogConflict');};
+ failSave=true;
  await submit(cloudForm);
  check(!!cloudForm.querySelector('[role=alert]')&&cloudForm.isConnected,'A rejected cloud save keeps the form open with an error');
- cloudSave=async(next,revision)=>{
-   assert.equal(revision,1);
-   publishCatalog({data:next,revision:2});
- };
+ failSave=false;
  await submit(cloudForm);
- check(!cloudForm.isConnected&&localStorage.getItem('safemap-react-v2')===storedDemo,'An accepted cloud save closes the form without changing local demo data');
+ check(!cloudForm.isConnected&&localStorage.getItem('safemap-react-v2')===null,'An accepted Firebase save closes the form without writing a local catalog');
  await click(document.querySelector('.header-logout'));
  await click(document.querySelector('.login-form-area > button'));
  check([...document.querySelectorAll('.place-card h3')].some(heading=>heading.textContent==='Điểm được đồng bộ'),'The cloud update appears on the public map after sign-out');
  console.log(`PASS: ${checks} React DOM integration checks. No visual/layout assertions were performed.`);
 }finally{
  if(root){const {act}=await import('react');await act(async()=>root.unmount());}
- dom.window.close();await Promise.all([output,cloudOutput].map(file=>unlink(file).catch(()=>{})));
+ dom.window.close();await unlink(output).catch(()=>{});
 }

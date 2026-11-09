@@ -6,5 +6,7 @@ export function readFirebaseConfig(env) {
     appId: env.VITE_FIREBASE_APP_ID?.trim(),
   };
   const values = Object.values(config);
-  return { enabled: values.some(Boolean), config: values.every(Boolean) ? config : null };
+  const measurementId = env.VITE_FIREBASE_MEASUREMENT_ID?.trim();
+  if (measurementId) config.measurementId = measurementId;
+  return { config: values.every(Boolean) ? config : null };
 }

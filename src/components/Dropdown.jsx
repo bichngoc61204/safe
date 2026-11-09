@@ -1,6 +1,6 @@
 import { Children, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 
-export default function Dropdown({ children, value, onChange, label, className='', disabled=false, triggerClass='', menuClass='' }) {
+export default function Dropdown({ children, value, onChange, label, className='', disabled=false, triggerClass='', menuClass='', compact=false }) {
   const options = Children.toArray(children).flatMap(child => child.type === 'optgroup'
     ? Children.toArray(child.props.children).map(option => ({ ...option.props, group: child.props.label }))
     : [child.props]);
@@ -22,7 +22,8 @@ export default function Dropdown({ children, value, onChange, label, className='
       const below = window.innerHeight - rect.bottom - 12;
       const above = rect.top - 12;
       const upward = below < Math.min(panel.scrollHeight + 10, 245) && above > below;
-      const width = Math.min(window.innerWidth - 20, Math.max(rect.width, 168));
+      const minimum = compact && window.innerWidth <= 700 ? 84 : 168;
+      const width = Math.min(window.innerWidth - 20, Math.max(rect.width, minimum));
       Object.assign(panel.style, {
         width: `${width}px`,
         left: `${Math.max(10, Math.min(rect.left, window.innerWidth - width - 10))}px`,
@@ -40,7 +41,7 @@ export default function Dropdown({ children, value, onChange, label, className='
       window.removeEventListener('resize', place);
       window.removeEventListener('scroll', place, true);
     };
-  }, [open]);
+  }, [open,compact]);
 
   useEffect(() => {
     if (!open) return;

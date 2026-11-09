@@ -2,6 +2,8 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from
 import { onSnapshot } from 'firebase/firestore';
 import { catalogRefs, observeCatalog, writeCatalog } from './firebaseCatalog.js';
 
+let trafficStarted = false;
+
 export function connectFirebase(config) {
   const refs = catalogRefs(config);
   const auth = getAuth(refs.app);
@@ -24,6 +26,15 @@ export function connectFirebase(config) {
         }, () => receive({ status: 'error' }));
       }, () => receive({ status: 'error' }));
       return () => { stopAuth(); stopRole?.(); };
+    },
+    getIdToken: () => auth.currentUser?.getIdToken(),
+    async enableTraffic(isPublic) {
+      if (!config.measurementId || trafficStarted) return;
+      const { initializeAnalytics, isSupported, logEvent } = await import('firebase/analytics');
+      if (!await isSupported() || !isPublic() || trafficStarted) return;
+      const analytics = initializeAnalytics(refs.app, { config: { send_page_view: false } });
+      trafficStarted = true;
+      logEvent(analytics, 'page_view', { page_location: new URL('/', window.location.origin).href });
     },
     login: (email, password) => signInWithEmailAndPassword(auth, email, password),
     logout: () => signOut(auth),

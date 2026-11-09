@@ -1,5 +1,6 @@
-export const CENTER = [16.0505, 108.2435];
-export const defaultCategories = [
+import { organizeCatalog } from '../src/lib/catalogGroups.js';
+
+const defaultCategories = [
   { id: 'safe', name: 'An toàn', nameEn: 'Safety', icon: 'shield', color: '#3788c9', kind: 'safe' },
   { id: 'admin', name: 'Hành chính', nameEn: 'Government', icon: 'landmark', color: '#817bb5', kind: 'safe' },
   { id: 'health', name: 'Y tế', nameEn: 'Healthcare', icon: 'heart', color: '#dd7683', kind: 'safe' },
@@ -22,20 +23,10 @@ const raw = [
   ['11','Cửa hàng tiện lợi An Thượng','service','Khu phố An Thượng',16.0480,108.2438,'Cửa hàng địa phương'],
 
 ];
-const photoIds={
-  sorting:'pKlYOOLNX2g', cafe:'q5EilynfZuo', cafeGreen:'YTCPj1wGIDg',
-  clinic:'Ytcp0r7SIE4', market:'JqnEXIy9Xuc', police:'3rx2-APuDeQ',
-  shop:'dYsvv_RrYEc', bins:'RkIsyD_AVvc', medical:'Z3SNdaI8mkc',
-  recycle:'LNXN8NgK3HQ', campus:'PXoUUAtHTbw',
-};
-const photoSets=[
-  ['police','campus','clinic'], ['clinic','medical','campus'], ['campus','clinic','market'],
-  ['recycle','sorting','bins'], ['bins','sorting','recycle'], ['cafeGreen','cafe','market'],
-  ['campus','clinic','market'], ['medical','clinic','shop'], ['market','cafe','police'],
-  ['market','shop','sorting'], ['shop','market','cafe'],
-];
-export const demoPlacePhotos=Object.fromEntries(raw.map(([id],index)=>[
-  id, photoSets[index].map(key=>({src:`/demo-places/${key}.jpg`,credit:`https://unsplash.com/photos/${photoIds[key]}`})),
-]));
-export const demoPhotoPaths=new Set(Object.values(demoPlacePhotos).flat().map(photo=>photo.src));
-export const defaultPlaces = raw.map(([id,name,category,address,lat,lng,owner,waste='',status='active'])=>({id,name,category,address:address+', Đà Nẵng',lat,lng,owner,waste,status,phone:`000 000 ${id.padStart(4,'0')}`,image:demoPlacePhotos[id][0].src,hours:'',description:'',source:'Dữ liệu minh họa',updatedAt:'2026-11-05'}));
+const places=raw.map(([id,name,category,address,lat,lng,owner,waste='',status='active'])=>({
+  id,name,category,address:address+', Đà Nẵng',lat,lng,owner,waste,status,
+  phone:`000 000 ${id.padStart(4,'0')}`,
+  image:`https://example.invalid/places/${id}.jpg`,
+  images:[`https://example.invalid/places/${id}-detail.jpg`],
+}));
+export const makeTestCatalog=()=>organizeCatalog(structuredClone({categories:defaultCategories,places}));

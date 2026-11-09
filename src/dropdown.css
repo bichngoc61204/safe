@@ -79,10 +79,17 @@
 @media (max-width: 700px) {
   .map-mode-header .header-controls { background: none; box-shadow: none; border: 0; }
   .map-mode-header .language-control.dropdown { width: auto; }
-  .map-mode-header .language-control .dropdown-trigger { min-height: 42px; background: #fff; box-shadow: 0 3px 10px #193b2c13; }
+  .map-mode-header .language-control .dropdown-trigger { min-height: 42px; background: #fff; border-color: #dce4df; box-shadow: 0 3px 10px #193b2c13; }
   .dropdown-menu [role=option] { min-height: 44px; }
   .admin-map-link { font-size: 11px; }
-  .route-mode-picker { flex: 0 1 auto; }
+  .route-mode-picker { flex:0 1 auto; max-width:42%; }
+  .route-mode-picker .dropdown-trigger,.map-mode-header .language-control .dropdown-trigger {
+    font-size:11px; gap:6px; padding-inline:8px; min-height:36px;
+  }
+  :is(.route-mode-options,.language-menu) [role=option] {
+    min-height:36px; font-size:11px; padding:6px 8px;
+  }
+  .dropdown-menu:is(.route-mode-options,.language-menu) { min-width:0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .dropdown-menu { animation: none; }

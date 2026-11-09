@@ -24,14 +24,14 @@ Chạy `npm run dev`, mở URL trên trình duyệt. Dùng DevTools Responsive M
 ## Quản trị
 
 - [ ] Chưa đăng nhập: hiển thị form. Sai email/mật khẩu: báo lỗi.
-- [ ] Điền tài khoản demo, đăng nhập và đăng xuất được trên mobile lẫn desktop.
+- [ ] Dùng tài khoản Firebase được cấp để đăng nhập và đăng xuất được trên mobile lẫn desktop.
 - [ ] Tổng quan mặc định: tổng 19; hỗ trợ 6; thu gom 10; cần xử lý 2.
 - [ ] Nhấn stat/card hoặc danh mục phân bổ: chuyển đúng bảng và bộ lọc.
 - [ ] Tìm kiếm, lọc danh mục/trạng thái, phân trang; trường hợp không có kết quả.
 - [ ] Tạo GreenPoint: điền tên/địa chỉ/đơn vị/vật liệu, chọn tọa độ bằng map và kéo ghim.
 - [ ] Sửa trạng thái thành quá tải: thống kê và cảnh báo cập nhật ngay.
 - [ ] Về bản đồ cộng đồng: thông tin và marker đồng bộ.
-- [ ] Tải lại trang: dữ liệu thêm/sửa vẫn còn; phiên demo còn trong tab hiện tại.
+- [ ] Tải lại trang: dữ liệu thêm/sửa vẫn còn; phiên Firebase còn hiệu lực.
 - [ ] Xóa có xác nhận; hủy xóa giữ nguyên dữ liệu; xóa thật cập nhật tổng số.
 - [ ] Tạo/sửa đối tác và kiểm tra màn hình Đối tác xanh.
 - [ ] Tạo danh mục, sửa tên/màu/icon, gán địa điểm, kiểm tra filter/marker.
@@ -47,9 +47,7 @@ Không có backend, bảo mật đăng nhập thật, phân quyền nhiều cán
 
 - Mặc định bản đồ Bright có nhãn; chỉ lọc nhãn nền quanh Hoàng Sa–Trường Sa. Vệ tinh có lớp nhãn áp dụng cùng bộ lọc. Giữ các overlay SafeMap và nguồn dữ liệu.
 - Marker và danh sách dùng icon danh mục Lucide cùng nét. Giao diện trắng–xanh lá; marker an toàn xanh dương, y tế đỏ hồng, hành chính/giáo dục navy, môi trường xanh lá. Cảnh báo marker có chấm vàng nhỏ.
-- Đã kiểm tra dashboard demo trên mobile, không tràn ngang, thống kê 19 / 6 / 10 / 2.
 - Chỉ đường Google Maps và OpenStreetMap đều là liên kết ngoài. Chưa triển khai tuyến đường nội bộ.
-- Ảnh xem trước: `preview-desktop.jpg`, `preview-mobile.jpg`.
 - WebGL không khả dụng: fallback nền OSM; thử trên thiết bị thật để đánh giá hiệu năng GPU và GPS.
 
 - Đã kiểm tra PC: khi chọn địa điểm, phần giới thiệu/tab thu gọn, không có popup lặp; ghim chọn nổi bật và metadata đóng mặc định.
@@ -70,4 +68,4 @@ Không có backend, bảo mật đăng nhập thật, phân quyền nhiều cán
 - Lớp Hoàng Sa–Trường Sa và POI của SafeMap không bị bộ lọc nền tác động.
 - Kiểm tra cả bản đồ màu và vệ tinh có lớp nhãn.
 
-- Bộ đổi nền có đủ Bản đồ / Tối giản / Vệ tinh; đã kiểm tra ở chiều rộng mobile 320px.
+- Bộ đổi nền có đủ Bản đồ / Tiêu chuẩn / Nền tối / Vệ tinh; đã kiểm tra ở chiều rộng mobile 320px.

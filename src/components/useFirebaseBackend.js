@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { readFirebaseConfig } from '../lib/firebaseConfig.js';
 
-const { enabled, config } = readFirebaseConfig(import.meta.env ?? {});
+const { config } = readFirebaseConfig(import.meta.env ?? {});
 
 export function useFirebaseBackend() {
   const [backend, setBackend] = useState(null);
@@ -38,5 +38,5 @@ export function useFirebaseBackend() {
     setAttempt(value => value + 1);
   }
 
-  return { enabled, backend, catalog, catalogStatus, editor, retry };
+  return { backend, catalog, catalogStatus, editor, retry };
 }

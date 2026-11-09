@@ -99,6 +99,7 @@ export default function MapWelcome({t, onReveal, onEnter}) {
   const [{index,direction}, setSlide] = useState({index:0,direction:1});
   const slide=slides[index];
   const dialog = useRef(null);
+  const restoreHeading = useRef(false);
   const touch = useRef(null);
   const wheel = useRef(0);
   const title = useId();
@@ -109,6 +110,12 @@ export default function MapWelcome({t, onReveal, onEnter}) {
     element.querySelector('h2').focus({preventScroll: true});
     return () => element.close();
   }, []);
+
+  useLayoutEffect(() => {
+    if (!restoreHeading.current) return;
+    restoreHeading.current=false;
+    dialog.current.querySelector('h2').focus({preventScroll:true});
+  }, [index]);
 
   useEffect(() => {
     if (!leaving) return;
@@ -126,6 +133,7 @@ export default function MapWelcome({t, onReveal, onEnter}) {
   }
   function changeSlide(next) {
     if(leaving||next<0||next>=slides.length||next===index)return;
+    restoreHeading.current=document.activeElement===dialog.current.querySelector('h2');
     wheel.current=0;
     setSlide({index:next,direction:next>index?1:-1});
   }
@@ -178,13 +186,19 @@ export default function MapWelcome({t, onReveal, onEnter}) {
     >
       <WelcomeArtwork slide={slide} t={t}/>
       <div className="welcome-copy">
-        <div className="welcome-slide-content">
-          <p key={slide.kicker} className="welcome-kicker"><Icon name={slide.icon} size={15}/> {t(slide.kicker)}</p>
-          <h2 id={title} tabIndex={-1} aria-live="polite"><span key={slide.title[0]} className="welcome-title-brand">{t(slide.title[0])}</span>{' '}<span key={slide.title[1]} className="welcome-title-place">{t(slide.title[1])}</span></h2>
-          <p key={slide.description} className="welcome-description">{t(slide.description)}</p>
-          <ul key={slide.id} className="welcome-features">
-            {slide.features.map(([icon,label])=><li key={label}><Icon name={icon} size={16}/>{t(label)}</li>)}
-          </ul>
+        <div className="welcome-slide-content" aria-live="polite">
+          {slides.map(item=>{
+            const active=item.id===slide.id;
+            const Heading=active?'h2':'div';
+            return <div key={item.id} className={`welcome-slide-panel ${active?'is-active':''}`} aria-hidden={active?undefined:true}>
+              <p className="welcome-kicker"><Icon name={item.icon} size={15}/> {t(item.kicker)}</p>
+              <Heading className="welcome-heading" id={active?title:undefined} tabIndex={active?-1:undefined}>
+                <span className="welcome-title-brand">{t(item.title[0])}</span>{' '}<span className="welcome-title-place">{t(item.title[1])}</span>
+              </Heading>
+              <p className="welcome-description">{t(item.description)}</p>
+              <ul className="welcome-features">{item.features.map(([icon,label])=><li key={label}><Icon name={icon} size={16}/>{t(label)}</li>)}</ul>
+            </div>;
+          })}
         </div>
         <nav className="welcome-pagination" aria-label={t('welcomeSlides')}>
           {slides.map((item,i)=><button type="button" key={item.id} aria-label={t(item.kicker)} aria-current={i===index?'step':undefined}

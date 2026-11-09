@@ -1,27 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Icon from './Icon';
-import Dropdown from './Dropdown';
+import { placeHourRows } from '../lib/placeHours';
 import MapView from './MapView';
 import PlaceGallery from './PlaceGallery';
-import { CENTER, demoPlacePhotos } from '../lib/data';
+import { CENTER } from '../lib/mapCenter';
 import RouteGuide from './RouteGuide';
 import useNavigation from './useNavigation';
 import { fetchRoute, routeModes } from '../lib/routing';
 import { Status } from './Admin';
-import { filterPlaces, getCategory, directionsUrl, haversine, formatDistance, safeImage, phoneHref, isDemoPhone, isAlert, markerColor } from '../lib/domain';
+import { filterPlaces, getCategory, directionsUrl, haversine, formatDistance, safeImage, placePhotoUrls, phoneHref, isDemoPhone, isAlert, markerColor } from '../lib/domain';
 
 const scopes=[['map','explore','map'],['safe','safe','shield'],['green','green','recycle'],['partner','partner','leaf']];
 const areaCenter={lat:CENTER[0],lng:CENTER[1]};
+const greenStatuses=['all','alerts','clean','warning','overloaded','inactive'];
 
-function PlaceDetails({place,categories,position,t,lang,onClose,routing,demo}) {
+function PlaceDetails({place,categories,position,t,lang,onClose,routing}) {
   const c=getCategory(categories,place.category);
-  const [demoCall,setDemoCall]=useState(false);
-  const image=safeImage(place.image);
-  const demoPhotos=demoPlacePhotos[place.id];
-  const extraImages=Array.isArray(place.images)?place.images.map(safeImage).filter(Boolean):[];
-  const images=extraImages.length
-    ? [...new Set([image,...extraImages].filter(Boolean))].map(src=>demoPhotos?.find(photo=>photo.src===src)??{src})
-    : image===demoPhotos?.[0].src?demoPhotos:image?[{src:image}]:[];
+  const images=placePhotoUrls(place);
   const phone=String(place.phone||'').replace(/[^+\d]/g,'');
   const demoPhone=isDemoPhone(place.phone);
   return <section className="place-details" aria-label={t('details')}>
@@ -42,34 +37,53 @@ function PlaceDetails({place,categories,position,t,lang,onClose,routing,demo}) {
       <dl className="detail-info">
         <div><dt>{t('phone')}</dt><dd className="detail-phone">
           <span>{place.phone||t('noPhone')}{demoPhone&&<small>{t('demoPhone')}</small>}</span>
-          {phone&&(demoPhone
-            ? <button type="button" className="button secondary" onClick={()=>setDemoCall(true)}><Icon name="phone" size={16}/>{t('call')}</button>
-            : <a className="button secondary" href={phoneHref(phone)}><Icon name="phone" size={16}/>{t('call')}</a>)}
-          {demoCall&&<span className="demo-call-status" role="status">{t('demoCall')}</span>}
+          {phone&&!demoPhone&&<a className="button secondary" href={phoneHref(phone)}><Icon name="phone" size={16}/>{t('call')}</a>}
         </dd></div>
-        {[['owner',place.owner],['waste',place.waste],['hours',place.hours],['description',place.description]].filter(([,value])=>value).map(([key,value])=><div key={key}><dt>{t(key)}</dt><dd>{value}</dd></div>)}
+        {[['owner',place.owner],['waste',place.waste],...placeHourRows(place),['description',place.description]].filter(([,value])=>value).map(([key,value])=><div key={key}><dt>{t(key)}</dt><dd>{value}</dd></div>)}
       </dl>
-      <details className="detail-metadata"><summary>{t('dataDetails')}<Icon name="down" size={14}/></summary><dl><div><dt>{t('coordinates')}</dt><dd>{place.lat.toFixed(6)}, {place.lng.toFixed(6)}</dd></div>{(place.source||demo)&&<div><dt>{t('source')}</dt><dd>{place.source||t('demo')}</dd></div>}</dl></details>
-      {(demo||place.source==='Dữ liệu minh họa')&&<p className="detail-demo">{t('demoNote')}</p>}
+      <details className="detail-metadata"><summary>{t('dataDetails')}<Icon name="down" size={14}/></summary><dl><div><dt>{t('coordinates')}</dt><dd>{place.lat.toFixed(6)}, {place.lng.toFixed(6)}</dd></div>{place.source&&<div><dt>{t('source')}</dt><dd>{place.source}</dd></div>}</dl></details>
+      {place.source==='Dữ liệu minh họa'&&<p className="detail-demo">{t('demoNote')}</p>}
     </div>
   </section>;
 }
 
-export default function PublicApp({welcomePhase,data,scope,setScope,selected,setSelected,t,lang,position,onLocate,onRouteLocate,locating,onSos,demo}) {
+export default function PublicApp({welcomePhase,data,scope,setScope,selected,setSelected,t,lang,position,onLocate,onRouteLocate,locating,onSos}) {
   const [query,setQuery]=useState('');
   const [category,setCategory]=useState('all');
   const [status,setStatus]=useState('all');
   const [expanded,setExpanded]=useState(Boolean(selected));
   const [searchOpen,setSearchOpen]=useState(false);
+  const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
+  const [hoverScope,setHoverScope]=useState(null);
+  const [previewScope,setPreviewScope]=useState(null);
   const [previewed,setPreviewed]=useState(null);
   const [focusRevision,setFocusRevision]=useState(0);
   const touchStart=useRef(null);
   const placesList=useRef(null);
+  const scopeCopy=useRef(null);
+  const collapseControl=useRef(null);
+  const expandControl=useRef(null);
+  const previousListView=useRef({scope,expanded});
   const searchToggle=useRef(null);
   const listToggle=useRef(null);
-  useEffect(()=>{
+  useLayoutEffect(()=>{
     if(placesList.current)placesList.current.scrollTop=0;
   },[scope,query,category,status]);
+  useLayoutEffect(()=>{
+    const previous=previousListView.current;
+    previousListView.current={scope,expanded};
+    const scopeChanged=previous.scope!==scope;
+    const mobileListOpened=expanded&&!previous.expanded&&!selected&&window.matchMedia?.('(max-width: 700px)').matches;
+    if((!scopeChanged&&!mobileListOpened)||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
+    const direction=scopeChanged&&scopes.findIndex(([id])=>id===scope)>scopes.findIndex(([id])=>id===previous.scope)?1:-1;
+    const cards=Array.from(placesList.current?.querySelectorAll('.place-card')??[]).slice(0,8);
+    const elements=scopeChanged?[scopeCopy.current,...cards]:cards;
+    const animations=elements.map((element,index)=>element?.animate?.([
+      {opacity:.48,transform:`translateX(${direction*13}px)`},
+      {opacity:1,transform:'translateX(0)'},
+    ],{duration:365,delay:Math.min(index*45,235),easing:'cubic-bezier(.2,.7,.25,1)',fill:'backwards'}));
+    return ()=>animations.forEach(animation=>animation?.cancel());
+  },[scope,expanded,selected]);
   const [origin,setOrigin]=useState(null);
   const [picking,setPicking]=useState(null);
   const [request,setRequest]=useState(null);
@@ -80,6 +94,12 @@ export default function PublicApp({welcomePhase,data,scope,setScope,selected,set
   const [routeResult,setRouteResult]=useState(null);
   const lastRouteRequest=useRef(0);
   const visible=useMemo(()=>filterPlaces(data.places,data.categories,{query,category,scope,status,position}),[data,query,category,scope,status,position]);
+  const groupPreviews=useMemo(()=>scopes.map(([id,label,icon])=>({
+    id,label,icon,
+    places:filterPlaces(data.places,data.categories,{scope:id}),
+    categories:data.categories.filter(category=>category.kind===id),
+  })),[data]);
+  const hoverPlaces=groupPreviews.find(group=>group.id===hoverScope)?.places??null;
   const place=visible.find(p=>p.id===selected);
   destinationRef.current=place?.id;
   const activeRequest=request&&place?.id===request.destination.id?request:null;
@@ -175,7 +195,23 @@ export default function PublicApp({welcomePhase,data,scope,setScope,selected,set
     setSearchOpen(true);
     setExpanded(false);
   };
+  const toggleSidebar=()=>{
+    const focusTarget=sidebarCollapsed?collapseControl:expandControl;
+    setHoverScope(null);
+    setSidebarCollapsed(!sidebarCollapsed);
+    requestAnimationFrame(()=>focusTarget.current?.focus({preventScroll:true}));
+  };
   const selectPlace=id=>{
+    if(!visible.some(point=>point.id===id)){
+      const point=data.places.find(point=>point.id===id);
+      if(!point)return;
+      setScope(hoverScope==='map'?'map':getCategory(data.categories,point.category).kind);
+      setQuery('');
+      setCategory('all');
+      setStatus('all');
+    }
+    setHoverScope(null);
+    setSidebarCollapsed(false);
     if(id!==selected)cancelRoute();
     setPicking(null);
     setSearchOpen(false);
@@ -193,15 +229,48 @@ export default function PublicApp({welcomePhase,data,scope,setScope,selected,set
   },[hasFilters,position,visible]);
   const scopeIndex=scopes.findIndex(([id])=>id===scope);
   const [, scopeLabel, scopeIcon]=scopes[scopeIndex];
+  const previewGroup=id=>{
+    setPreviewScope(id);
+    setHoverScope(id);
+  };
   return <main className="public-app" data-welcome={welcomePhase}>
-    <div className={`map-workspace ${expanded?'sheet-expanded':''} ${place?'has-detail':''}`} data-scope={scope}>
+    <div className={`map-workspace ${expanded?'sheet-expanded':''} ${place?'has-detail':''}`} data-scope={scope} data-sidebar={sidebarCollapsed?'collapsed':'open'}>
       <div className="mobile-map-actions">
         <button ref={searchToggle} className={`map-tool ${hasFilters?'has-filters':''}`} aria-label={t('search')} aria-expanded={searchOpen} aria-controls="map-search-panel" onClick={toggleSearch}><Icon name={searchOpen?'x':'search'} size={21}/></button>
         <button ref={listToggle} className="map-tool" aria-label={t('nearby')} aria-expanded={expanded} aria-controls="public-sheet-content" onClick={()=>{setSearchOpen(false);clearSelection();setExpanded(searchOpen||!expanded||Boolean(place));}}><Icon name="list" size={21}/></button>
       </div>
+      <div className="public-sidebar-region">
+      {sidebarCollapsed&&<div className="sidebar-rail">
+        <button ref={expandControl} type="button" aria-controls="desktop-map-sidebar" aria-expanded={false}
+          aria-label={t('expandSidebar')} title={t('expandSidebar')} onClick={toggleSidebar}><Icon name="right" size={20}/></button>
+        <nav aria-label={t('modules')} onPointerLeave={()=>setHoverScope(null)} onBlur={event=>{
+          if(!event.currentTarget.contains(event.relatedTarget))setHoverScope(null);
+        }} onKeyDown={event=>{if(event.key==='Escape')setHoverScope(null);}}>
+          {scopes.map(([id,label,icon])=><button type="button" key={id}
+            aria-label={t(label)} aria-describedby={hoverScope===id?'sidebar-group-preview':undefined}
+            aria-pressed={scope===id} data-previewed={hoverScope===id}
+            onPointerEnter={event=>{if(event.pointerType==='mouse')previewGroup(id);}}
+            onFocus={event=>{if(event.currentTarget.matches(':focus-visible'))previewGroup(id);}}
+            onClick={()=>{changeScope(id);toggleSidebar();}}><Icon name={icon} size={21}/></button>)}
+        </nav>
+      </div>}
+      <div className="sidebar-group-preview" id="sidebar-group-preview" data-open={Boolean(hoverScope)}
+        data-scope={previewScope} role="tooltip" aria-hidden={!hoverScope}>
+        {groupPreviews.map(({id,icon,places,categories})=><div key={id} className="sidebar-preview-panel"
+          data-active={previewScope===id} aria-hidden={hoverScope!==id}>
+          <div className="sidebar-preview-title"><Icon name={icon} size={22}/><strong>{id==='map'?'SafeMap An Thượng':t(`${id}Title`)}</strong></div>
+          <p>{t(id==='map'?'subtitle':`${id}Subtitle`)}</p>
+          <ul>{id==='map'?scopes.slice(1).map(([group,label,groupIcon])=><li key={group}><Icon name={groupIcon} size={14}/>{t(label)}</li>):
+            categories.map(category=><li key={category.id}><Icon name={category.icon} size={14}/>{lang==='en'?category.nameEn:category.name}</li>)}</ul>
+          <small>{places.length} {t('results')}</small>
+        </div>)}
+      </div>
+      <div className="sidebar-drawer" id="desktop-map-sidebar">
       <section className={`explore-panel ${searchOpen?'is-open':''}`} id="map-search-panel" aria-label={t('search')} onKeyDown={e=>{if(e.key==='Escape'&&searchOpen)closeSearch();}}>
         <div className="public-intro">
-          <div className="scope-copy">
+          <button ref={collapseControl} type="button" className="sidebar-collapse" aria-controls="desktop-map-sidebar"
+            aria-label={t('collapseSidebar')} title={t('collapseSidebar')} onClick={toggleSidebar}><Icon name="left" size={17}/></button>
+          <div className="scope-copy" ref={scopeCopy}>
             <span className="eyebrow">{t(scope==='map'?'localGuide':scopeLabel)}</span>
             <h1>{scope==='map'?<>{t('explore')} <span className="title-accent">An Thượng.</span></>:t(`${scope}Title`)}</h1>
             <p>{t(scope==='map'?'subtitle':`${scope}Subtitle`)}</p>
@@ -214,22 +283,23 @@ export default function PublicApp({welcomePhase,data,scope,setScope,selected,set
         <nav className="public-tabs" aria-label={t('modules')} style={{'--scope-index':scopeIndex}}>{scopes.map(([id,label,icon])=><button key={id} data-group={id} className={scope===id?'active':''} aria-pressed={scope===id} onClick={()=>changeScope(id)}><Icon name={icon} size={15}/><span>{t(label)}</span></button>)}</nav>
         <div className="public-toolbar">
           <div className="search-field"><Icon name="search" size={18}/><input placeholder={t('search')} aria-label={t('search')} value={query} onKeyDown={e=>{if(e.key==='Enter'&&searchOpen&&visible.length)showResults();}} onChange={e=>{setQuery(e.target.value);clearSelection();}}/>{query&&<button type="button" onClick={()=>{setQuery('');clearSelection();}} aria-label={t('clearSearch')}><Icon name="x" size={15}/></button>}</div>
-          <div className="filter-row" id="public-filters">
-            {scope==='safe'
-              ? <div className="category-chips" role="group" aria-label={t('category')}>
-                  <button type="button" aria-pressed={category==='all'} onClick={()=>{setCategory('all');clearSelection();}}>{t('all')}</button>
-                  {scopeCats.map(c=><button type="button" key={c.id} aria-pressed={category===c.id} style={{'--chip-color':markerColor(c)}} onClick={()=>{setCategory(c.id);clearSelection();}}>
-                    <Icon name={c.icon} size={14}/>{lang==='en'?c.nameEn:c.name}
-                  </button>)}
-                </div>
-              : <Dropdown className="filter-select" label={t('category')} value={category} onChange={value=>{setCategory(value);clearSelection();}}>
-                  <option value="all">{t('allCategories')}</option>
-                  {scopeCats.map(c=><option key={c.id} value={c.id}>{lang==='en'?c.nameEn:c.name}</option>)}
-                </Dropdown>}
-            {scope==='green'&&<Dropdown className="public-status" label={t('status')} value={status} onChange={value=>{setStatus(value);clearSelection();}}>
-              <option value="all">{t('allStatus')}</option><option value="alerts">{t('alertStatus')}</option>
-              {['clean','warning','overloaded','inactive'].map(s=><option key={s} value={s}>{t(s)}</option>)}
-            </Dropdown>}
+          <div className="public-filters" id="public-filters">
+            <div className="public-filter-section">
+              <span>{t('category')}</span>
+              <div className="category-chips" key={scope} role="group" aria-label={t('category')}>
+                <button type="button" aria-pressed={category==='all'} onClick={()=>{setCategory('all');clearSelection();}}>{t('all')}</button>
+                {scopeCats.map(c=><button type="button" key={c.id} aria-pressed={category===c.id} style={{'--chip-color':markerColor(c)}} onClick={()=>{setCategory(c.id);clearSelection();}}>
+                  <Icon name={c.icon} size={14}/>{lang==='en'?c.nameEn:c.name}
+                </button>)}
+              </div>
+            </div>
+            {scope==='green'&&<div className="public-filter-section">
+              <span>{t('status')}</span>
+              <div className="category-chips status-chips" role="group" aria-label={t('status')}>
+                {greenStatuses.map(value=><button type="button" key={value} data-status={value} aria-pressed={status===value}
+                  onClick={()=>{setStatus(value);clearSelection();}}>{t(value==='all'?'allStatus':value==='alerts'?'alertStatus':value)}</button>)}
+              </div>
+            </div>}
           </div>
         </div>
         <div className="mobile-search-footer">
@@ -270,7 +340,7 @@ export default function PublicApp({welcomePhase,data,scope,setScope,selected,set
           </button>}
           <div className="list-heading"><h2>{t('nearby')}<span>{visible.length}</span></h2>{position&&<span>{t('nearest')}</span>}</div>
         </div>
-        <div className="public-sheet-content" id="public-sheet-content">{place&&<PlaceDetails key={place.id} place={place} categories={data.categories} position={position} t={t} lang={lang} routing={routing} onClose={closeDetails} demo={demo}/>}<div className="places-list" ref={placesList}>{visible.length?visible.map((p,index)=>{const c=getCategory(data.categories,p.category);const image=safeImage(p.image);return <button className={`place-card ${p.status==='inactive'?'is-inactive':''} ${previewed===p.id?'is-previewed':''}`} style={{'--place-accent':markerColor(c),'--place-index':Math.min(index,5)}} aria-pressed={p.id===selected} key={p.id}
+        <div className="public-sheet-content" id="public-sheet-content">{place&&<PlaceDetails key={place.id} place={place} categories={data.categories} position={position} t={t} lang={lang} routing={routing} onClose={closeDetails}/>}<div className="places-list" ref={placesList}>{visible.length?visible.map(p=>{const c=getCategory(data.categories,p.category);const image=safeImage(p.image);return <button className={`place-card ${p.status==='inactive'?'is-inactive':''} ${previewed===p.id?'is-previewed':''}`} style={{'--place-accent':markerColor(c)}} aria-pressed={p.id===selected} key={p.id}
           onPointerEnter={event=>{if(event.pointerType==='mouse')setPreviewed(p.id);}}
           onPointerLeave={()=>setPreviewed(id=>id===p.id?null:id)}
           onFocus={event=>{if(event.currentTarget.matches(':focus-visible'))setPreviewed(p.id);}}
@@ -288,8 +358,10 @@ export default function PublicApp({welcomePhase,data,scope,setScope,selected,set
           </span>
           <span className="card-distance">{position?formatDistance(haversine(position,p)):<Icon name="right" size={16}/>}</span>
         </button>}):<div className="empty-state"><h3>{t('empty')}</h3><p>{t('emptyHint')}</p><button className="text-button" onClick={clear}>{t('clearFilters')}</button></div>}</div>
-        </div><div className="list-footer"><span className="live-dot"/>{t(demo?'demo':'community')}<span>{t('area')}</span></div>
+        </div><div className="list-footer"><span className="live-dot"/>{t('community')}<span>{t('area')}</span></div>
       </aside>
+      </div>
+      </div>
       <MapView welcomePhase={welcomePhase} focusRevision={focusRevision} navigation={navigation}
         routeGuide={result?.route
           ? <RouteGuide key={activeRequest.mode+':'+lastRouteRequest.current} route={navigation.route} navigation={navigation} mode={activeRequest.mode} destination={place.name} onExit={exitRoute} onModeChange={mode=>requestRoute(activeRequest.origin,mode)} t={t}/>
@@ -301,7 +373,7 @@ export default function PublicApp({welcomePhase,data,scope,setScope,selected,set
                 <a className="button secondary" href={directionsUrl(place)} target="_blank" rel="noopener noreferrer">Google Maps<Icon name="arrow" size={14}/></a>
               </div>}
             </section>}
-        route={navigation.route} routeMode={activeRequest?.mode} routeOrigin={activeRequest?origin:null} pickingOrigin={pickingOrigin} onPickOrigin={chooseOrigin} onCancelOrigin={exitRoute} places={visible} categories={data.categories} selected={selected} previewed={place?null:previewed} onPreview={setPreviewed} onSelect={selectPlace} position={position} lang={lang} t={t} onLocate={onLocate} locating={locating} onSos={onSos}/>
+        route={navigation.route} routeMode={activeRequest?.mode} routeOrigin={activeRequest?origin:null} pickingOrigin={pickingOrigin} onPickOrigin={chooseOrigin} onCancelOrigin={exitRoute} places={hoverScope?data.places:visible} hoverPlaces={hoverPlaces} categories={data.categories} selected={selected} previewed={place?null:previewed} onPreview={setPreviewed} onSelect={selectPlace} position={position} lang={lang} t={t} onLocate={onLocate} locating={locating} onSos={onSos}/>
     </div>
   </main>;
 }

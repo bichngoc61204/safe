@@ -1,14 +1,17 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import Icon, { categoryIconOptions } from './Icon';
 import Modal from './Modal';
 import Dropdown from './Dropdown';
 import { catalogGroups } from '../lib/catalogGroups';
 import PlaceForm from './PlaceForm';
-import { CoordinatePicker } from './MapView';
-import { filterPlaces, getCategory, isAlert } from '../lib/domain';
+import PlaceGallery from './PlaceGallery';
+import TrafficDashboard from './TrafficDashboard';
+import { AdminPlacesMap } from './MapView';
+import { placeHourRows } from '../lib/placeHours';
+import { directionsUrl, filterPlaces, getCategory, isAlert, isDemoPhone, phoneHref, placePhotoUrls } from '../lib/domain';
 export function Status({value,t}) {return <span className={`status status-${value}`}><i/>{t(value)}</span>;}
 export function CategoryIcon({category,size=19}){return <span className="category-icon" style={{'--category-color':category.color,background:category.color+'13',color:category.color}}><Icon name={category.icon} size={size}/></span>;}
-export function Login({onLogin,onBack,t,demo,available,editorStatus}){
+export function Login({onLogin,onBack,t,available,editorStatus}){
  const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[show,setShow]=useState(false);
  const [error,setError]=useState(''),[pending,setPending]=useState(false);
  async function submit(event) {
@@ -23,8 +26,8 @@ export function Login({onLogin,onBack,t,demo,available,editorStatus}){
      setPending(false);
    }
  }
- const message = error || (editorStatus==='denied'?'editorDenied':editorStatus==='error'&&!demo?'editorError':'');
- return <main className="login-page"><div className="login-story"><div className="login-symbol"><Icon name="map" size={86}/><span className="orbit one"><Icon name="shield" size={25}/></span><span className="orbit two"><Icon name="recycle" size={25}/></span><span className="orbit three"><Icon name="leaf" size={25}/></span></div><div className="eyebrow">SAFEMAP AN THƯỢNG</div><h1>{t('loginTitle')}</h1><p>{t('footer')}</p><div className="login-pills"><span><Icon name="shield" size={15}/>SafePoint</span><span><Icon name="recycle" size={15}/>GreenPoint</span></div></div><div className="login-form-area"><button className="text-button" onClick={onBack}><Icon name="back" size={16}/>{t('loginBack')}</button><form className="login-form" onSubmit={submit}><span className="login-lock"><Icon name="lock" size={23}/></span><h2>{t('login')}</h2><p>{t(demo?'loginSubtitle':'editorLoginSubtitle')}</p><label><span>{t('email')}</span><input type="email" autoComplete="username" value={email} onChange={e=>{setEmail(e.target.value);setError('');}} placeholder={demo?"admin@safemap.vn":undefined} required/></label><label><span>{t('password')}</span><div className="password-field"><input type={show?'text':'password'} autoComplete="current-password" value={password} onChange={e=>{setPassword(e.target.value);setError('');}} required/><button type="button" aria-label={show?'Hide password':'Show password'} onClick={()=>setShow(!show)}><Icon name={show?'eyeoff':'eye'} size={18}/></button></div></label>{message&&<p className="form-error" role="alert">{t(message)}</p>}<button className="button primary login-submit" disabled={pending||!available}>{t(pending?'editorChecking':'login')}<Icon name="right" size={17}/></button>{demo&&<div className="demo-account"><strong>{t('demoAccount')}</strong><code>admin@safemap.vn<br/>SafeMap2026!</code><button className="text-button" type="button" onClick={()=>{setEmail('admin@safemap.vn');setPassword('SafeMap2026!');setError('');}}>{t('fillDemo')}<Icon name="arrow" size={15}/></button></div>}{demo&&<small><Icon name="help" size={14}/>{t('loginNotice')}</small>}</form></div></main>;
+ const message = error || (editorStatus==='denied'?'editorDenied':editorStatus==='error'?'editorError':'');
+ return <main className="login-page"><div className="login-story"><div className="login-symbol"><Icon name="map" size={86}/><span className="orbit one"><Icon name="shield" size={25}/></span><span className="orbit two"><Icon name="recycle" size={25}/></span><span className="orbit three"><Icon name="leaf" size={25}/></span></div><div className="eyebrow">SAFEMAP AN THƯỢNG</div><h1>{t('loginTitle')}</h1><p>{t('footer')}</p><div className="login-pills"><span><Icon name="shield" size={15}/>SafePoint</span><span><Icon name="recycle" size={15}/>GreenPoint</span></div></div><div className="login-form-area"><button className="text-button" onClick={onBack}><Icon name="back" size={16}/>{t('loginBack')}</button><form className="login-form" onSubmit={submit}><span className="login-lock"><Icon name="lock" size={23}/></span><h2>{t('login')}</h2><p>{t('editorLoginSubtitle')}</p><label><span>{t('email')}</span><input type="email" autoComplete="username" value={email} onChange={e=>{setEmail(e.target.value);setError('');}} required/></label><label><span>{t('password')}</span><div className="password-field"><input type={show?'text':'password'} autoComplete="current-password" value={password} onChange={e=>{setPassword(e.target.value);setError('');}} required/><button type="button" aria-label={show?'Hide password':'Show password'} onClick={()=>setShow(!show)}><Icon name={show?'eyeoff':'eye'} size={18}/></button></div></label>{message&&<p className="form-error" role="alert">{t(message)}</p>}<button className="button primary login-submit" disabled={pending||!available}>{t(pending?'editorChecking':'login')}<Icon name="right" size={17}/></button></form></div></main>;
 }
 function moveCardHighlight(event) {
  if (event.pointerType !== 'mouse') return;
@@ -42,24 +45,86 @@ function CategoryForm({category,initialKind,onSave,onClose,t,busy,saveError}) {
    {categoryIconOptions.map(icon=><option key={icon} value={icon}>{icon}</option>)}
  </Dropdown></div><div className="category-preview span-2"><CategoryIcon category={v}/><strong>{v.name||t('categoryName')}</strong><small>{v.nameEn}</small></div></div></div>{saveError&&<p className="form-error place-form-error" role="alert">{t(saveError)}</p>}<div className="modal-footer"><button className="button secondary" type="button" onClick={onClose}>{t('cancel')}</button><button className="button primary" disabled={busy}>{t(busy?'saving':'save')}</button></div></form></Modal>;
 }
-function PlacePreview({place,category,t,lang,onClose,onEdit}) {
-  return <aside className="admin-place-preview" aria-labelledby="admin-preview-title" onKeyDown={e=>{if(e.key==='Escape')onClose();}}>
-    <div className="admin-preview-header">
-      <h2 id="admin-preview-title">{t('details')}</h2>
-      <button type="button" className="icon-button" onClick={onClose} aria-label={t('close')}><Icon name="x" size={19}/></button>
-    </div>
-    <CoordinatePicker lat={place.lat} lng={place.lng} readOnly t={t}/>
-    <div className="admin-preview-content">
-      <span className="preview-category"><CategoryIcon category={category} size={16}/>{lang==='en'?category.nameEn:category.name}</span>
-      <h3>{place.name}</h3>
-      <Status value={place.status} t={t}/>
-      <dl>{[['address',place.address],['phone',place.phone],['owner',place.owner],['hours',place.hours],['waste',place.waste],['description',place.description]].filter(([,value])=>value).map(([key,value])=><div key={key}><dt>{t(key)}</dt><dd>{value}</dd></div>)}</dl>
-      <button className="button secondary" type="button" onClick={onEdit}><Icon name="edit" size={16}/>{t('edit')}</button>
-    </div>
-  </aside>;
+const mobileAdminQuery='(max-width: 700px)';
+const isMobileAdmin=()=>window.matchMedia?.(mobileAdminQuery).matches??false;
+function subscribeMobileAdmin(notify) {
+  const media=window.matchMedia?.(mobileAdminQuery);
+  media?.addEventListener?.('change',notify);
+  return ()=>media?.removeEventListener?.('change',notify);
 }
 
-export default function Admin({data,commit,t,lang,notify,onLogout,email,demo}) {
+function MobilePlaceCard({place,category,categoryName,groupLabel,t,index,onDetails,onEdit,onDelete}) {
+  const [image]=placePhotoUrls(place);
+  return <li className="admin-mobile-place" style={{'--card-delay':`${index*34}ms`,'--category-color':category.color}}>
+    <button type="button" className="admin-mobile-place-main" aria-haspopup="dialog" onClick={onDetails}>
+      <span className="admin-mobile-place-image">
+        <CategoryIcon category={category} size={20}/>
+        {image&&<img key={image} src={image} alt="" loading="lazy" onError={event=>{event.currentTarget.hidden=true;}}/>}
+      </span>
+      <span className="admin-mobile-place-copy">
+        <strong>{place.name}</strong>
+        <span className="admin-mobile-place-address"><Icon name="pin" size={13}/>{place.address}</span>
+      </span>
+      <Icon name="right" size={16}/>
+    </button>
+    <div className="admin-mobile-place-meta">
+      <span className="admin-category-tag">{categoryName}</span>
+      <Status value={place.status} t={t}/>
+    </div>
+    <div className="admin-mobile-place-actions">
+      <span>{groupLabel}</span>
+      <button type="button" className="text-button" onClick={onEdit}><Icon name="edit" size={15}/>{t('edit')}</button>
+      <button type="button" className="text-button danger-text" aria-label={`${t('delete')} ${place.name}`} onClick={onDelete}><Icon name="delete" size={15}/></button>
+    </div>
+  </li>;
+}
+
+function PlacePreview({place,category,groupLabel,t,lang,onClose,onEdit,inDialog=false}) {
+  const images=placePhotoUrls(place);
+  const demoPhone=isDemoPhone(place.phone);
+  const number=phoneHref(place.phone);
+  const timestamp=Date.parse(place.updatedAt);
+  const updated=Number.isFinite(timestamp)
+    ? new Intl.DateTimeFormat(lang,{dateStyle:'medium',timeZone:'Asia/Ho_Chi_Minh'}).format(timestamp)
+    : null;
+  const facts=[['owner',place.owner],...placeHourRows(place),['waste',place.waste],['description',place.description]]
+    .filter(([,value])=>value);
+  return <section className="admin-preview-content" aria-label={t('details')}>
+    <header className="admin-sheet-heading">
+      <span className="preview-category"><CategoryIcon category={category} size={16}/>
+        <span><small>{groupLabel}</small><strong>{lang==='en'?category.nameEn:category.name}</strong></span>
+      </span>
+      {!inDialog&&<button type="button" className="icon-button" onClick={onClose} aria-label={t('closeDetails')}><Icon name="x" size={17}/></button>}
+    </header>
+    {!inDialog&&<h3>{place.name}</h3>}
+    <div className="admin-preview-summary">
+      <span><Icon name="pin" size={15}/>{place.address}</span>
+      <Status value={place.status} t={t}/>
+    </div>
+    {images.length?<PlaceGallery images={images} name={place.name} t={t}/>:
+      <p className="admin-preview-no-photo"><Icon name="image" size={18}/>{t('noPlacePhotos')}</p>}
+    <dl className="admin-preview-facts">
+      <div><dt>{t('phone')}</dt><dd>{number!=='tel:'&&!demoPhone?<a href={number}>{place.phone}</a>:place.phone||t('noPhone')}
+        {demoPhone&&<small> · {t('demoPhone')}</small>}</dd></div>
+      {facts.map(([key,value])=><div key={key}><dt>{t(key)}</dt><dd>{value}</dd></div>)}
+    </dl>
+    <details className="admin-preview-metadata">
+      <summary>{t('dataDetails')}</summary>
+      <dl>
+        <div><dt>{t('coordinates')}</dt><dd>{place.lat.toFixed(6)}, {place.lng.toFixed(6)}</dd></div>
+        {place.source&&<div><dt>{t('source')}</dt><dd>{place.source}</dd></div>}
+        {updated&&<div><dt>{t('updated')}</dt><dd><time dateTime={place.updatedAt}>{updated}</time></dd></div>}
+      </dl>
+    </details>
+    <div className="admin-preview-actions">
+      <button className="button primary" type="button" onClick={onEdit}><Icon name="edit" size={16}/>{t('edit')}</button>
+      {!inDialog&&<a className="button secondary" href={directionsUrl(place)} target="_blank" rel="noopener noreferrer"><Icon name="navigation" size={16}/>Google Maps</a>}
+    </div>
+  </section>;
+}
+
+export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdToken}) {
+ const mobile=useSyncExternalStore(subscribeMobileAdmin,isMobileAdmin);
  const [tab,setTab]=useState('overview');
  const [overview,setOverview]=useState('summary');
  const [query,setQuery]=useState('');
@@ -71,6 +136,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,demo}) {
  const [editCategory,setEditCategory]=useState(null);
  const [deleting,setDeleting]=useState(null);
  const [previewId,setPreviewId]=useState(null);
+ const mapPanel=useRef(null);
  const [busy,setBusy]=useState(false);
  const [exporting,setExporting]=useState(false);
  const [saveError,setSaveError]=useState('');
@@ -78,7 +144,6 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,demo}) {
  const {places,categories}=data;
  const group=catalogGroups.find(item=>item.id===tab);
  const scope=group?.id ?? (groupFilter==='all'?'map':groupFilter);
- const preview=places.find(place=>place.id===previewId);
  const categoryName=item=>lang==='en'?item.nameEn:item.name;
  const groupName=id=>t(catalogGroups.find(item=>item.id===id)?.label??id);
  const groups=catalogGroups.map(item=>{
@@ -96,6 +161,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,demo}) {
  const pages=Math.max(1,Math.ceil(filtered.length/7));
  const current=Math.min(page,pages);
  const visible=filtered.slice((current-1)*7,current*7);
+ const preview=filtered.find(place=>place.id===previewId);
  const recent=[...places].sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))).slice(0,5);
  const title=tab==='overview'?'overview':tab==='categories'?'manageCategories':group?.label??'managePlaces';
 
@@ -105,6 +171,22 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,demo}) {
  function navigate(next){
    setTab(next);setPreviewId(null);clearFilters();
    if(window.scrollY>0)window.scrollTo({top:0,behavior:'instant'});
+ }
+ function revealMap(){
+   if(mobile||!window.matchMedia?.('(max-width: 1000px)').matches)return;
+   const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+   requestAnimationFrame(()=>mapPanel.current?.scrollIntoView({block:'start',behavior:reduced?'instant':'smooth'}));
+ }
+ function changeGroup(value){
+   if(group)navigate(value==='all'?'places':value);
+   else{setGroupFilter(value);setCategory('all');setStatus('all');setPage(1);}
+ }
+ function changeCategory(value){
+   setCategory(value);setPage(1);
+ }
+ function selectPreview(id){
+   setPreviewId(id);
+   revealMap();
  }
  function closeDialog(setDialog){
    if(!saving.current){setSaveError('');setDialog(null);}
@@ -171,7 +253,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,demo}) {
        <Icon name={item.icon}/><span>{t(item.label)}</span>{item.id==='green'&&alerts.length>0&&<b>{alerts.length}</b>}
      </button>)}</nav>
      <div className="admin-sidebar-bottom">
-       <div className="admin-profile"><span>AD</span><div><strong>SafeMap Admin</strong><small>{email||(demo?'admin@safemap.vn':'')}</small></div></div>
+       <div className="admin-profile"><span>AD</span><div><strong>SafeMap Admin</strong><small>{email}</small></div></div>
        <button className="text-button" onClick={onLogout}><Icon name="logout" size={16}/>{t('logout')}</button>
      </div>
    </aside>
@@ -224,16 +306,22 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,demo}) {
              </section>
              <section className="panel recent-panel">
                <div className="panel-heading"><h2>{t('recent')}</h2><button className="text-button" onClick={()=>navigate('places')}>{t('viewAll')}</button></div>
-               <div className="recent-places">{recent.map(place=><button key={place.id} onClick={()=>{navigate('places');setPreviewId(place.id);}}>
-                 <strong>{place.name}</strong><small>{String(place.updatedAt||'').slice(0,10)}</small>
-               </button>)}</div>
+               {recent.length?<div className="recent-places">{recent.map(place=>{
+                 const item=getCategory(categories,place.category);
+                 const timestamp=Date.parse(place.updatedAt);
+                 const time=Number.isFinite(timestamp)?new Intl.DateTimeFormat(lang,{dateStyle:'medium',timeZone:'Asia/Ho_Chi_Minh'}).format(timestamp):t('unknownDate');
+                 return <button key={place.id} onClick={()=>{navigate('places');selectPreview(place.id);}}>
+                   <CategoryIcon category={item} size={17}/>
+                   <span className="recent-place-label"><strong>{place.name}</strong><small>{place.address}</small>
+                     <span>{categoryName(item)} <span aria-hidden="true">·</span> {groupName(item.kind)}</span>
+                   </span>
+                   <span className="recent-place-meta"><time dateTime={Number.isFinite(timestamp)?place.updatedAt:undefined}>{time}</time><Status value={place.status} t={t}/></span>
+                   <Icon name="right" size={15}/>
+                 </button>;
+               })}</div>:<div className="empty-state">{t('noResults')}</div>}
              </section>
-           </div>:<section className="panel traffic-panel">
-             <div className="panel-heading"><h2>{t('overviewTraffic')}</h2></div>
-             <div className="traffic-content"><p>{t('trafficUnavailable')}</p>
-               <a className="button secondary" href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer">{t('openFirebase')}</a>
-             </div>
-           </section>}
+           </div>:<TrafficDashboard t={t} lang={lang} getIdToken={getIdToken}/>}
+
          </div>
        </>:tab==='categories'?<div className="admin-category-groups">
          {groups.map(item=><section className="panel category-group-panel" key={item.id} style={{'--group-color':item.color}}>
@@ -252,56 +340,110 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,demo}) {
              </article>;
            })}</div>:<div className="empty-state">{t('noCategory')}</div>}
          </section>)}
-       </div>:<section className="panel admin-places">
-         <div className="panel-heading"><h2>{t(group?.label??'allPlaces')} <span className="count-pill">{filtered.length}</span></h2></div>
+       </div>:<section className="admin-places">
+       <div className="panel admin-places-toolbar">
+         <div className="panel-heading"><h2>{t(group?.label??'allPlaces')} <span className="count-pill">{filtered.length}</span></h2>
+           {!mobile&&<button type="button" className="button secondary admin-open-map" onClick={revealMap}><Icon name="map" size={16}/>{t('viewMap')}</button>}
+         </div>
          <div className="table-toolbar">
            <div className="search-field"><Icon name="search" size={18}/><input aria-label={t('search')} placeholder={t('search')} value={query} onChange={event=>{setQuery(event.target.value);setPage(1);}}/>
              {query&&<button aria-label={t('clearSearch')} onClick={()=>{setQuery('');setPage(1);}}><Icon name="x" size={14}/></button>}</div>
-           {!group&&<Dropdown label={t('kind')} value={groupFilter} onChange={value=>{setGroupFilter(value);setCategory('all');setPage(1);}}>
+           {mobile?<div className="admin-mobile-filters">
+             <div className="admin-mobile-filter"><span>{t('kind')}</span>
+               <div className="category-chips" role="group" aria-label={t('kind')}>
+                 <button type="button" aria-pressed={!group&&groupFilter==='all'} onClick={()=>changeGroup('all')}>{t('allGroups')}</button>
+                 {catalogGroups.map(item=><button type="button" key={item.id} aria-pressed={(group?.id??groupFilter)===item.id}
+                   style={{'--chip-color':item.color}} onClick={()=>changeGroup(item.id)}><Icon name={item.icon} size={14}/>{t(item.label)}</button>)}
+               </div>
+             </div>
+             <div className="admin-mobile-filter"><span>{t('category')}</span>
+               <div className="category-chips" key={scope} role="group" aria-label={t('category')}>
+                 <button type="button" aria-pressed={category==='all'} onClick={()=>changeCategory('all')}>{t('allCategories')}</button>
+                 {visibleCategories.map(item=><button type="button" key={item.id} aria-pressed={category===item.id}
+                   style={{'--chip-color':item.color}} onClick={()=>changeCategory(item.id)}><Icon name={item.icon} size={14}/>{categoryName(item)}</button>)}
+               </div>
+             </div>
+             {(query||groupFilter!=='all'||category!=='all'||status!=='all')&&
+               <div className="admin-mobile-filter-footer">
+                 {status!=='all'&&<Status value={status==='alerts'?'alertStatus':status} t={t}/>}
+                 <button className="text-button admin-clear-filters" onClick={clearFilters}><Icon name="x" size={15}/>{t('clearFilters')}</button>
+               </div>}
+           </div>:<div className="admin-filter-controls">
+           <Dropdown label={t('kind')} value={group?.id??groupFilter} onChange={changeGroup}>
              <option value="all">{t('allGroups')}</option>{catalogGroups.map(item=><option key={item.id} value={item.id}>{t(item.label)}</option>)}
-           </Dropdown>}
-           <Dropdown label={t('category')} value={category} onChange={value=>{setCategory(value);setPage(1);}}>
+           </Dropdown>
+           <Dropdown label={t('category')} value={category} onChange={changeCategory}>
              <option value="all">{t('allCategories')}</option>{visibleCategories.map(item=><option key={item.id} value={item.id}>{categoryName(item)}</option>)}
            </Dropdown>
            <Dropdown label={t('status')} value={status} onChange={value=>{setStatus(value);setPage(1);}}>
              <option value="all">{t('allStatus')}</option>{(scope==='map'||scope==='green')&&<option value="alerts">{t('alertStatus')}</option>}
              {states.map(item=><option key={item} value={item}>{t(item)}</option>)}
            </Dropdown>
-           {(query||groupFilter!=='all'||category!=='all'||status!=='all')&&<button className="text-button" onClick={clearFilters}>{t('clearFilters')}</button>}
+           {(query||groupFilter!=='all'||category!=='all'||status!=='all')&&<button className="text-button admin-clear-filters" aria-label={t('clearFilters')} onClick={clearFilters}><Icon name="x" size={15}/><span>{t('clearFilters')}</span></button>}
+           </div>}
+
          </div>
-         <div className="table-scroll"><table><thead><tr><th>{t('name')}</th><th>{t('category')}</th><th>{t('status')}</th><th>{t('actions')}</th></tr></thead>
+       </div>
+       <div className={`admin-places-layout ${mobile?'is-mobile':''}`}>
+       <div className="panel admin-places-list">
+         {mobile?<ul className="admin-mobile-places" key={`${scope}:${category}:${current}`}>
+           {visible.map((place,index)=>{
+             const item=getCategory(categories,place.category);
+             return <MobilePlaceCard key={place.id} place={place} category={item} categoryName={categoryName(item)} groupLabel={groupName(item.kind)}
+               index={index} t={t} onDetails={()=>selectPreview(place.id)} onEdit={()=>setEdit({place})}
+               onDelete={()=>setDeleting({type:'place',record:place})}/>;
+           })}
+         </ul>:<div className="table-scroll"><table><thead><tr><th>{t('name')}</th><th>{t('category')}</th><th>{t('status')}</th><th>{t('actions')}</th></tr></thead>
            <tbody>{visible.map(place=>{
              const item=getCategory(categories,place.category);
              return <tr key={place.id} className={previewId===place.id?'is-previewed':undefined}
-               onClick={event=>{if(!event.target.closest('button'))setPreviewId(place.id);}}>
+               onClick={event=>{if(!event.target.closest('button'))selectPreview(place.id);}}>
                <td><div className="table-place"><CategoryIcon category={item} size={17}/><div>
-                 <button className="admin-place-name" type="button" aria-expanded={previewId===place.id} onClick={()=>setPreviewId(place.id)}>{place.name}</button>
+                 <button className="admin-place-name" type="button" aria-expanded={previewId===place.id} onClick={()=>selectPreview(place.id)}>{place.name}</button>
                  <small>{place.address}</small>{group?.id==='green'&&place.waste&&<small>{place.waste}</small>}
                </div></div></td>
                <td><span className="admin-category-tag" style={{'--category-color':item.color}}>{categoryName(item)}</span>{!group&&<small className="table-group-label">{groupName(item.kind)}</small>}</td>
                <td><Status value={place.status} t={t}/></td>
                <td><div className="table-actions">
-                 <button className="icon-button" aria-label={`${t('viewMap')} ${place.name}`} title={t('viewMap')} onClick={()=>setPreviewId(place.id)}><Icon name="map" size={16}/></button>
+                 <button className="icon-button" aria-label={`${t('viewMap')} ${place.name}`} title={t('viewMap')} onClick={()=>selectPreview(place.id)}><Icon name="map" size={16}/></button>
                  <button className="icon-button" aria-label={`${t('edit')} ${place.name}`} title={t('edit')} onClick={()=>setEdit({place})}><Icon name="edit" size={16}/></button>
                  <button className="icon-button danger-text" aria-label={`${t('delete')} ${place.name}`} title={t('delete')} onClick={()=>setDeleting({type:'place',record:place})}><Icon name="delete" size={16}/></button>
                </div></td>
              </tr>;
            })}</tbody></table>
            {!visible.length&&<div className="empty-state"><Icon name="search" size={30}/><h3>{t('noResults')}</h3></div>}
-         </div>
-         {visible.length>0&&<div className="pagination"><span>{filtered.length} {t('results')}</span><div>
+         </div>}
+         {mobile&&!visible.length&&<div className="empty-state"><Icon name="search" size={30}/><h3>{t('noResults')}</h3></div>}
+         <div className="pagination"><span>{filtered.length} {t('results')}</span><div>
            <button className="icon-button" disabled={current<=1} aria-label={t('previousPage')} onClick={()=>setPage(current-1)}><Icon name="left" size={16}/></button>
            <span>{t('page')} {current} {t('of')} {pages}</span>
            <button className="icon-button" disabled={current>=pages} aria-label={t('nextPage')} onClick={()=>setPage(current+1)}><Icon name="right" size={16}/></button>
-         </div></div>}
+         </div></div>
+       </div>
+       {!mobile&&<aside ref={mapPanel} className="admin-place-preview" aria-label={t('viewMap')}
+         onKeyDown={event=>{if(event.key==='Escape')setPreviewId(null);}}>
+         <div className="admin-preview-map">
+           <AdminPlacesMap places={filtered} categories={categories} selected={preview?.id} onSelect={setPreviewId} t={t} lang={lang}/>
+           <div className="admin-preview-header"><h2>{t('viewMap')}</h2>
+             {preview&&<button type="button" className="icon-button" onClick={()=>setPreviewId(null)} aria-label={t('closeDetails')}><Icon name="x" size={19}/></button>}
+           </div>
+         </div>
+         {preview&&<PlacePreview key={preview.id} place={preview} category={getCategory(categories,preview.category)}
+           groupLabel={groupName(getCategory(categories,preview.category).kind)} t={t} lang={lang}
+           onClose={()=>setPreviewId(null)} onEdit={()=>setEdit({place:preview})}/>}
+       </aside>}
+       </div>
        </section>}
      </div>
-     <p className="admin-notice"><Icon name="help" size={16}/><span>{t(demo?'adminDemo':'adminFirebase')}</span></p>
+     <p className="admin-notice"><Icon name="help" size={16}/><span>{t('adminFirebase')}</span></p>
    </main>
-   {preview&&<PlacePreview place={preview} category={getCategory(categories,preview.category)} t={t} lang={lang}
-     onClose={()=>setPreviewId(null)} onEdit={()=>setEdit({place:preview})}/>}
+   {mobile&&preview&&<Modal title={preview.name} className="admin-place-dialog" onClose={()=>setPreviewId(null)} t={t}>
+     <PlacePreview key={preview.id} place={preview} category={getCategory(categories,preview.category)}
+       groupLabel={groupName(getCategory(categories,preview.category).kind)} t={t} lang={lang} inDialog
+       onEdit={()=>{setPreviewId(null);setEdit({place:preview});}}/>
+   </Modal>}
    {edit&&<PlaceForm place={edit.place} initialKind={edit.initialKind} categories={categories} onSave={savePlace}
-     onClose={()=>closeDialog(setEdit)} t={t} lang={lang} busy={busy} saveError={saveError} demo={demo}/>}
+     onClose={()=>closeDialog(setEdit)} t={t} lang={lang} busy={busy} saveError={saveError}/>}
    {editCategory&&<CategoryForm category={editCategory.category} initialKind={editCategory.initialKind} onSave={saveCategory}
      onClose={()=>closeDialog(setEditCategory)} t={t} busy={busy} saveError={saveError}/>}
    {deleting&&<Modal title={t(deleting.type==='category'?'confirmCategory':'confirmDelete')} onClose={()=>closeDialog(setDeleting)} t={t}>

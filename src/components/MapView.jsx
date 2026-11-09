@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import { renderToStaticMarkup } from 'react-dom/server';
 import Icon from './Icon';
-import { CENTER } from '../lib/data';
+import { CENTER } from '../lib/mapCenter';
 import { getCategory, markerColor } from '../lib/domain';
-import { addBasemap, DEFAULT_MAP_STYLE } from '../lib/basemap';
+import { addBasemap, DEFAULT_MAP_STYLE, limitVietnamZoom, vietnamMapOptions } from '../lib/basemap';
 import { addCollapsibleAttribution } from '../lib/attribution';
 import { addArchipelagoLayer } from '../lib/archipelagos';
 import { blendPosition, routeShape, routeTarget, sampleRoute } from '../lib/mapMotion';
@@ -14,9 +14,15 @@ function pinIcon(category,selected=false,status='active') {
   const label=category.name||'Location';
   return L.divIcon({
     className:'custom-marker',
-    html:renderToStaticMarkup(<div className={`marker-pin marker-${category.kind} ${selected?'selected':''} ${['warning','overloaded'].includes(status)?'marker-alert':''}`} style={{'--marker-color':markerColor(category)}}><Icon name={category.icon||'pin'} size={19}/><span className="sr-only">{label}</span></div>),
+    html:renderToStaticMarkup(<div className="marker-upright"><div className={`marker-pin marker-${category.kind} ${selected?'selected':''} ${['warning','overloaded'].includes(status)?'marker-alert':''}`} style={{'--marker-color':markerColor(category)}}><Icon name={category.icon||'pin'} size={19}/><span className="sr-only">{label}</span></div></div>),
     iconSize:[42,46],iconAnchor:[21,40],popupAnchor:[0,-34],
   });
+}
+function setGroupMarkerState(element,id,hoverIds) {
+  if(!element)return;
+  const highlighted=hoverIds?.has(id)??false;
+  element.classList.toggle('is-group-highlighted',highlighted);
+  element.classList.toggle('is-group-dimmed',Boolean(hoverIds)&&!highlighted);
 }
 const zoomIcons = {
   zoomInText: renderToStaticMarkup(<Icon name="plus" size={17}/>),
@@ -24,7 +30,7 @@ const zoomIcons = {
 };
 const creditsIcon = renderToStaticMarkup(<Icon name="info" size={16}/>);
 
-const MAP_MODES = [['streets','mapStreets'], ['light','mapLight'], ['satellite','mapSatellite']];
+const MAP_MODES = [['streets','mapStreets'], ['light','mapLight'], ['dark','mapDark'], ['satellite','mapSatellite']];
 const WELCOME_CENTER = [16.061, 108.231];
 const DEFAULT_ZOOM = 15;
 // A visual guide to the area served by SafeMap, not an administrative boundary.
@@ -34,29 +40,40 @@ const AN_THUONG_AREA = [
   [16.0484,108.2389], [16.0522,108.2390],
 ];
 
-function focusMap(map,target,zoom,rotation){
+function desktopMapInset(map) {
+  if(window.matchMedia?.('(max-width: 700px)').matches)return 0;
+  const workspace=map.getContainer().closest('.map-workspace');
+  if(!workspace||workspace.dataset.sidebar==='collapsed')return 0;
+  return (workspace.querySelector('.sidebar-drawer')?.offsetWidth||0)
+    +(workspace.querySelector('.place-details')?.offsetWidth||0);
+}
+
+function focusMap(map,target,zoom,rotation,duration=.55,extraLeftInset=0){
   if(!map)return;
   const mobile=window.matchMedia?.('(max-width: 700px)').matches;
   const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const workspace=map.getContainer().closest('.map-workspace');
   const sheet=mobile&&workspace?.classList.contains('sheet-expanded')?workspace.querySelector('.places-sidebar'):null;
   const bottomInset=sheet?.clientHeight?sheet.clientHeight+(parseFloat(getComputedStyle(sheet).bottom)||0):0;
-  const leftInset=mobile?0:workspace?.querySelector('.place-details')?.offsetWidth||0;
+  const leftInset=desktopMapInset(map)+extraLeftInset;
   const offset=L.point(-leftInset/2,bottomInset/2);
   const center=map.unproject(map.project(target,zoom).add(rotation?.screenToMap(offset)??offset),zoom);
-  const options={animate:!reduced,duration:.55,easeLinearity:.28};
+  const options={animate:!reduced,duration,easeLinearity:.28};
   map.stop();
   if(map.getZoom()===zoom)map.panTo(center,options);
   else map.flyTo(center,zoom,options);
 }
 
-export default function MapView({welcomePhase,focusRevision,places,categories,selected,onSelect,previewed,onPreview,position,lang,t,onLocate,locating,onSos,route,routeGuide,routeMode,routeOrigin,pickingOrigin,onPickOrigin,onCancelOrigin,navigation}) {
+export default function MapView({welcomePhase,focusRevision,places,hoverPlaces,categories,selected,onSelect,previewed,onPreview,position,lang,t,onLocate,locating,onSos,route,routeGuide,routeMode,routeOrigin,pickingOrigin,onPickOrigin,onCancelOrigin,navigation}) {
   const container=useRef(null),mapRef=useRef(null),markers=useRef(new Map()),userRef=useRef(null),onSelectRef=useRef(onSelect),creditsRef=useRef(null),selectedRef=useRef(selected);
   const stage=useRef(null),frame=useRef(null),viewport=useRef(null),rotation=useRef(null);
   const routeLayers=useRef(null);
   const motion=useRef({shape:null,distance:0,sampledAt:0});
   const camera=useRef({following:false,target:null});
   const previewRef=useRef(previewed);
+  const hoverIds=useMemo(()=>hoverPlaces&&new Set(hoverPlaces.map(place=>place.id)),[hoverPlaces]);
+  const hoverIdsRef=useRef(hoverIds);
+  hoverIdsRef.current=hoverIds;
   const pickOriginRef=useRef(null);
   const welcomeCamera=useRef(welcomePhase==='open'&&!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
   pickOriginRef.current=pickingOrigin?onPickOrigin:null;
@@ -66,9 +83,12 @@ export default function MapView({welcomePhase,focusRevision,places,categories,se
   const [rotated,setRotated]=useState(false);
   const [style,setStyle]=useState(DEFAULT_MAP_STYLE),[mapStatus,setMapStatus]=useState('loading');
   useEffect(()=>{
-    const map=L.map(container.current,{zoomControl:false,minZoom:2,maxZoom:19,attributionControl:false,touchZoom:'center'})
-      .setView(welcomeCamera.current?WELCOME_CENTER:CENTER,welcomeCamera.current?13:DEFAULT_ZOOM);
+    const map=L.map(container.current,{...vietnamMapOptions,zoomControl:false,attributionControl:false,touchZoom:'center'});
+    const zoom=welcomeCamera.current?13:DEFAULT_ZOOM;
+    const center=map.project(welcomeCamera.current?WELCOME_CENTER:CENTER,zoom);
+    map.setView(map.unproject(center.subtract([desktopMapInset(map)/2,0]),zoom),zoom);
     mapRef.current=map;
+    const stopZoomLimit=limitVietnamZoom(map,frame.current);
     L.polygon(AN_THUONG_AREA,{
       color:'#43826a',weight:2,dashArray:'6 6',opacity:.78,fillOpacity:.055,interactive:false,
       className:'an-thuong-outline',
@@ -80,16 +100,16 @@ export default function MapView({welcomePhase,focusRevision,places,categories,se
     const mapStage=stage.current;
     rotation.current=addMapRotation(map,viewport.current,frame.current,bearing=>{
       mapStage.style.setProperty('--north-angle',`${bearing}rad`);
+      viewport.current.style.setProperty('--map-upright',`${-bearing}rad`);
       setRotated(Boolean(bearing));
     });
-    return()=>{rotation.current.destroy();rotation.current=null;creditsRef.current?.destroy();creditsRef.current=null;map.remove();markers.current.clear();mapRef.current=null;userRef.current=null;};
+    return()=>{stopZoomLimit();rotation.current.destroy();rotation.current=null;creditsRef.current?.destroy();creditsRef.current=null;map.remove();markers.current.clear();mapRef.current=null;userRef.current=null;};
   },[]);
   useEffect(()=>{
     if(welcomePhase==='open'||!welcomeCamera.current||!mapRef.current)return;
     welcomeCamera.current=false;
     const map=mapRef.current;
-    if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)map.setView(CENTER,DEFAULT_ZOOM,{animate:false});
-    else map.flyTo(CENTER,DEFAULT_ZOOM,{duration:1.8});
+    focusMap(map,CENTER,DEFAULT_ZOOM,rotation.current,1.8);
   },[welcomePhase]);
   useEffect(()=>{if(mapRef.current)return addArchipelagoLayer(mapRef.current,lang,{imagery:style==='satellite'});},[lang,style]);
   useEffect(()=>{creditsRef.current?.setLabel(t('mapCredits'));},[lang]);
@@ -160,6 +180,7 @@ export default function MapView({welcomePhase,focusRevision,places,categories,se
         element?.setAttribute('title',marker.options.title);
         element?.setAttribute('aria-current',String(id===selectedRef.current));
         element?.classList.toggle('is-previewed',id===previewRef.current);
+        setGroupMarkerState(element,id,hoverIdsRef.current);
       }
     };
     syncVisibility();
@@ -167,12 +188,26 @@ export default function MapView({welcomePhase,focusRevision,places,categories,se
     return()=>map.off('zoomend',syncVisibility);
   },[places,categories,selected,onPreview]);
   useEffect(()=>{
+    for(const [id,marker] of markers.current)setGroupMarkerState(marker.getElement(),id,hoverIds);
+  },[hoverIds]);
+  useEffect(()=>{
     const map=mapRef.current;
     if(!map)return;
     const marker=markers.current.get(selected);
     if(!marker)return;
     focusMap(map,marker.getLatLng(),Math.max(map.getZoom(),16),rotation.current);
   },[selected,focusRevision]);
+  useEffect(()=>{
+    const map=mapRef.current;
+    if(!map)return;
+    if(!hoverPlaces?.length||route||pickingOrigin)return;
+    const timer=setTimeout(()=>{
+      const bounds=L.latLngBounds(hoverPlaces.map(point=>[point.lat,point.lng]));
+      // Pan at the current zoom so successive previews keep the same label detail.
+      focusMap(map,bounds.getCenter(),map.getZoom(),rotation.current,.46,Math.min(235,frame.current.clientWidth/3));
+    },170);
+    return ()=>clearTimeout(timer);
+  },[hoverPlaces,route,pickingOrigin]);
   useEffect(()=>{
     for(const [id,marker] of markers.current){
       marker.getElement()?.classList.toggle('is-previewed',id===previewed);
@@ -221,9 +256,9 @@ export default function MapView({welcomePhase,focusRevision,places,categories,se
     const line=L.polyline(points,{color:'#2968dc',weight:5,opacity:1,interactive:false,className:'navigation-line'}).addTo(map);
     routeLayers.current=[outline,line];
     const mobile=window.matchMedia?.('(max-width: 700px)').matches;
-    const detailWidth=mobile?0:container.current.closest('.map-workspace')?.querySelector('.place-details')?.offsetWidth||0;
+    const leftInset=desktopMapInset(map);
     if(!active){
-      const topLeft=[24+detailWidth,mobile?246:195];
+      const topLeft=[24+leftInset,mobile?246:195];
       const bottomRight=[mobile?55:40,70];
       map.stop();
       if(!rotation.current?.bearing()||!fitRotatedRoute(map,rotation.current,frame.current,points,topLeft,bottomRight)){
@@ -282,7 +317,7 @@ export default function MapView({welcomePhase,focusRevision,places,categories,se
     }
     return ()=>cancelAnimationFrame(animation);
   },[active,following,livePosition,remaining,shape]);
-  return <section ref={stage} className={`map-stage ${pickingOrigin?'is-picking-origin':''} ${routeGuide?'has-route-guide':''}`} data-basemap-status={mapStatus} aria-label={t('community')}>
+  return <section ref={stage} className={`map-stage ${pickingOrigin?'is-picking-origin':''} ${routeGuide?'has-route-guide':''}`} data-basemap-status={mapStatus} data-map-style={style} aria-label={t('community')}>
     <div ref={frame} className="map-frame"><div ref={viewport} className="map-rotation-viewport"><div ref={container} className="leaflet-map"/></div></div>
     {mapStatus==='loading'&&<div className="map-loading" role="status">{t('loadingMap')}</div>}
     {routeGuide}
@@ -294,18 +329,20 @@ export default function MapView({welcomePhase,focusRevision,places,categories,se
       <button className={`icon-button ${locating?'locating':''}`} onClick={active?resume:onLocate} disabled={locating} title={t('location')} aria-label={t('location')}><Icon name="locate" size={18}/></button>
       {rotated&&<button className="icon-button map-north" onClick={()=>rotation.current?.reset()} title={t('mapNorth')} aria-label={t('mapNorth')}><span>N</span><Icon name="down" size={12}/></button>}
     </div>
-    <div className="map-bottom-tools"><button className="map-tool mobile-layers-toggle" aria-label={t('mapStyle')} aria-expanded={layersOpen} aria-controls="map-layers-panel" onClick={()=>setLayersOpen(open=>!open)}><Icon name={layersOpen?'x':'layers'} size={21}/></button><div id="map-layers-panel" className={`map-style-control ${layersOpen?'is-open':''}`} role="group" aria-label={t('mapStyle')} style={{'--mode-index':MAP_MODES.findIndex(([value])=>value===style)}}>{MAP_MODES.map(([value,label])=><button key={value} className={style===value?'active':''} aria-pressed={style===value} onClick={()=>{setStyle(value);setLayersOpen(false);}}>{t(label)}</button>)}</div><button className="sos-button" aria-label={`SOS ${t('emergency')}`} onClick={onSos}><span/><Icon className="sos-phone-icon" name="phone" size={17}/><span className="sos-text">SOS</span><span className="sos-label">{t('emergency')}</span><Icon className="mobile-sos-icon" name="phone" size={22}/></button></div>
-    <div className="map-legend"><span style={{color:'#3582bc'}}><Icon name="shield" size={13}/>SafePoint</span><span style={{color:'#4e6089'}}><Icon name="landmark" size={13}/>{t('civic')}</span><span style={{color:'#22936a'}}><Icon name="recycle" size={13}/>GreenPoint</span><span style={{color:'#bd9556'}}><Icon name="store" size={13}/>{t('utilities')}</span></div>
+    <div className="map-bottom-tools"><button className="map-tool mobile-layers-toggle" aria-label={t('mapStyle')} aria-expanded={layersOpen} aria-controls="map-layers-panel" onClick={()=>setLayersOpen(open=>!open)}><Icon name={layersOpen?'x':'layers'} size={21}/></button><div id="map-layers-panel" className={`map-style-control ${layersOpen?'is-open':''}`} role="group" aria-label={t('mapStyle')} style={{'--mode-count':MAP_MODES.length,'--mode-index':MAP_MODES.findIndex(([value])=>value===style)}}>{MAP_MODES.map(([value,label])=><button key={value} className={style===value?'active':''} aria-pressed={style===value} onClick={()=>{setStyle(value);setLayersOpen(false);}}>{t(label)}</button>)}</div><button className="sos-button" aria-label={`SOS ${t('emergency')}`} onClick={onSos}><span/><Icon className="sos-phone-icon" name="phone" size={17}/><span className="sos-text">SOS</span><span className="sos-label">{t('emergency')}</span><Icon className="mobile-sos-icon" name="phone" size={22}/></button></div>
+    <div className="map-legend"><span style={{color:'#3582bc'}}><Icon name="shield" size={13}/>{t('safe')}</span><span style={{color:'#22936a'}}><Icon name="recycle" size={13}/>{t('green')}</span><span style={{color:'#855f35'}}><Icon name="leaf" size={13}/>{t('partner')}</span></div>
   </section>;
 }
 export function CoordinatePicker({lat,lng,onChange,t,readOnly=false}) {
   const el=useRef(null),mapRef=useRef(null),markerRef=useRef(null),change=useRef(onChange);change.current=onChange;
   useEffect(()=>{
     const initial=[Number.isFinite(lat)?lat:CENTER[0],Number.isFinite(lng)?lng:CENTER[1]];
-    const map=L.map(el.current,{zoomControl:false,attributionControl:false,scrollWheelZoom:false,minZoom:2,maxZoom:19}).setView(initial,15);mapRef.current=map;
+    const map=L.map(el.current,{...vietnamMapOptions,zoomControl:false,attributionControl:false,scrollWheelZoom:false}).setView(initial,15);mapRef.current=map;
     const credits=addCollapsibleAttribution(map,t('mapCredits'),creditsIcon);
     L.control.zoom(zoomIcons).addTo(map);
     const stop=addBasemap(map);
+    const stopZoomLimit=limitVietnamZoom(map,el.current);
+    const removeIslands=addArchipelagoLayer(map);
     const marker=L.marker(initial,{draggable:!readOnly,icon:pinIcon({kind:'green',icon:'pin',color:'#16845d'},true)}).addTo(map);markerRef.current=marker;
     const update=ll=>change.current({lat:Number(ll.lat.toFixed(6)),lng:Number(ll.lng.toFixed(6))});
     if(!readOnly){
@@ -313,7 +350,7 @@ export function CoordinatePicker({lat,lng,onChange,t,readOnly=false}) {
       marker.on('dragend',()=>update(marker.getLatLng()));
     }
     const resize=new ResizeObserver(()=>map.invalidateSize());resize.observe(el.current);
-    return()=>{resize.disconnect();stop();credits.destroy();map.remove();};
+    return()=>{resize.disconnect();stopZoomLimit();removeIslands();stop();credits.destroy();map.remove();};
   },[]);
   useEffect(()=>{
     if(!Number.isFinite(Number(lat))||!Number.isFinite(Number(lng))||Math.abs(lat)>90||Math.abs(lng)>180)return;
@@ -321,4 +358,67 @@ export function CoordinatePicker({lat,lng,onChange,t,readOnly=false}) {
     if(readOnly)mapRef.current?.panTo([lat,lng],{animate:false});
   },[lat,lng,readOnly]);
   return <><div ref={el} className="coordinate-map" aria-label={t('locationSection')}/>{!readOnly&&<small className="field-hint">{t('pickHint')}</small>}</>;
+}
+
+export function AdminPlacesMap({places,categories,selected,onSelect,t,lang}) {
+  const element=useRef(null);
+  const mapRef=useRef(null);
+  const pins=useRef(new Map());
+  const select=useRef(onSelect);
+  select.current=onSelect;
+
+  useEffect(()=>{
+    const map=L.map(element.current,{...vietnamMapOptions,zoomControl:false,attributionControl:false}).setView(CENTER,15);
+    mapRef.current=map;
+    const credits=addCollapsibleAttribution(map,t('mapCredits'),creditsIcon);
+    const stopBase=addBasemap(map);
+    const stopZoom=limitVietnamZoom(map,element.current);
+    L.control.zoom({...zoomIcons,position:'topleft'}).addTo(map);
+    const observer=new ResizeObserver(()=>map.invalidateSize());
+    observer.observe(element.current);
+    return ()=>{observer.disconnect();stopZoom();stopBase();credits.destroy();map.remove();mapRef.current=null;};
+  },[]);
+
+  useEffect(()=>{
+    if(mapRef.current)return addArchipelagoLayer(mapRef.current,lang);
+  },[lang]);
+
+  useEffect(()=>{
+    const map=mapRef.current;
+    if(!map)return;
+    const layer=L.layerGroup().addTo(map);
+    for(const place of places){
+      const category=getCategory(categories,place.category);
+      if(!category)continue;
+      const marker=L.marker([place.lat,place.lng],{
+        title:place.name,icon:pinIcon(category,false,place.status),autoPanOnFocus:false,
+      }).on('click',()=>select.current(place.id)).addTo(layer);
+      marker.getElement()?.setAttribute('aria-label',place.name);
+      pins.current.set(place.id,{marker,category,status:place.status});
+    }
+    return ()=>{layer.remove();pins.current.clear();};
+  },[places,categories]);
+
+  useEffect(()=>{
+    const map=mapRef.current;
+    if(!map)return;
+    map.invalidateSize({pan:false});
+    for(const [id,{marker,category,status}] of pins.current){
+      const icon=pinIcon(category,id===selected,status);
+      if(marker.options.icon.options.html!==icon.options.html)marker.setIcon(icon);
+      marker.setZIndexOffset(id===selected?1000:0);
+      marker.getElement()?.setAttribute('aria-label',marker.options.title);
+    }
+    const point=pins.current.get(selected)?.marker.getLatLng();
+    if(point){
+      const zoom=Math.max(15,map.getZoom());
+      const center=map.unproject(map.project(point,zoom).add([0,element.current.clientHeight*.19]),zoom);
+      map.setView(center,zoom,{animate:!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches});
+    }else if(pins.current.size){
+      const bounds=L.latLngBounds([...pins.current.values()].map(({marker})=>marker.getLatLng()));
+      map.fitBounds(bounds,{padding:[32,40],maxZoom:16,animate:false});
+    }
+  },[selected,places,categories]);
+
+  return <div ref={element} className="coordinate-map admin-map-canvas" aria-label={t('viewMap')}/>;
 }

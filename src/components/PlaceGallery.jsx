@@ -28,10 +28,10 @@ export default function PlaceGallery({images, name, t}) {
           e.preventDefault();
           go(Math.max(0,Math.min(images.length-1,index+(e.key==='ArrowRight'?1:-1))));
         }}>
-        {images.map(({src,credit},i)=><button type="button" className="place-gallery-slide" key={src}
+        {images.map((src,i)=><button type="button" className="place-gallery-slide" key={src}
           aria-label={`${t('photoEnlarge')} ${i+1}`} onClick={()=>show(i)}>
           <Icon name="pin" size={24}/>
-          <img src={src} alt={credit?`${t('demoImage')} ${i+1}`:name} loading={i===0?'eager':'lazy'} onError={e=>{e.currentTarget.hidden=true;}}/>
+          <img src={src} alt={name} loading={i===0?'eager':'lazy'} onError={e=>{e.currentTarget.hidden=true;}}/>
         </button>)}
       </div>
       {images.length>1&&<>
@@ -40,7 +40,6 @@ export default function PlaceGallery({images, name, t}) {
         <span className="place-gallery-count" aria-live="polite">{index+1} / {images.length}</span>
       </>}
     </div>
-    {images[index]?.credit&&<figcaption><a href={images[index].credit} target="_blank" rel="noreferrer">{t('demoImage')} · Unsplash <Icon name="arrow" size={12}/></a></figcaption>}
   </figure>
   {enlarged&&<Modal title={name} onClose={()=>setZoom(null)} className="photo-modal" t={t}>
     <div className="photo-viewer" onKeyDown={e=>{
@@ -51,14 +50,13 @@ export default function PlaceGallery({images, name, t}) {
       swipe.current=null;
       if(Math.abs(delta)>50)show(zoom+(delta<0?1:-1));
     }} onTouchCancel={()=>{swipe.current=null;}}>
-      <img key={enlarged.src} src={enlarged.src} alt={enlarged.credit?`${t('demoImage')} ${zoom+1}`:name}/>
+      <img key={enlarged} src={enlarged} alt={name}/>
       {images.length>1&&<>
         <button type="button" autoFocus className="place-gallery-arrow previous" aria-label={t('photoPrevious')} aria-disabled={zoom===0} onClick={()=>show(zoom-1)}><Icon name="left" size={20}/></button>
         <button type="button" className="place-gallery-arrow next" aria-label={t('photoNext')} aria-disabled={zoom===images.length-1} onClick={()=>show(zoom+1)}><Icon name="right" size={20}/></button>
         <span className="place-gallery-count" aria-live="polite">{zoom+1} / {images.length}</span>
       </>}
     </div>
-    {enlarged.credit&&<a className="photo-credit" href={enlarged.credit} target="_blank" rel="noreferrer">{t('demoImage')} · Unsplash <Icon name="arrow" size={12}/></a>}
   </Modal>}
   </>;
 }

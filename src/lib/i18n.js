@@ -15,7 +15,7 @@ Object.assign(messages.vi, {
   invalidImageUrl: 'Đường dẫn ảnh không hợp lệ. Kiểm tra lại URL hoặc để trống trường ảnh.',
  title:'Khám phá An Thượng', safeTitle:'Điểm hỗ trợ cộng đồng', greenTitle:'Thu gom & tái chế', partnerTitle:'Đối tác địa phương',
  subtitle:'An toàn, tiện ích và môi trường quanh bạn.', localGuide:'BẢN ĐỒ CỘNG ĐỒNG', explore:'Khám phá', modules:'Các nhóm địa điểm', allCategories:'Tất cả danh mục',
- osmDirections:'Mở chỉ đường trên OpenStreetMap', mapLight:'Tối giản', mapStreets:'Chi tiết', mapStyle:'Nền bản đồ', vectorFallback:'Đang dùng nền cơ bản vì bản đồ vector không khả dụng.',
+ osmDirections:'Mở chỉ đường trên OpenStreetMap', mapLight:'Tiêu chuẩn', mapDark:'Nền tối', mapStreets:'Chi tiết', mapStyle:'Nền bản đồ', vectorFallback:'Đang dùng nền cơ bản vì bản đồ vector không khả dụng.',
  previousPage:'Trang trước',nextPage:'Trang sau',adminTitle:'Tổng quan hệ thống',adminSubtitle:'Quản lý địa điểm và trạng thái điểm thu gom tại An Thượng.',
  loginTitle:'Quản trị SafeMap',loginSubtitle:'Quản lý dữ liệu địa điểm cộng đồng.', defaultSort:'Danh sách địa điểm'
 });
@@ -28,7 +28,7 @@ Object.assign(messages.en, {
   invalidImageUrl: 'The image link is invalid. Check the URL or leave the image field blank.',
  title:'Explore An Thuong', safeTitle:'Community support', greenTitle:'Collection & recycling', partnerTitle:'Local partners',
  subtitle:'Safety, local services and the environment around you.',localGuide:'COMMUNITY MAP',explore:'Explore',modules:'Location groups',allCategories:'All categories',
- osmDirections:'Open directions on OpenStreetMap',mapLight:'Minimal',mapStreets:'Detailed',mapStyle:'Map style',vectorFallback:'Using the basic map because vector maps are unavailable.',
+ osmDirections:'Open directions on OpenStreetMap',mapLight:'Standard',mapDark:'Dark',mapStreets:'Detailed',mapStyle:'Map style',vectorFallback:'Using the basic map because vector maps are unavailable.',
  previousPage:'Previous page',nextPage:'Next page',adminTitle:'System overview',adminSubtitle:'Manage local places and collection point statuses in An Thuong.',loginTitle:'SafeMap administration',loginSubtitle:'Manage your community location data.',defaultSort:'Locations'
 });
 
@@ -104,11 +104,11 @@ Object.assign(messages.en, {
  navigationArrived:'You have arrived.'
 });
 
-Object.assign(messages.vi,{demoImage:'Ảnh minh họa',demoPhone:'Số minh họa'});
-Object.assign(messages.en,{demoImage:'Illustration',demoPhone:'Demo number'});
+Object.assign(messages.vi,{demoPhone:'Số minh họa'});
+Object.assign(messages.en,{demoPhone:'Demo number'});
 
-Object.assign(messages.vi,{placePhotos:'Ảnh địa điểm',photoEnlarge:'Phóng to ảnh',photoPrevious:'Ảnh trước',routeRetry:'Thử lại',routeRemaining:'Còn',photoNext:'Ảnh tiếp theo',demoCall:'Đây là số demo, không thực hiện cuộc gọi.'});
-Object.assign(messages.en,{placePhotos:'Place photos',photoEnlarge:'Enlarge photo',photoPrevious:'Previous photo',routeRetry:'Try again',routeRemaining:'Remaining',photoNext:'Next photo',demoCall:'This is a demo number. No call was placed.'});
+Object.assign(messages.vi,{placePhotos:'Ảnh địa điểm',photoEnlarge:'Phóng to ảnh',photoPrevious:'Ảnh trước',routeRetry:'Thử lại',routeRemaining:'Còn',photoNext:'Ảnh tiếp theo'});
+Object.assign(messages.en,{placePhotos:'Place photos',photoEnlarge:'Enlarge photo',photoPrevious:'Previous photo',routeRetry:'Try again',routeRemaining:'Remaining',photoNext:'Next photo'});
 Object.assign(messages.vi, {
   welcomeArea: 'An Thượng · Đà Nẵng',
   welcomeDescription: 'Bản đồ cộng đồng giúp bạn tìm điểm hỗ trợ, nơi thu gom tái chế và các cửa hàng đồng hành quanh An Thượng.',
@@ -175,9 +175,12 @@ Object.assign(messages.vi, {
   logoutError: 'Không đăng xuất được. Vui lòng thử lại.',
   adminFirebase: 'Thay đổi đã lưu sẽ được cập nhật lên bản đồ cộng đồng.',
   saving: 'Đang lưu…',
-  galleryUrls: 'Link ảnh phụ',
-  galleryHint: 'Tối đa 5 link, mỗi link một dòng',
-  invalidGallery: 'Nhập tối đa 5 đường dẫn ảnh hợp lệ.',
+  galleryUrls: 'Ảnh phụ',
+  galleryHint: 'Ảnh phụ hiển thị theo thứ tự bên dưới, sau ảnh chính.',
+  galleryImage: 'Ảnh phụ',
+  addGalleryImage: 'Thêm ảnh phụ',
+  duplicateGalleryImage: 'Link này đã được dùng cho một ảnh khác.',
+  invalidGallery: 'Kiểm tra lại các link ảnh phụ đã đánh dấu.',
 });
 
 Object.assign(messages.en, {
@@ -199,17 +202,28 @@ Object.assign(messages.en, {
   logoutError: 'Could not sign out. Please try again.',
   adminFirebase: 'Saved changes are published to the community map.',
   saving: 'Saving…',
-  galleryUrls: 'Additional image URLs',
-  galleryHint: 'Up to 5 URLs, one per line',
-  invalidGallery: 'Enter up to 5 valid image URLs.',
+  galleryUrls: 'Additional photos',
+  galleryHint: 'Additional photos appear in this order, after the cover photo.',
+  galleryImage: 'Photo',
+  addGalleryImage: 'Add a photo',
+  duplicateGalleryImage: 'This link is already used for another photo.',
+  invalidGallery: 'Check the highlighted photo links.',
 });
 
 Object.assign(messages.vi, {
   kind:'Nhóm', allGroups:'Tất cả nhóm', allPlaces:'Tất cả địa điểm', placeCount:'Số địa điểm',
   overviewSummary:'Phân bố', overviewActivity:'Cập nhật', overviewTraffic:'Lượt truy cập',
   groupDistribution:'Địa điểm theo nhóm', statusDistribution:'Trạng thái địa điểm',
-  trafficUnavailable:'SafeMap chưa kết nối số liệu truy cập. Bạn có thể mở Firebase Console để xem hoặc thiết lập Analytics cho dự án.',
-  openFirebase:'Mở Firebase Console', exportExcel:'Xuất Excel', exportingExcel:'Đang tạo Excel…',
+  trafficUnavailable:'Chưa kết nối Google Analytics để đọc báo cáo. Cần cấu hình ID thuộc tính GA4 và tài khoản dịch vụ.',
+  trafficEndpointMissing:'Bản chạy này chưa có dịch vụ báo cáo. Mở bản trên Vercel hoặc chạy bằng vercel dev để xem số liệu.',
+  trafficDemo:'Báo cáo lượt truy cập chỉ có trong bản quản trị kết nối Firebase.',
+  trafficLoading:'Đang tải báo cáo…', trafficError:'Chưa tải được báo cáo Google Analytics. Vui lòng thử lại.',
+  trafficEmpty:'Google Analytics chưa ghi nhận lượt xem trong kỳ này.',
+  trafficPeriod:'7 ngày đã kết thúc gần nhất · Bản đồ cộng đồng', trafficRefresh:'Làm mới',
+  trafficViews:'Lượt xem bản đồ', trafficUsers:'Người dùng', trafficDaily:'Lượt xem theo ngày',
+  unknownDate:'Chưa có ngày cập nhật',
+  noPlacePhotos:'Chưa có ảnh địa điểm', placeImages:'Hình ảnh địa điểm', previewMainImage:'Xem ảnh chính', noMainImage:'Chưa có ảnh chính',
+  mainImage:'URL ảnh chính', mainImageHint:'Ảnh bìa hiển thị ở danh sách và đầu bộ ảnh.', exportExcel:'Xuất Excel', exportingExcel:'Đang tạo Excel…',
   excelError:'Không xuất được tệp Excel. Vui lòng thử lại.', exported:'Đã xuất tệp Excel.',
   latitude:'Vĩ độ', longitude:'Kinh độ',
 });
@@ -217,8 +231,34 @@ Object.assign(messages.en, {
   kind:'Group', allGroups:'All groups', allPlaces:'All places', placeCount:'Places',
   overviewSummary:'Distribution', overviewActivity:'Updates', overviewTraffic:'Traffic',
   groupDistribution:'Places by group', statusDistribution:'Place status',
-  trafficUnavailable:'Traffic reporting is not connected. Open Firebase Console to view or set up Analytics for the project.',
-  openFirebase:'Open Firebase Console', exportExcel:'Export Excel', exportingExcel:'Creating workbook…',
+  trafficUnavailable:'Google Analytics reporting needs a GA4 property ID and service account.',
+  trafficEndpointMissing:'This build has no reporting service. Open the Vercel deployment or use vercel dev to view the report.',
+  trafficDemo:'Traffic reporting is available in the admin app connected to Firebase.',
+  trafficLoading:'Loading report…', trafficError:'Could not load the Google Analytics report. Try again.',
+  trafficEmpty:'Google Analytics recorded no views in this period.',
+  trafficPeriod:'Last 7 completed days · Community map', trafficRefresh:'Refresh',
+  trafficViews:'Map views', trafficUsers:'Users', trafficDaily:'Daily views',
+  unknownDate:'No update date',
+  noPlacePhotos:'No location photos yet', placeImages:'Location photos', previewMainImage:'Preview cover photo', noMainImage:'No cover photo',
+  mainImage:'Cover photo URL', mainImageHint:'Used in the list and shown first in the gallery.', exportExcel:'Export Excel', exportingExcel:'Creating workbook…',
   excelError:'Could not export the Excel file. Please try again.', exported:'Excel file exported.',
   latitude:'Latitude', longitude:'Longitude',
 });
+
+Object.assign(messages.vi,{
+  opensAt:'Giờ mở cửa', closesAt:'Giờ đóng cửa', hoursNotes:'Ghi chú giờ hoạt động',
+  hoursExample:'Ví dụ: Thứ Hai – Thứ Sáu', hoursNextDay:'Giờ đóng cửa thuộc ngày hôm sau.',
+  hoursInvalid:'Chọn đủ giờ mở cửa và đóng cửa. Hai giờ cần khác nhau.',
+  previewImages:'Xem trước ảnh', previewImageError:'Không tải được ảnh từ link này.',
+  closeDetails:'Đóng thông tin địa điểm',
+});
+Object.assign(messages.en,{
+  opensAt:'Opens at', closesAt:'Closes at', hoursNotes:'Opening hours notes',
+  hoursExample:'For example, Monday to Friday', hoursNextDay:'Closing time is on the following day.',
+  hoursInvalid:'Choose both opening and closing times. They must be different.',
+  previewImages:'Preview image', previewImageError:'Could not load the image from this link.',
+  closeDetails:'Close place details',
+});
+
+Object.assign(messages.vi,{collapseSidebar:'Thu gọn thanh bên',expandSidebar:'Mở thanh bên'});
+Object.assign(messages.en,{collapseSidebar:'Collapse sidebar',expandSidebar:'Expand sidebar'});
