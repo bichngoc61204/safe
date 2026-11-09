@@ -1,4 +1,4 @@
-import { regionalLabelStyle } from './cartography.js';
+import { regionalLabelStyle, standardPaint } from './cartography.js';
 import { placeHourRows } from './placeHours.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -57,9 +57,28 @@ test('Vietnam display filters keep land labels and reject boundaries, ferries an
  assert.equal(city.filter[2][0],'within');
  assert.equal(city.filter[2][1].type,'MultiPolygon');
  const roadLabel=result.layers.find(l=>l.id==='road_name');
- assert.equal(roadLabel.filter[1][0],'within');
+ assert.equal(roadLabel.filter[1][0],'any');
+ assert.equal(roadLabel.filter[1][1][1].type,'MultiPolygon');
+ assert.equal(roadLabel.filter[1][2][1].type,'Polygon');
  assert.equal(result.sources.world.attribution,'Required source');
  assert.deepEqual(regionalLabelStyle(source,{labelsOnly:true}).layers.map(l=>l.id),['place_city','road_name']);
+});
+
+test('Standard uses mapped building heights for depth and can recolor layers in place',()=>{
+ const building={id:'building',type:'fill',source:'world','source-layer':'building'};
+ const label={id:'street-name',type:'symbol',source:'world','source-layer':'transportation_name'};
+ const source={version:8,sources:{},layers:[building,label]};
+ const style=regionalLabelStyle(source,{standard:true,buildingDepth:true});
+ const lowShadow=style.layers.find(layer=>layer.id==='safemap-building-shadow-0-far');
+ const highShadow=style.layers.find(layer=>layer.id==='safemap-building-shadow-55-far');
+ const volume=style.layers.find(layer=>layer.type==='fill-extrusion');
+ assert.equal(volume.source,building.source);
+ assert.equal(style.layers.at(-2),volume);
+ assert.ok(style.layers.indexOf(highShadow)<style.layers.findIndex(layer=>layer.id===building.id));
+ assert.ok(highShadow.paint['fill-translate'].at(-1)[1][0]>lowShadow.paint['fill-translate'].at(-1)[1][0]);
+ assert.notEqual(standardPaint(volume,true)['fill-extrusion-color'],volume.paint['fill-extrusion-color']);
+ assert.equal(standardPaint(volume,true)['fill-extrusion-height'],volume.paint['fill-extrusion-height']);
+ assert.ok(!regionalLabelStyle(source,{standard:true}).layers.some(layer=>layer.type==='fill-extrusion'));
 });
 
 test('opening hours retain legacy notes and recognize a pair that closes the following day',()=>{

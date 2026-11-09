@@ -7,7 +7,7 @@ import {
   IconCircleCheck, IconClock, IconWorld, IconDownload, IconMenu2, IconChevronDown,
   IconEye, IconEyeOff, IconPlant, IconBuilding, IconMail, IconLock, IconFlame,
   IconHelpCircle, IconCircleOff, IconCrosshair, IconInfoCircle, IconLayersIntersect, IconZoomIn,
-  IconMotorbike, IconWalk, IconBike, IconCar, IconPhoto,
+  IconMotorbike, IconWalk, IconBike, IconCar, IconPhoto, IconSun, IconMoon, IconChartBar,
 } from '@tabler/icons-react';
 
 // Keep these keys stable for categories saved by earlier versions.
@@ -17,14 +17,14 @@ const icons = {
   search: IconSearch, pin: IconMapPin, navigation: IconNavigation, locate: IconCurrentLocation,
   plus: IconPlus, minus: IconMinus, x: IconX, back: IconArrowLeft, arrow: IconArrowUpRight,
   right: IconChevronRight, left: IconChevronLeft, filter: IconAdjustmentsHorizontal,
-  dashboard: IconLayoutDashboard, list: IconList, tags: IconTags, logout: IconLogout,
+  dashboard: IconLayoutDashboard, chart: IconChartBar, list: IconList, tags: IconTags, logout: IconLogout,
   edit: IconPencil, delete: IconTrash, phone: IconPhone, alert: IconAlertTriangle,
   check: IconCircleCheck, clock: IconClock, globe: IconWorld, download: IconDownload,
   menu: IconMenu2, down: IconChevronDown, eye: IconEye, eyeoff: IconEyeOff,
   sprout: IconPlant, building: IconBuilding, mail: IconMail, lock: IconLock,
   fire: IconFlame, help: IconHelpCircle, off: IconCircleOff, crosshair: IconCrosshair,
   info: IconInfoCircle, layers: IconLayersIntersect, zoom: IconZoomIn,
-  motorbike: IconMotorbike, walk: IconWalk, bike: IconBike, car: IconCar, image: IconPhoto,
+  motorbike: IconMotorbike, walk: IconWalk, bike: IconBike, car: IconCar, image: IconPhoto, sun: IconSun, moon: IconMoon,
 };
 
 export default function Icon({name,size=18,...props}) {

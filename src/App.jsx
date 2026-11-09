@@ -15,6 +15,7 @@ const catalogMessages = {
 function Brand({onClick}) {return <button className="brand" onClick={onClick}><span className="brand-mark"><Icon name="leaf" size={23}/></span><span><strong>SafeMap<span className="brand-separator">/</span><b>An Thượng</b></strong><small>AN TOÀN · TIỆN ÍCH · MÔI TRƯỜNG</small></span></button>;}
 export default function App(){
  const [welcomePhase,setWelcomePhase]=useState('open');
+ const [mapStyle,setMapStyle]=useState('light');
  const firebase = useFirebaseBackend();
  const [lang,setLang]=useState('vi'),[mode,setMode]=useState(()=>isAdminPath()?'admin':'public'),[scope,setScope]=useState('map'),[selected,setSelected]=useState(null),[position,setPosition]=useState(null),[locating,setLocating]=useState(false),[sos,setSos]=useState(false),[toast,setToast]=useState('');
  function openMap(){
@@ -93,20 +94,29 @@ export default function App(){
    }).catch(()=>{});
    return ()=>{disposed=true;permission?.removeEventListener?.('change',sync);};
  },[]);
- return <><header className={`site-header ${mode==='public'?'map-mode-header':''}`}>
+ return <><header className={`site-header ${mode==='public'?'map-mode-header':'admin-mode-header'}`}>
    <Brand onClick={openMap}/>
    <span className="header-location">Đà Nẵng, Việt Nam<span className="header-location-dot"/></span>
    <div className="header-controls">
-     {mode==='admin'&&<a className="admin-map-link" href="/" onClick={event=>{
+     {mode==='admin'&&<a className="admin-map-link" aria-label={t('community')} href="/" onClick={event=>{
        if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
        event.preventDefault();openMap();
-     }}>{t('community')}</a>}
+     }}><Icon name="map" size={17}/><span>{t('community')}</span></a>}
      {mode==='admin'&&session&&<button className="icon-button header-logout" aria-label={t('logout')} title={t('logout')} onClick={logout}><Icon name="logout" size={17}/></button>}
+     <div className="header-segments mobile-language" role="group" aria-label="Ngôn ngữ / Language">
+       <button type="button" aria-label="Tiếng Việt" aria-pressed={lang==='vi'} onClick={()=>setLang('vi')}>VI</button>
+       <button type="button" aria-label="English" aria-pressed={lang==='en'} onClick={()=>setLang('en')}>EN</button>
+     </div>
+     {mode==='public'&&<button type="button" className="map-theme-toggle" aria-label={t('mapDark')}
+       aria-pressed={mapStyle==='dark'} title={t(mapStyle==='dark'?'mapLight':'mapDark')}
+       onClick={()=>setMapStyle(style=>style==='dark'?'light':'dark')}>
+       <Icon key={mapStyle==='dark'?'dark':'light'} name={mapStyle==='dark'?'moon':'sun'} size={17}/>
+     </button>}
      <Dropdown className="language-control" menuClass="language-menu" compact value={lang} label="Language / Ngôn ngữ" onChange={setLang}>
        <option value="vi">VI</option><option value="en">EN</option>
      </Dropdown>
    </div>
- </header>{mode==='public'?<PublicApp welcomePhase={welcomePhase} data={data} scope={scope} setScope={setScope} selected={selected} setSelected={setSelected} t={t} lang={lang} position={position} onLocate={()=>locate()} onRouteLocate={()=>locate(false)} locating={locating} onSos={()=>setSos(true)}/>:session && firebase.catalog ? <Admin data={data} commit={commit} t={t} lang={lang} notify={notify} onLogout={logout} email={firebase.editor.email} getIdToken={firebase.backend?.getIdToken}/>
+ </header>{mode==='public'?<PublicApp mapStyle={mapStyle} setMapStyle={setMapStyle} welcomePhase={welcomePhase} data={data} scope={scope} setScope={setScope} selected={selected} setSelected={setSelected} t={t} lang={lang} position={position} onLocate={()=>locate()} onRouteLocate={()=>locate(false)} locating={locating} onSos={()=>setSos(true)}/>:session && firebase.catalog ? <Admin data={data} commit={commit} t={t} lang={lang} notify={notify} onLogout={logout} email={firebase.editor.email} getIdToken={firebase.backend?.getIdToken}/>
  : session || firebase.editor.status==='checking' ? <main className="admin-main"><p role="status">{t(session?catalogNotice:'editorChecking')}</p></main>
  : <Login onLogin={firebase.backend?.login} onBack={openMap} t={t} available={Boolean(firebase.backend)} editorStatus={firebase.editor.status}/>} {mode==='public'&&welcomePhase!=='closed'&&<MapWelcome t={t} onReveal={()=>setWelcomePhase('revealing')} onEnter={()=>setWelcomePhase('closed')}/>} {sos&&<Modal title={t('emergency')} onClose={()=>setSos(false)} t={t}><div className="sos-content"><div className="sos-intro"><span><Icon name="phone" size={25}/></span><p>{t('sosNote')}</p></div>{[['shield','police','113'],['heart','medical','115'],['fire','fire','114']].map(([icon,key,num])=><a className="emergency-row" href={`tel:${num}`} key={num}><span className="emergency-icon"><Icon name={icon} size={23}/></span><span><strong>{t(key)}</strong><small>{num}</small></span><span className="call-emergency"><Icon name="phone" size={17}/>{t('call')}</span></a>)}</div></Modal>}{catalogNotice && !toast && <div className="toast" role="status"><Icon name="info" size={18}/><span>{t(catalogNotice)}</span>{firebase.catalogStatus==='error'&&<button type="button" onClick={firebase.retry} aria-label={t('routeRetry')}>{t('routeRetry')}</button>}</div>}{toast&&<div className="toast" role="status"><Icon name="help" size={18}/><span>{toast}</span><button onClick={()=>setToast('')} aria-label={t('close')}><Icon name="x" size={15}/></button></div>}</>;
 }

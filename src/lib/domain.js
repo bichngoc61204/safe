@@ -9,10 +9,15 @@ export function haversine(a,b) {
 export function formatDistance(m) { return m<1000 ? `${Math.round(m)}m` : `${(m/1000).toFixed(1)}km`; }
 export function getCategory(categories,id) { return categories.find(c=>c.id===id); }
 export function filterPlaces(places,categories,{query='',category='all',scope='map',status='all',position=null}={}) {
-  return places.filter(p=>{
-    const c=getCategory(categories,p.category);
-    return (category==='all'||p.category===category) && (scope==='map'||c?.kind===scope) && (status==='all'||(status==='alerts'?isAlert(p):p.status===status)) && normalize(`${p.name} ${p.address} ${p.owner} ${p.waste}`).includes(normalize(query));
-  }).sort((a,b)=>position?haversine(position,a)-haversine(position,b):0);
+  const term=normalize(query);
+  const groupCategories=scope==='map'?null:new Set(categories.filter(item=>item.kind===scope).map(item=>item.id));
+  const matches=places.filter(p=>
+    (category==='all'||p.category===category) && (!groupCategories||groupCategories.has(p.category)) &&
+    (status==='all'||(status==='alerts'?isAlert(p):p.status===status)) &&
+    (!term||normalize(`${p.name} ${p.address} ${p.owner} ${p.waste}`).includes(term)));
+  if(!position)return matches;
+  return matches.map(place=>({place,distance:haversine(position,place)}))
+    .sort((a,b)=>a.distance-b.distance).map(({place})=>place);
 }
 export function validData(data) {
   return data && Array.isArray(data.categories) && Array.isArray(data.places) && data.categories.length>0 && new Set(data.categories.map(c=>c.id)).size===data.categories.length && new Set(data.places.map(p=>p.id)).size===data.places.length && data.categories.every(c=>typeof c.id==='string'&&typeof c.name==='string'&&c.name.trim()&&typeof c.nameEn==='string'&&/^#[0-9a-f]{6}$/i.test(c.color)&&['safe','green','partner','service'].includes(c.kind)) && data.places.every(p=>typeof p.id==='string'&&typeof p.name==='string'&&p.name.trim()&&typeof p.address==='string'&&p.address.trim()&&getCategory(data.categories,p.category)&&Number.isFinite(p.lat)&&Math.abs(p.lat)<=90&&Number.isFinite(p.lng)&&Math.abs(p.lng)<=180&&statuses.includes(p.status));

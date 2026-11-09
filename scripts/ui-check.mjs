@@ -112,8 +112,26 @@ try{
  check(document.querySelectorAll('.marker-pin>svg').length===11,'Every map marker uses an icon instead of a number');
  check(document.querySelectorAll('.archipelago-label').length===2,'Both archipelagos retain ordinary map text');
  check(!document.querySelector('.map-region-button'),'No island-navigation action remains');
- check([...document.querySelectorAll('.map-style-control button')].map(b=>b.textContent).join(',')==='Bản đồ,Tiêu chuẩn,Nền tối,Vệ tinh','All four map modes are available');
+ check([...document.querySelectorAll('.map-style-control button')].map(b=>b.textContent).join(',')==='Bản đồ,Tiêu chuẩn,Vệ tinh','The map picker contains three basemaps');
  check(!!document.querySelector('.map-credits-button svg'),'Source info icon uses an aligned SVG');
+ const gestureViewport=document.querySelector('.map-rotation-viewport');
+ const gesture=(points)=>act(async()=>{
+   for(const [type,touches] of [
+     ['touchstart',[[200,240],[300,240]]],
+     ...points.map(pair=>['touchmove',pair]),
+     ['touchend',[]],
+   ]){
+     const event=new window.Event(type,{bubbles:true,cancelable:true});
+     Object.defineProperty(event,'touches',{value:touches.map(([clientX,clientY])=>({clientX,clientY}))});
+     gestureViewport.dispatchEvent(event);
+   }
+ });
+ await gesture([[[185,240],[315,244]],[[174,223],[326,258]]]);
+ check(!document.querySelector('.map-north'),'A pinch keeps its zoom mode when the fingers turn slightly');
+ await gesture([[[207,215],[293,265]],[[180,208],[320,273]]]);
+ check(!!document.querySelector('.map-north'),'A deliberate twist locks to map rotation');
+ await click(document.querySelector('.map-north'));
+
  check(document.querySelector('.custom-marker')?.getAttribute('aria-label')==='Công an Phường Mỹ An / An Thượng','Markers expose the actual place name to assistive technology');
  await input(document.querySelector('.public-toolbar input'),'phuoc thien');
  check(document.querySelectorAll('.place-card').length===1,'Live search works in React');
@@ -181,7 +199,8 @@ try{
    if(routeUnavailable)return new Response('{}',{status:503});
    return new Response(JSON.stringify({code:'Ok',routes:[{
      distance:220,duration:60,
-     geometry:{type:'LineString',coordinates:[origin,destination]},
+     geometry:{type:'LineString',coordinates:Array.from({length:241},(_,index)=>
+       origin.map((value,axis)=>value+(destination[axis]-value)*index/240))},
      legs:[{steps:[{distance:75,maneuver:{type:'depart'}},{distance:145,maneuver:{type:'turn',modifier:'left'}},{distance:0,maneuver:{type:'arrive'}}]}],
    }]}));
  };
@@ -219,6 +238,8 @@ try{
  const line=document.querySelector('.navigation-line');
  const fullLine=line.getAttribute('d');
  const remaining=()=>document.querySelector('.route-remaining-distance')?.textContent;
+ await move(NaN,108.242);
+ check(gpsWatch&&line.getAttribute('d')===fullLine,'An invalid GPS fix keeps the active route and watcher intact');
  await move(16.0512,108.242);
  const firstFrame=line.getAttribute('d');
  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,180));});
@@ -284,18 +305,40 @@ try{
  check(document.querySelectorAll('tbody tr').length===7,'Admin table paginates');
  await click(document.querySelector('.admin-place-name'));
  check(document.querySelectorAll('.admin-map-canvas .custom-marker').length===11&&!!document.querySelector('.admin-preview-content')&&document.querySelectorAll('tbody tr').length===7,'Admin shows all filtered pins alongside the table and opens the selected place sheet');
- await click(document.querySelector('.admin-preview-header button'));
+ const selectedName=document.querySelector('.admin-preview-content h3').textContent;
+ const hoveredRow=document.querySelectorAll('tbody tr')[1];
+ const hoveredName=hoveredRow.querySelector('.admin-place-name').textContent;
+ await act(async()=>hoveredRow.dispatchEvent(new window.PointerEvent('pointerover',{bubbles:true,pointerType:'mouse'})));
+ const brightPins=document.querySelectorAll('.admin-map-canvas .custom-marker:not(.is-admin-dimmed)');
+ check(brightPins.length===1&&brightPins[0].getAttribute('aria-label')===hoveredName&&document.querySelector('.admin-preview-content h3').textContent===selectedName,'Hover highlights the matching pin without switching the open place details');
+ await act(async()=>hoveredRow.dispatchEvent(new window.PointerEvent('pointerout',{bubbles:true,pointerType:'mouse'})));
+ check(!document.querySelector('.admin-map-canvas .is-admin-dimmed'),'Leaving the row restores all marker opacities');
+ const previewCard=document.querySelector('.admin-preview-content');
+ const adminMap=document.querySelector('.admin-map-canvas');
+ const photoGallery=previewCard.querySelector('.place-gallery');
+ check(document.querySelectorAll('.admin-places-list thead th').length===3&&!document.querySelector('.admin-places-list .table-actions'),'The places table leaves actions inside the details card');
+ await click(previewCard.querySelector('.admin-preview-actions .primary'));
+ const inlineName=previewCard.querySelector('input[name=name]');
+ check(!!inlineName&&!document.querySelector('dialog')&&adminMap.isConnected&&photoGallery?.isConnected,'Edit retains the map, details card and photo gallery');
+ await input(inlineName,selectedName+' - bản nháp');
+ await click(button('Hủy',previewCard));
+ check(previewCard.querySelector('h3').textContent===selectedName&&!cloudData.places.some(place=>place.name.endsWith(' - bản nháp')),'Cancel discards the draft without closing the details card');
+ await click(previewCard.querySelector('.admin-preview-actions .primary'));
+ await input(previewCard.querySelector('input[name=name]'),selectedName+' - đã cập nhật');
+ await submit(previewCard);
+ check(previewCard.isConnected&&previewCard.querySelector('h3').textContent===selectedName+' - đã cập nhật'&&cloudData.places.some(place=>place.name.endsWith(' - đã cập nhật')),'Saving publishes the edit in the same card');
+ await click(document.querySelector('.admin-sheet-heading button'));
+ check(!document.querySelector('.admin-preview-content')&&!!document.querySelector('.admin-map-canvas'),'Closing place details returns to the map');
  await click(button('Thêm địa điểm'));
  const form=document.querySelector('dialog form');
  check(!!form&&!!document.querySelector('.coordinate-map'),'Add form includes map picker');
- const labels=[...form.querySelectorAll('label')];
- const field=name=>labels.find(l=>l.querySelector('span')?.textContent.startsWith(name))?.querySelector('input');
- await input(field('Tên địa điểm'),'Điểm test React');
- await input(field('Địa chỉ'),'An Thượng test');
- await input(field('Giờ mở cửa'),'20:00');
+ const field=name=>form.elements.namedItem(name);
+ await input(field('name'),'Điểm test React');
+ await input(field('address'),'An Thượng test');
+ await input(field('opensAt'),'20:00');
  await submit(form);
  check(!!form.querySelector('[role=alert]'),'An opening time requires a closing time');
- await input(field('Giờ đóng cửa'),'02:00');
+ await input(field('closesAt'),'02:00');
  const photos=['https://example.com/first.jpg','https://example.com/second.jpg'];
  const extraFields=()=>[...form.querySelectorAll('.extra-image-row input')];
  await click(button('Thêm ảnh phụ',form));
@@ -314,14 +357,14 @@ try{
  check(!document.querySelector('dialog'),'Successful save closes the form');
  await input(document.querySelector('.table-toolbar input'),'Điểm test React');
  check(document.querySelectorAll('tbody tr').length===1,'Admin live search finds created record');
- await click(document.querySelector('button[title="Chỉnh sửa"]'));
- const editForm=document.querySelector('dialog form');
- const nameLabel=[...editForm.querySelectorAll('label')].find(l=>l.querySelector('span')?.textContent.startsWith('Tên địa điểm'));
- await input(nameLabel.querySelector('input'),'Điểm test đã sửa');
+ await click(document.querySelector('.admin-place-name'));
+ const editForm=document.querySelector('.admin-preview-content');
+ await click(button('Chỉnh sửa',editForm));
+ await input(editForm.elements.namedItem('name'),'Điểm test đã sửa');
  await submit(editForm);
  check(cloudData.places.some(p=>p.name==='Điểm test đã sửa'),'Editing persists changes');
  await input(document.querySelector('.table-toolbar input'),'Điểm test đã sửa');
- await click(document.querySelector('button[title="Xóa"]'));
+ await click(button('Xóa',editForm));
  check(!!document.querySelector('.delete-content'),'Delete requires confirmation');
  await click(button('Xóa',document.querySelector('dialog')));
  check(!cloudData.places.some(p=>p.name==='Điểm test đã sửa'),'Confirmed delete persists');
@@ -373,7 +416,7 @@ try{
  await click(button('Thêm địa điểm'));
  const cloudForm=document.querySelector('dialog form');
  await input(cloudForm.querySelector('input[required]'),'Điểm được đồng bộ');
- await input([...cloudForm.querySelectorAll('label')].find(label=>label.textContent.startsWith('Địa chỉ')).querySelector('input'),'An Thượng');
+ await input(cloudForm.elements.namedItem('address'),'An Thượng');
  failSave=true;
  await submit(cloudForm);
  check(!!cloudForm.querySelector('[role=alert]')&&cloudForm.isConnected,'A rejected cloud save keeps the form open with an error');

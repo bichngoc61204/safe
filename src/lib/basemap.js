@@ -1,5 +1,5 @@
 import L from 'leaflet';
-import { regionalLabelStyle, VIETNAM_VIEW, VIETNAM_PAN } from './cartography';
+import { regionalLabelStyle, standardPaint, VIETNAM_VIEW, VIETNAM_PAN } from './cartography';
 
 export const DEFAULT_MAP_STYLE='light';
 export const MAP_STYLES = {
@@ -31,48 +31,130 @@ export function limitVietnamZoom(map, frame) {
   observer.observe(frame);
   return ()=>{observer.disconnect();map.off('zoomend',showCountryAtLimit);};
 }
-async function loadCleanStyle(url,signal,{labelsOnly,dark}){
-  const cacheKey=url+(dark?'#dark':labelsOnly?'#labels':'#map');
+async function loadCleanStyle(url,signal,{labelsOnly,standard,buildingDepth}){
+  const cacheKey=url+(labelsOnly?'#labels':buildingDepth?'#standard-depth':standard?'#standard':'#map');
   if(stylesCache.has(cacheKey))return structuredClone(stylesCache.get(cacheKey));
   const response=await fetch(url,{signal});
   if(!response.ok)throw Error('Basemap style unavailable');
-  const style=regionalLabelStyle(await response.json(),{labelsOnly,dark});stylesCache.set(cacheKey,style);
+  const style=regionalLabelStyle(await response.json(),{labelsOnly,standard,buildingDepth});stylesCache.set(cacheKey,style);
   return structuredClone(style);
 }
 
-export function addBasemap(map,{style=DEFAULT_MAP_STYLE,onStatus=()=>{}}={}) {
-  let disposed=false,layer=null,rasterLayer=null,timer=null,attribution=null,vectorMap=null,labelsReady=false;
+export function addBasemap(map,{style=DEFAULT_MAP_STYLE,buildingDepth=false,onStatus=()=>{}}={}) {
+  let disposed=false,layer=null,rasterLayer=null,timer=null,vectorMap=null,loadedStyle=null;
+  let vectorReady=false,contextLost=false,dark=false,appliedDark=false;
+  const standard=style===DEFAULT_MAP_STYLE;
+  const hybrid=style==='satellite';
   const request=new AbortController();
   const report=value=>{if(!disposed)onStatus(value);};
-  const remove=()=>{clearTimeout(timer);if(vectorMap){vectorMap.off('error',fallback);vectorMap=null;}if(layer){layer.remove();layer=null;}if(rasterLayer){rasterLayer.remove();rasterLayer=null;}if(attribution){map.attributionControl?.removeAttribution(attribution);attribution=null;}};
-  function imagery(isFallback=false){
-    if(disposed)return;
-    rasterLayer=L.tileLayer(IMAGERY_URL,{maxZoom:19,maxNativeZoom:19,noWrap:true,attribution:imageryAttribution}).addTo(map);
-    rasterLayer.on('tileerror',()=>report('error'));
-    rasterLayer.on('load',()=>report(isFallback?'fallback':labelsReady?'hybrid':'imagery'));
+  function paintTheme(){
+    if(!standard||!vectorReady||contextLost||appliedDark===dark)return;
+    const reduceMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    for(const layerStyle of loadedStyle.layers){
+      const next=dark?standardPaint(layerStyle,true):layerStyle.paint;
+      const previous=appliedDark?standardPaint(layerStyle,true):layerStyle.paint;
+      for(const [property,value] of Object.entries(next)){
+        if(value===previous[property])continue;
+        vectorMap.setPaintProperty(layerStyle.id,`${property}-transition`,{duration:reduceMotion?0:280,delay:0});
+        vectorMap.setPaintProperty(layerStyle.id,property,value);
+      }
+    }
+    appliedDark=dark;
   }
-  function fallback(){if(disposed)return;remove();imagery(true);}
+  function removeImagery(){
+    rasterLayer?.remove();
+    rasterLayer=null;
+  }
+  function imagery(isFallback=false){
+    if(disposed||rasterLayer)return;
+    let hasTiles=false;
+    rasterLayer=L.tileLayer(IMAGERY_URL,{maxZoom:19,maxNativeZoom:19,noWrap:true,attribution:imageryAttribution});
+    rasterLayer.on('tileload',()=>{
+      if(hasTiles)return;
+      hasTiles=true;
+      report(isFallback?'fallback':vectorReady&&!contextLost?'hybrid':'imagery');
+    });
+    rasterLayer.on('load',()=>{if(!hasTiles)report('error');});
+    rasterLayer.addTo(map);
+    rasterLayer.bringToBack();
+  }
+  function fallback(){
+    if(disposed)return;
+    if(!hybrid)imagery(true);
+    report(hybrid?'imagery':'fallback');
+  }
+  function ready(){
+    clearTimeout(timer);
+    if(contextLost)return;
+    vectorReady=true;
+    layer.getContainer().style.visibility='';
+    paintTheme();
+    if(!hybrid)removeImagery();
+    report(hybrid?'hybrid':'vector');
+  }
+  function loseContext(){
+    contextLost=true;
+    layer.getContainer().style.visibility='hidden';
+    fallback();
+  }
+  function restoreContext(){
+    contextLost=false;
+    // Wait for the recovered canvas to draw before removing the backup underneath it.
+    if(vectorReady)vectorMap.once('render',ready);
+  }
   report('loading');
-  const hybrid=style==='satellite';
   if(hybrid)imagery();
-  if(!window.WebGLRenderingContext&&!window.WebGL2RenderingContext){if(!hybrid)imagery(true);}
+  if(!window.WebGLRenderingContext&&!window.WebGL2RenderingContext){if(!hybrid)fallback();}
   else {
     (async()=>{
       try{
         const [gl,{maplibreGL},{default:workerUrl},cleanStyle]=await Promise.all([
           import('maplibre-gl'),import('@maplibre/maplibre-gl-leaflet'),
           import('maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'),
-          loadCleanStyle(MAP_STYLES[style==='dark'?'light':style]||MAP_STYLES.streets,request.signal,{labelsOnly:hybrid,dark:style==='dark'}),
+          loadCleanStyle(MAP_STYLES[style]||MAP_STYLES.streets,request.signal,{
+            labelsOnly:hybrid,standard,buildingDepth:standard&&buildingDepth,
+          }),
         ]);
         if(disposed)return;
         gl.setWorkerUrl(workerUrl);
-        layer=maplibreGL({style:cleanStyle,attributionControl:false,interactive:false,renderWorldCopies:false}).addTo(map);
-        attribution=vectorAttribution;map.attributionControl?.addAttribution(attribution);
-        vectorMap=layer.getMaplibreMap();vectorMap.on('error',fallback);
-        vectorMap.once('load',()=>{labelsReady=true;clearTimeout(timer);report(hybrid?'hybrid':'vector');});
+        loadedStyle=cleanStyle;
+        layer=maplibreGL({
+          style:cleanStyle, attributionControl:false, interactive:false, renderWorldCopies:false,
+          pixelRatio:Math.min(window.devicePixelRatio||1,1.6), updateInterval:40, fadeDuration:180,
+        });
+        layer.addTo(map);
+        vectorMap=layer.getMaplibreMap();
+        map.attributionControl?.addAttribution(vectorAttribution);
+        vectorMap.on('webglcontextlost',loseContext);
+        vectorMap.on('webglcontextrestored',restoreContext);
+        vectorMap.once('load',ready);
         timer=setTimeout(fallback,20000);
-      }catch{fallback();}
+      }catch{
+        // Leaflet registers a layer before creating its WebGL context.
+        // A failed constructor must not leave a partial renderer receiving map events.
+        if(layer&&map.hasLayer(layer)&&!layer.getMaplibreMap()){
+          layer.onRemove=()=>layer.getContainer()?.remove();
+          layer.remove();
+          layer=null;
+        }
+        fallback();
+      }
     })();
   }
-  return()=>{disposed=true;request.abort();remove();};
+  function remove(){
+    disposed=true;
+    request.abort();
+    clearTimeout(timer);
+    if(vectorMap){
+      vectorMap.off('webglcontextlost',loseContext);
+      vectorMap.off('webglcontextrestored',restoreContext);
+      vectorMap.off('load',ready);
+      vectorMap.off('render',ready);
+      map.attributionControl?.removeAttribution(vectorAttribution);
+    }
+    layer?.remove();
+    removeImagery();
+  }
+  remove.setDark=value=>{dark=value;paintTheme();};
+  return remove;
 }

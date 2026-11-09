@@ -43,12 +43,12 @@ export default function TrafficDashboard({ t, lang, getIdToken }) {
   return <section className="panel admin-traffic-panel" aria-busy={state === 'loading'}>
     <div className="panel-heading">
       <div><h2>{t('overviewTraffic')}</h2><p>{t('trafficPeriod')}</p></div>
-      {getIdToken && <button className="button secondary" disabled={state === 'loading'} onClick={() => {
-        setResult({ state: 'loading' });
+      {getIdToken && <button type="button" className="button secondary" disabled={state === 'loading'} onClick={() => {
+        setResult(previous=>({ ...previous,state:'loading' }));
         setAttempt(value => value + 1);
       }}>{t('trafficRefresh')}</button>}
     </div>
-    {state === 'ready' ? <>
+    {report ? <>
       <div className="traffic-metrics">
         <div><span>{t('trafficViews')}</span><strong>{number.format(report.views)}</strong></div>
         <div><span>{t('trafficUsers')}</span><strong>{number.format(report.users)}</strong></div>
@@ -63,6 +63,9 @@ export default function TrafficDashboard({ t, lang, getIdToken }) {
           </li>;
         })}
       </ol> : <p className="traffic-message" role="status">{t('trafficEmpty')}</p>}
-    </> : <p className="traffic-message" role="status">{t(messages[state])}</p>}
+    </> : <>
+      <p className="traffic-message" role="status">{t(messages[state])}</p>
+      {state==='loading'&&<div className="traffic-metrics traffic-skeleton" aria-hidden="true"><div/><div/></div>}
+    </>}
   </section>;
 }

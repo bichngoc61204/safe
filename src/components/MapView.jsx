@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import Icon from './Icon';
 import { CENTER } from '../lib/mapCenter';
 import { getCategory, markerColor } from '../lib/domain';
-import { addBasemap, DEFAULT_MAP_STYLE, limitVietnamZoom, vietnamMapOptions } from '../lib/basemap';
+import { addBasemap, limitVietnamZoom, vietnamMapOptions } from '../lib/basemap';
 import { addCollapsibleAttribution } from '../lib/attribution';
 import { addArchipelagoLayer } from '../lib/archipelagos';
 import { blendPosition, routeShape, routeTarget, sampleRoute } from '../lib/mapMotion';
@@ -30,7 +30,7 @@ const zoomIcons = {
 };
 const creditsIcon = renderToStaticMarkup(<Icon name="info" size={16}/>);
 
-const MAP_MODES = [['streets','mapStreets'], ['light','mapLight'], ['dark','mapDark'], ['satellite','mapSatellite']];
+const MAP_MODES = [['streets','mapStreets'], ['light','mapLight'], ['satellite','mapSatellite']];
 const WELCOME_CENTER = [16.061, 108.231];
 const DEFAULT_ZOOM = 15;
 // A visual guide to the area served by SafeMap, not an administrative boundary.
@@ -48,26 +48,32 @@ function desktopMapInset(map) {
     +(workspace.querySelector('.place-details')?.offsetWidth||0);
 }
 
-function focusMap(map,target,zoom,rotation,duration=.55,extraLeftInset=0){
-  if(!map)return;
+function focusCenter(map,target,zoom,rotation,extraLeftInset=0){
   const mobile=window.matchMedia?.('(max-width: 700px)').matches;
-  const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const workspace=map.getContainer().closest('.map-workspace');
   const sheet=mobile&&workspace?.classList.contains('sheet-expanded')?workspace.querySelector('.places-sidebar'):null;
   const bottomInset=sheet?.clientHeight?sheet.clientHeight+(parseFloat(getComputedStyle(sheet).bottom)||0):0;
   const leftInset=desktopMapInset(map)+extraLeftInset;
   const offset=L.point(-leftInset/2,bottomInset/2);
-  const center=map.unproject(map.project(target,zoom).add(rotation?.screenToMap(offset)??offset),zoom);
+  return map.unproject(map.project(target,zoom).add(rotation?.screenToMap(offset)??offset),zoom);
+}
+
+function focusMap(map,target,zoom,rotation,duration=.55,extraLeftInset=0){
+  if(!map)return;
+  const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const center=focusCenter(map,target,zoom,rotation,extraLeftInset);
   const options={animate:!reduced,duration,easeLinearity:.28};
   map.stop();
   if(map.getZoom()===zoom)map.panTo(center,options);
   else map.flyTo(center,zoom,options);
 }
 
-export default function MapView({welcomePhase,focusRevision,places,hoverPlaces,categories,selected,onSelect,previewed,onPreview,position,lang,t,onLocate,locating,onSos,route,routeGuide,routeMode,routeOrigin,pickingOrigin,onPickOrigin,onCancelOrigin,navigation}) {
+export default function MapView({style,setStyle,welcomePhase,focusRevision,places,hoverPlaces,categories,selected,onSelect,previewed,onPreview,position,lang,t,onLocate,locating,onSos,route,routeGuide,routeMode,routeOrigin,pickingOrigin,onPickOrigin,onCancelOrigin,navigation}) {
   const container=useRef(null),mapRef=useRef(null),markers=useRef(new Map()),userRef=useRef(null),onSelectRef=useRef(onSelect),creditsRef=useRef(null),selectedRef=useRef(selected);
   const stage=useRef(null),frame=useRef(null),viewport=useRef(null),rotation=useRef(null);
   const routeLayers=useRef(null);
+  const basemap=useRef(null);
+  const mapFamily=style==='dark'?'light':style;
   const motion=useRef({shape:null,distance:0,sampledAt:0});
   const camera=useRef({following:false,target:null});
   const previewRef=useRef(previewed);
@@ -81,9 +87,9 @@ export default function MapView({welcomePhase,focusRevision,places,hoverPlaces,c
   onSelectRef.current=onSelect;selectedRef.current=selected;
   const [layersOpen,setLayersOpen]=useState(false);
   const [rotated,setRotated]=useState(false);
-  const [style,setStyle]=useState(DEFAULT_MAP_STYLE),[mapStatus,setMapStatus]=useState('loading');
+  const [mapStatus,setMapStatus]=useState('loading');
   useEffect(()=>{
-    const map=L.map(container.current,{...vietnamMapOptions,zoomControl:false,attributionControl:false,touchZoom:'center'});
+    const map=L.map(container.current,{...vietnamMapOptions,zoomControl:false,attributionControl:false,touchZoom:false});
     const zoom=welcomeCamera.current?13:DEFAULT_ZOOM;
     const center=map.project(welcomeCamera.current?WELCOME_CENTER:CENTER,zoom);
     map.setView(map.unproject(center.subtract([desktopMapInset(map)/2,0]),zoom),zoom);
@@ -111,7 +117,7 @@ export default function MapView({welcomePhase,focusRevision,places,hoverPlaces,c
     const map=mapRef.current;
     focusMap(map,CENTER,DEFAULT_ZOOM,rotation.current,1.8);
   },[welcomePhase]);
-  useEffect(()=>{if(mapRef.current)return addArchipelagoLayer(mapRef.current,lang,{imagery:style==='satellite'});},[lang,style]);
+  useEffect(()=>{if(mapRef.current)return addArchipelagoLayer(mapRef.current,lang,{imagery:mapFamily==='satellite'});},[lang,mapFamily]);
   useEffect(()=>{creditsRef.current?.setLabel(t('mapCredits'));},[lang]);
   useEffect(()=>{
     const credits=creditsRef.current;
@@ -121,8 +127,14 @@ export default function MapView({welcomePhase,focusRevision,places,hoverPlaces,c
       : '<a href="https://routing.openstreetmap.de/about.html">OSRM / FOSSGIS</a>';
     const attribution=`${provider} · <a href="https://www.openstreetmap.org/fixthemap">${t('routeFixMap')}</a>`;
     return credits.add(attribution);
-  },[route,routeMode,lang]);
-  useEffect(()=>{if(mapRef.current)return addBasemap(mapRef.current,{style,onStatus:setMapStatus});},[style]);
+  },[Boolean(route),routeMode,lang]);
+  useEffect(()=>{
+    if(!mapRef.current)return;
+    const remove=addBasemap(mapRef.current,{style:mapFamily,buildingDepth:true,onStatus:setMapStatus});
+    basemap.current=remove;
+    return ()=>{basemap.current=null;remove();};
+  },[mapFamily]);
+  useEffect(()=>{basemap.current?.setDark(style==='dark');},[style]);
   useEffect(()=>{
     const map=mapRef.current;if(!map)return;
     const visibleIds=new Set(places.map(place=>place.id));
@@ -251,10 +263,30 @@ export default function MapView({welcomePhase,focusRevision,places,hoverPlaces,c
   useEffect(()=>{
     const map=mapRef.current;
     if(!shape||!map)return;
-    const points=shape.points;
-    const outline=L.polyline(points,{color:'#fff',weight:9,opacity:.92,interactive:false}).addTo(map);
-    const line=L.polyline(points,{color:'#2968dc',weight:5,opacity:1,interactive:false,className:'navigation-line'}).addTo(map);
-    routeLayers.current=[outline,line];
+    const {points}=shape;
+    const blockSize=96;
+    let blockEnd=Math.min(blockSize,points.length-1);
+    const first=points.slice(0,blockEnd+1);
+    const rest=blockEnd<points.length-1?points.slice(blockEnd):[];
+    const outlineOptions={color:'#fff',weight:9,opacity:.92,interactive:false};
+    const lineOptions={color:'#2968dc',weight:5,opacity:1,interactive:false};
+    const outline=L.polyline(first,outlineOptions).addTo(map);
+    const tailOutline=L.polyline(rest,outlineOptions).addTo(map);
+    const line=L.polyline(first,{...lineOptions,className:'navigation-line'}).addTo(map);
+    const tail=L.polyline(rest,lineOptions).addTo(map);
+    routeLayers.current=sample=>{
+      const finished=sample.segmentEnd>=points.length;
+      const end=finished?points.length:Math.min(Math.ceil(sample.segmentEnd/blockSize)*blockSize,points.length-1);
+      if(end!==blockEnd){
+        blockEnd=end;
+        const nextTail=end<points.length-1?points.slice(end):[];
+        tailOutline.setLatLngs(nextTail);
+        tail.setLatLngs(nextTail);
+      }
+      const head=finished?[]:[sample.point,...points.slice(sample.segmentEnd,end+1)];
+      outline.setLatLngs(head);
+      line.setLatLngs(head);
+    };
     const mobile=window.matchMedia?.('(max-width: 700px)').matches;
     const leftInset=desktopMapInset(map);
     if(!active){
@@ -262,10 +294,10 @@ export default function MapView({welcomePhase,focusRevision,places,hoverPlaces,c
       const bottomRight=[mobile?55:40,70];
       map.stop();
       if(!rotation.current?.bearing()||!fitRotatedRoute(map,rotation.current,frame.current,points,topLeft,bottomRight)){
-        map.fitBounds(line.getBounds(),{maxZoom:17,animate:false,paddingTopLeft:topLeft,paddingBottomRight:bottomRight});
+        map.fitBounds(L.latLngBounds(points),{maxZoom:17,animate:false,paddingTopLeft:topLeft,paddingBottomRight:bottomRight});
       }
     }
-    return ()=>{routeLayers.current=null;line.remove();outline.remove();};
+    return ()=>{routeLayers.current=null;line.remove();outline.remove();tail.remove();tailOutline.remove();};
   },[shape]);
   useEffect(()=>{
     const map=mapRef.current;
@@ -289,28 +321,33 @@ export default function MapView({welcomePhase,focusRevision,places,hoverPlaces,c
         focusMap(map,target,Math.max(16,map.getZoom()),rotation.current);
         camera.current={following,target};
       }
-      else if(!oldTarget||map.latLngToContainerPoint(oldTarget).distanceTo(map.latLngToContainerPoint(target))>=2){
-        map.panTo(target,{animate:!reduced,duration:duration/1000,easeLinearity:1});
+      else if(!oldTarget||map.project(oldTarget).distanceTo(map.project(target))>=5){
+        const center=focusCenter(map,target,map.getZoom(),rotation.current);
+        map.panTo(center,{animate:!reduced,duration:duration/1000,easeLinearity:.55});
         camera.current={following,target};
       }
     }else camera.current={following:false,target:null};
 
     const advances=endDistance!==startDistance;
     const followsShape=matched&&sameShape&&startPoint?.distanceTo(sampleRoute(shape,startDistance).point)<2;
-    const draw=(amount)=>{
+    let lastLineFrame=-Infinity;
+    const draw=(amount,time)=>{
       const distance=startDistance+(endDistance-startDistance)*amount;
       const sample=shape&&(advances||matched)?sampleRoute(shape,distance):null;
-      if(advances&&sample)routeLayers.current?.forEach(layer=>layer.setLatLngs(sample.remaining));
+      if(sample&&(advances||remaining?.arrived)&&(amount===1||time-lastLineFrame>=32)){
+        routeLayers.current?.(sample);
+        lastLineFrame=time;
+      }
       if(target&&startPoint){
         marker.setLatLng(followsShape?sample.point:blendPosition(startPoint,target,amount));
       }
       motion.current.distance=distance;
     };
-    if(!duration||(!advances&&(!startPoint||!target||startPoint.equals(target))))draw(1);
+    if(!duration||(!advances&&(!startPoint||!target||startPoint.equals(target))))draw(1,now);
     else {
       const animate=(time)=>{
         const amount=Math.max(0,Math.min(1,(time-now)/duration));
-        draw(amount);
+        draw(amount,time);
         if(amount<1)animation=requestAnimationFrame(animate);
       };
       animation=requestAnimationFrame(animate);
@@ -329,7 +366,7 @@ export default function MapView({welcomePhase,focusRevision,places,hoverPlaces,c
       <button className={`icon-button ${locating?'locating':''}`} onClick={active?resume:onLocate} disabled={locating} title={t('location')} aria-label={t('location')}><Icon name="locate" size={18}/></button>
       {rotated&&<button className="icon-button map-north" onClick={()=>rotation.current?.reset()} title={t('mapNorth')} aria-label={t('mapNorth')}><span>N</span><Icon name="down" size={12}/></button>}
     </div>
-    <div className="map-bottom-tools"><button className="map-tool mobile-layers-toggle" aria-label={t('mapStyle')} aria-expanded={layersOpen} aria-controls="map-layers-panel" onClick={()=>setLayersOpen(open=>!open)}><Icon name={layersOpen?'x':'layers'} size={21}/></button><div id="map-layers-panel" className={`map-style-control ${layersOpen?'is-open':''}`} role="group" aria-label={t('mapStyle')} style={{'--mode-count':MAP_MODES.length,'--mode-index':MAP_MODES.findIndex(([value])=>value===style)}}>{MAP_MODES.map(([value,label])=><button key={value} className={style===value?'active':''} aria-pressed={style===value} onClick={()=>{setStyle(value);setLayersOpen(false);}}>{t(label)}</button>)}</div><button className="sos-button" aria-label={`SOS ${t('emergency')}`} onClick={onSos}><span/><Icon className="sos-phone-icon" name="phone" size={17}/><span className="sos-text">SOS</span><span className="sos-label">{t('emergency')}</span><Icon className="mobile-sos-icon" name="phone" size={22}/></button></div>
+    <div className="map-bottom-tools"><button className="map-tool mobile-layers-toggle" aria-label={t('mapStyle')} aria-expanded={layersOpen} aria-controls="map-layers-panel" onClick={()=>setLayersOpen(open=>!open)}><Icon name={layersOpen?'x':'layers'} size={21}/></button><div id="map-layers-panel" className={`map-style-control ${layersOpen?'is-open':''} ${style==='dark'?'is-unselected':''}`} role="group" aria-label={t('mapStyle')} style={{'--mode-count':MAP_MODES.length,'--mode-index':Math.max(0,MAP_MODES.findIndex(([value])=>value===style))}}>{MAP_MODES.map(([value,label])=><button key={value} className={style===value?'active':''} aria-pressed={style===value} onClick={()=>{setStyle(value);setLayersOpen(false);}}>{t(label)}</button>)}</div><button className="sos-button" aria-label={`SOS ${t('emergency')}`} onClick={onSos}><span/><Icon className="sos-phone-icon" name="phone" size={17}/><span className="sos-text">SOS</span><span className="sos-label">{t('emergency')}</span><Icon className="mobile-sos-icon" name="phone" size={22}/></button></div>
     <div className="map-legend"><span style={{color:'#3582bc'}}><Icon name="shield" size={13}/>{t('safe')}</span><span style={{color:'#22936a'}}><Icon name="recycle" size={13}/>{t('green')}</span><span style={{color:'#855f35'}}><Icon name="leaf" size={13}/>{t('partner')}</span></div>
   </section>;
 }
@@ -360,7 +397,7 @@ export function CoordinatePicker({lat,lng,onChange,t,readOnly=false}) {
   return <><div ref={el} className="coordinate-map" aria-label={t('locationSection')}/>{!readOnly&&<small className="field-hint">{t('pickHint')}</small>}</>;
 }
 
-export function AdminPlacesMap({places,categories,selected,onSelect,t,lang}) {
+export function AdminPlacesMap({places,categories,selected,hovered,onSelect,t,lang}) {
   const element=useRef(null);
   const mapRef=useRef(null);
   const pins=useRef(new Map());
@@ -374,7 +411,7 @@ export function AdminPlacesMap({places,categories,selected,onSelect,t,lang}) {
     const stopBase=addBasemap(map);
     const stopZoom=limitVietnamZoom(map,element.current);
     L.control.zoom({...zoomIcons,position:'topleft'}).addTo(map);
-    const observer=new ResizeObserver(()=>map.invalidateSize());
+    const observer=new ResizeObserver(()=>map.invalidateSize({debounceMoveend:true}));
     observer.observe(element.current);
     return ()=>{observer.disconnect();stopZoom();stopBase();credits.destroy();map.remove();mapRef.current=null;};
   },[]);
@@ -406,19 +443,33 @@ export function AdminPlacesMap({places,categories,selected,onSelect,t,lang}) {
     for(const [id,{marker,category,status}] of pins.current){
       const icon=pinIcon(category,id===selected,status);
       if(marker.options.icon.options.html!==icon.options.html)marker.setIcon(icon);
-      marker.setZIndexOffset(id===selected?1000:0);
       marker.getElement()?.setAttribute('aria-label',marker.options.title);
     }
     const point=pins.current.get(selected)?.marker.getLatLng();
     if(point){
       const zoom=Math.max(15,map.getZoom());
-      const center=map.unproject(map.project(point,zoom).add([0,element.current.clientHeight*.19]),zoom);
-      map.setView(center,zoom,{animate:!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches});
+      map.setView(point,zoom,{animate:!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches});
     }else if(pins.current.size){
       const bounds=L.latLngBounds([...pins.current.values()].map(({marker})=>marker.getLatLng()));
       map.fitBounds(bounds,{padding:[32,40],maxZoom:16,animate:false});
     }
   },[selected,places,categories]);
+
+  useEffect(()=>{
+    const map=mapRef.current;
+    if(!map)return;
+    const target=pins.current.get(hovered)?.marker;
+    for(const [id,{marker}] of pins.current){
+      marker.getElement()?.classList.toggle('is-admin-dimmed',Boolean(target)&&marker!==target);
+      marker.setZIndexOffset(marker===target?2000:id===selected?1000:0);
+    }
+    if(!target)return;
+    const timer=setTimeout(()=>{
+      const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      map.panTo(target.getLatLng(),{animate:!reduced,duration:.36,easeLinearity:.28});
+    },110);
+    return ()=>clearTimeout(timer);
+  },[hovered,selected,places,categories]);
 
   return <div ref={element} className="coordinate-map admin-map-canvas" aria-label={t('viewMap')}/>;
 }

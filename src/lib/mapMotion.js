@@ -15,7 +15,8 @@ export function routeTarget(shape, progress) {
   if (!progress) return 0;
   const { segmentEnd, segmentFraction } = progress;
   const start = shape.distances[segmentEnd - 1];
-  return start + (shape.distances[segmentEnd] - start) * segmentFraction;
+  const target=start+(shape.distances[segmentEnd]-start)*segmentFraction;
+  return Number.isFinite(target)?Math.max(0,Math.min(shape.length,target)):0;
 }
 
 export function blendPosition(from, to, amount) {
@@ -24,7 +25,7 @@ export function blendPosition(from, to, amount) {
 
 export function sampleRoute(shape, distance) {
   const { points, distances, length } = shape;
-  if (distance >= length) return { point: points.at(-1), remaining: [] };
+  if (distance >= length) return { point: points.at(-1), segmentEnd: points.length };
   let low = 1;
   let high = points.length - 1;
   while (low < high) {
@@ -34,5 +35,5 @@ export function sampleRoute(shape, distance) {
   }
   const start = distances[low - 1];
   const point = blendPosition(points[low - 1], points[low], (distance - start) / (distances[low] - start));
-  return { point, remaining: [point, ...points.slice(low)] };
+  return { point, segmentEnd: low };
 }

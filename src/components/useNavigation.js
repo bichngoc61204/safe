@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchRoute } from '../lib/routing';
 import { routeProgress } from '../lib/navigation';
+import { haversine } from '../lib/domain';
 
 export default function useNavigation(preview, destination, mode) {
   const [started, setStarted] = useState(null);
@@ -26,36 +27,46 @@ export default function useNavigation(preview, destination, mode) {
     let acceptedProgress = 0;
     let offRouteSamples = 0;
     let lastReroute = 0;
+    let lastFixTime = 0;
+    let displayedFix;
     let request;
     let active = true;
-    const watch = gps.watchPosition(async ({coords}) => {
+    const watch = gps.watchPosition(async ({coords,timestamp}) => {
       if (!active) return;
-      if (coords.accuracy > 65) {
+      if(timestamp&&timestamp<=lastFixTime)return;
+      if(timestamp)lastFixTime=timestamp;
+      const {latitude:lat,longitude:lng,accuracy}=coords;
+      if(!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180||
+         !Number.isFinite(accuracy)||accuracy<0||accuracy>65){
         offRouteSamples = 0;
         if (!request) setStatus('navigationWaiting');
         return;
       }
-      const point = {lat: coords.latitude, lng: coords.longitude};
-      const progress = routeProgress(currentRoute, point);
-      setPosition({...point, matched: progress.distance <= Math.min(20, Math.max(8, coords.accuracy))});
-      if (progress.arrived && coords.accuracy <= 30) {
+      const point={lat,lng};
+      const progress=routeProgress(currentRoute,point,{includeCoordinates:false});
+      const matched=progress.distance<=Math.min(20,Math.max(8,accuracy));
+      if(!displayedFix||displayedFix.matched!==matched||haversine(displayedFix,point)>=1.5||progress.arrived){
+        displayedFix={...point,matched};
+        setPosition(displayedFix);
+      }
+      if (progress.arrived && accuracy <= 30) {
         active = false;
         request?.abort();
         gps.clearWatch(watch);
-        setRemaining({arrived:true,remainingCoordinates:[],remainingDistance:0});
+        setRemaining({arrived:true,remainingDistance:0});
         setStep(progress.index);
         setStatus('navigationArrived');
         return;
       }
 
-      if (progress.distance <= Math.max(40, coords.accuracy * 1.5)) {
+      if (progress.distance <= Math.max(40, accuracy * 1.5)) {
         offRouteSamples = 0;
         if (request) {
           request.abort();
           request = null;
         }
         setStatus(null);
-        if (progress.progress > acceptedProgress) {
+        if (progress.progress >= acceptedProgress+1.5) {
           acceptedProgress = progress.progress;
           setRemaining(progress);
         }
@@ -72,7 +83,8 @@ export default function useNavigation(preview, destination, mode) {
       setStatus('navigationRerouting');
       try {
         const next = await fetchRoute(point, destination, mode, controller.signal);
-        if (active && request === controller && !controller.signal.aborted) {
+        if (active && request === controller) {
+          if(controller.signal.aborted){setStatus('navigationRerouteError');return;}
           if (next) {
             currentRoute = next;
             currentStep = 0;
@@ -91,7 +103,13 @@ export default function useNavigation(preview, destination, mode) {
         if (request === controller) request = null;
       }
     }, error => {
-      if (active) setStatus(error.code === 1 ? 'navigationGpsError' : 'navigationWaiting');
+      if (!active)return;
+      if(error.code===1){
+        active=false;
+        request?.abort();
+        gps.clearWatch(watch);
+      }
+      setStatus(error.code===1?'navigationGpsError':'navigationWaiting');
     }, {enableHighAccuracy:true, maximumAge:3000, timeout:15000});
 
     return () => {

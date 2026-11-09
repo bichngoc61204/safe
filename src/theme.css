@@ -1305,3 +1305,100 @@
 @media(min-width:701px){
   .map-workspace .map-stage .map-style-control button { padding:6px 8px; }
 }
+
+.header-segments {
+  display:flex; gap:2px; padding:3px; border:1px solid #dce8e0;
+  border-radius:12px; background:#fff; color:#325d4a;
+}
+.header-segments button {
+  display:grid; place-items:center; min-width:33px; min-height:32px;
+  padding:0 4px; border-radius:8px; font-size:11px; font-weight:650;
+  transition:background-color 180ms ease, color 180ms ease;
+}
+.header-segments button[aria-pressed="true"] { background:#e6f3ea; color:#17543d; }
+.mobile-language,.admin-map-link > svg { display:none; }
+.map-style-control.is-unselected::before { opacity:0; }
+@media(max-width:700px){
+  .site-header .language-control { display:none; }
+  .site-header .mobile-language,.site-header .admin-map-link > svg { display:flex; }
+  .site-header .admin-map-link > span { display:none; }
+  .site-header .admin-map-link { display:grid; place-items:center; min-width:32px; min-height:36px; }
+  .site-header .header-controls { gap:5px; }
+  .site-header.map-mode-header .header-controls { gap:5px; border:0; background:none; box-shadow:none; }
+  .map-mode-header .header-segments { box-shadow:0 3px 12px #16372926; }
+  .map-workspace .places-sidebar { translate:0 26px; }
+  .map-workspace.sheet-expanded .places-sidebar { translate:none; }
+}
+
+.map-mode-header { border-bottom:0; }
+.map-theme-toggle {
+  display:grid; place-items:center; width:40px; height:40px; padding:0;
+  border:1px solid #dce8e0; border-radius:12px; background:#fff; color:#325d4a;
+  transition:background-color 180ms ease, color 180ms ease;
+}
+.map-theme-toggle[aria-pressed="true"] { background:#e6f3ea; color:#17543d; }
+.public-sheet-content .place-card-content { min-width:0; }
+
+.map-stage {
+  transition:background-color 280ms var(--motion-ease);
+}
+.map-stage :is(.archipelago-name,.regional-overview-label span) {
+  transition:color 280ms var(--motion-ease),text-shadow 280ms var(--motion-ease);
+}
+.map-theme-toggle > svg {
+  animation:map-control-enter 260ms var(--motion-ease) both;
+}
+.map-stage :is(.route-exit,.route-resume,.route-step-controls button),
+.map-workspace :is(.category-chips button,.mobile-search-preview button,.sheet-detail-bar button,.map-tool),
+.site-header .header-segments button {
+  touch-action:manipulation;
+  transition:background-color 180ms ease,color 180ms ease,scale 180ms var(--motion-ease);
+}
+@media(pointer:coarse){
+  .map-stage :is(.route-exit,.route-resume,.route-step-controls button):active,
+  .map-workspace :is(.category-chips button,.mobile-search-preview button,.sheet-detail-bar button,.map-tool):active,
+  .site-header :is(.header-segments button,.map-theme-toggle):active {
+    scale:.96;
+  }
+}
+@media(max-width:700px){
+  .map-workspace .explore-panel {
+    max-height:min(65dvh,calc(100dvh - var(--map-top) - 65px));
+  }
+  .map-workspace .map-stage .map-style-control {
+    display:grid; left:52px; bottom:0; width:min(218px,calc(100vw - 78px)); padding:3px;
+    opacity:0; visibility:hidden; pointer-events:none; translate:-8px 0;
+    transition:opacity 180ms ease,translate 280ms var(--motion-ease),visibility 0s 280ms;
+  }
+  .map-workspace .map-stage .map-style-control.is-open {
+    opacity:1; visibility:visible; pointer-events:auto; translate:none; animation:none; transition-delay:0s;
+  }
+  .route-guide :is(.route-guide-heading,.route-guide-step,.route-navigation-actions) {
+    animation:map-ui-arrive 300ms var(--route-enter-delay,30ms) var(--motion-ease) backwards;
+  }
+  .route-guide-step { --route-enter-delay:75ms; }
+  .route-navigation-actions { --route-enter-delay:110ms; }
+}
+@keyframes map-control-enter {
+  from { opacity:0; scale:.82; rotate:-12deg; }
+  to { opacity:1; scale:1; rotate:0deg; }
+}
+@media(prefers-reduced-motion:reduce){
+  .map-stage,.map-stage :is(.archipelago-name,.regional-overview-label span),
+  .map-workspace .map-stage .map-style-control { transition:none; }
+  .map-theme-toggle > svg,.route-guide :is(.route-guide-heading,.route-guide-step,.route-navigation-actions) { animation:none; }
+}
+.public-sheet-content .place-card h3,
+.public-sheet-content .place-card p > span,
+.public-sheet-content .place-card .place-type > span {
+  display:block; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+}
+@media(max-width:700px){
+  .map-mode-header .map-theme-toggle { box-shadow:0 3px 12px #16372926; }
+  .map-workspace .sheet-header { border-bottom:0; }
+  .map-workspace .sheet-handle { height:64px; }
+  .sheet-handle > .sheet-summary { margin-bottom:10px; }
+  .public-sheet-content .place-card {
+    height:90px; flex:0 0 90px; padding:8px 4px; border-bottom:0;
+  }
+}

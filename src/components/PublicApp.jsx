@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Icon from './Icon';
 import { placeHourRows } from '../lib/placeHours';
 import MapView from './MapView';
@@ -13,6 +13,36 @@ import { filterPlaces, getCategory, directionsUrl, haversine, formatDistance, sa
 const scopes=[['map','explore','map'],['safe','safe','shield'],['green','green','recycle'],['partner','partner','leaf']];
 const areaCenter={lat:CENTER[0],lng:CENTER[1]};
 const greenStatuses=['all','alerts','clean','warning','overloaded','inactive'];
+
+const PlaceCards=memo(function PlaceCards({places,categories,selected,previewed,position,t,lang,actions,listRef}) {
+  return <div className="places-list" ref={listRef}>{places.length?places.map(p=>{
+    const c=getCategory(categories,p.category);
+    const color=markerColor(c);
+    const image=safeImage(p.image);
+    const preview=()=>actions.current.preview(p.id);
+    const leave=()=>actions.current.leave(p.id);
+    return <button className={`place-card ${p.status==='inactive'?'is-inactive':''} ${previewed===p.id?'is-previewed':''}`}
+      style={{'--place-accent':color}} aria-pressed={p.id===selected} key={p.id}
+      onPointerEnter={event=>{if(event.pointerType==='mouse')preview();}} onPointerLeave={leave}
+      onFocus={event=>{if(event.currentTarget.matches(':focus-visible'))preview();}} onBlur={leave}
+      onClick={()=>actions.current.select(p.id)}>
+      <div className="place-card-content">
+        <h3>{p.name}</h3>
+        <span className="place-type" style={{color}}><Icon name={c.icon} size={13}/><span>{lang==='en'?c.nameEn:c.name}</span></span>
+        <p><Icon name="pin" size={13}/><span>{p.address}</span></p>
+        {isAlert(p)?<span className={`place-alert alert-${p.status}`}>{t(p.status)}</span>:
+          p.status==='inactive'?<span className="place-alert">{t('inactive')}</span>:null}
+      </div>
+      <span className={`place-category-icon place-thumbnail category-${c.kind}`} style={{'--category-color':color}}>
+        <Icon name={c.icon} size={21}/>
+        {image&&<img key={image} src={image} alt="" loading="lazy" decoding="async" onError={e=>{e.currentTarget.hidden=true;}}/>}
+      </span>
+      <span className="card-distance">{position?formatDistance(haversine(position,p)):<Icon name="right" size={16}/>}</span>
+    </button>;
+  }):<div className="empty-state"><h3>{t('empty')}</h3><p>{t('emptyHint')}</p>
+    <button className="text-button" onClick={()=>actions.current.clear()}>{t('clearFilters')}</button>
+  </div>}</div>;
+});
 
 function PlaceDetails({place,categories,position,t,lang,onClose,routing}) {
   const c=getCategory(categories,place.category);
@@ -47,7 +77,7 @@ function PlaceDetails({place,categories,position,t,lang,onClose,routing}) {
   </section>;
 }
 
-export default function PublicApp({welcomePhase,data,scope,setScope,selected,setSelected,t,lang,position,onLocate,onRouteLocate,locating,onSos}) {
+export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,setScope,selected,setSelected,t,lang,position,onLocate,onRouteLocate,locating,onSos}) {
   const [query,setQuery]=useState('');
   const [category,setCategory]=useState('all');
   const [status,setStatus]=useState('all');
@@ -58,8 +88,8 @@ export default function PublicApp({welcomePhase,data,scope,setScope,selected,set
   const [previewScope,setPreviewScope]=useState(null);
   const [previewed,setPreviewed]=useState(null);
   const [focusRevision,setFocusRevision]=useState(0);
-  const touchStart=useRef(null);
   const placesList=useRef(null);
+  const placeCardActions=useRef(null);
   const scopeCopy=useRef(null);
   const collapseControl=useRef(null);
   const expandControl=useRef(null);
@@ -221,6 +251,20 @@ export default function PublicApp({welcomePhase,data,scope,setScope,selected,set
     setExpanded(true);
   };
   const closeDetails=clearSelection;
+  placeCardActions.current={
+    select:selectPlace, preview:setPreviewed, leave:id=>setPreviewed(previous=>previous===id?null:previous), clear,
+  };
+  const dismissPopup=()=>{
+    setSearchOpen(false);
+    setExpanded(false);
+    listToggle.current?.focus({preventScroll:true});
+  };
+  const toggleList=()=>{
+    if(expanded&&!place){dismissPopup();return;}
+    setSearchOpen(false);
+    clearSelection();
+    setExpanded(true);
+  };
   const hasFilters=Boolean(query.trim())||category!=='all'||status!=='all'||scope!=='map';
   const searchPreview=useMemo(()=>{
     if(hasFilters)return visible;
@@ -234,10 +278,11 @@ export default function PublicApp({welcomePhase,data,scope,setScope,selected,set
     setHoverScope(id);
   };
   return <main className="public-app" data-welcome={welcomePhase}>
-    <div className={`map-workspace ${expanded?'sheet-expanded':''} ${place?'has-detail':''}`} data-scope={scope} data-sidebar={sidebarCollapsed?'collapsed':'open'}>
+    <div className={`map-workspace ${expanded?'sheet-expanded':''} ${place?'has-detail':''}`}
+      data-scope={scope} data-sidebar={sidebarCollapsed?'collapsed':'open'} data-search-open={searchOpen}>
       <div className="mobile-map-actions">
         <button ref={searchToggle} className={`map-tool ${hasFilters?'has-filters':''}`} aria-label={t('search')} aria-expanded={searchOpen} aria-controls="map-search-panel" onClick={toggleSearch}><Icon name={searchOpen?'x':'search'} size={21}/></button>
-        <button ref={listToggle} className="map-tool" aria-label={t('nearby')} aria-expanded={expanded} aria-controls="public-sheet-content" onClick={()=>{setSearchOpen(false);clearSelection();setExpanded(searchOpen||!expanded||Boolean(place));}}><Icon name="list" size={21}/></button>
+        <button ref={listToggle} className="map-tool" aria-label={t('nearby')} aria-expanded={expanded} aria-controls="public-sheet-content" onClick={toggleList}><Icon name="list" size={21}/></button>
       </div>
       <div className="public-sidebar-region">
       {sidebarCollapsed&&<div className="sidebar-rail">
@@ -325,44 +370,32 @@ export default function PublicApp({welcomePhase,data,scope,setScope,selected,set
           <button className="button primary mobile-search-results" onClick={showResults} disabled={!visible.length}>{t('showAllPlaces')}<Icon name="right" size={16}/></button>
         </div>
       </section>
-      <aside className="places-sidebar">
-        <div className="sheet-header" onTouchStart={e=>{touchStart.current=e.touches[0].clientY;}} onTouchEnd={e=>{const start=touchStart.current;touchStart.current=null;if(start!==null){const delta=e.changedTouches[0].clientY-start;if(Math.abs(delta)>45)setExpanded(delta<0);}}}>
+      <aside className="places-sidebar" onKeyDown={event=>{
+        if(expanded&&event.key==='Escape'&&!event.defaultPrevented&&!event.target.closest('dialog')&&listToggle.current?.offsetWidth)dismissPopup();
+      }}>
+        <div className="sheet-header">
           {place?<div className="sheet-detail-header">
             <span className="sheet-grip" aria-hidden="true"/>
             <div className="sheet-detail-bar">
               <button type="button" aria-label={t('nearby')} onClick={closeDetails}><Icon name="back" size={18}/></button>
               <h2>{place.name}</h2>
-              <button type="button" aria-label={t('close')} aria-expanded={expanded} aria-controls="public-sheet-content" onClick={()=>setExpanded(false)}><Icon name="down" size={18}/></button>
+              <button type="button" aria-label={t('close')} aria-expanded={expanded} aria-controls="public-sheet-content" onClick={dismissPopup}><Icon name="x" size={18}/></button>
             </div>
-          </div>:<button className="sheet-handle" aria-expanded={expanded} aria-controls="public-sheet-content" onClick={()=>setExpanded(open=>!open)}>
+          </div>:<button className="sheet-handle" aria-label={t('close')} aria-expanded={expanded} aria-controls="public-sheet-content" onClick={dismissPopup}>
             <span className="sheet-grip" aria-hidden="true"/>
-            <span className="sheet-summary"><Icon name="list" size={18}/><strong>{t('nearby')}</strong><span className="sheet-count">{visible.length}</span><Icon className="sheet-chevron" name="down" size={18}/></span>
+            <span className="sheet-summary"><Icon name="list" size={18}/><strong>{t('nearby')}</strong><span className="sheet-count">{visible.length}</span><Icon className="sheet-chevron" name="x" size={18}/></span>
           </button>}
           <div className="list-heading"><h2>{t('nearby')}<span>{visible.length}</span></h2>{position&&<span>{t('nearest')}</span>}</div>
         </div>
-        <div className="public-sheet-content" id="public-sheet-content">{place&&<PlaceDetails key={place.id} place={place} categories={data.categories} position={position} t={t} lang={lang} routing={routing} onClose={closeDetails}/>}<div className="places-list" ref={placesList}>{visible.length?visible.map(p=>{const c=getCategory(data.categories,p.category);const image=safeImage(p.image);return <button className={`place-card ${p.status==='inactive'?'is-inactive':''} ${previewed===p.id?'is-previewed':''}`} style={{'--place-accent':markerColor(c)}} aria-pressed={p.id===selected} key={p.id}
-          onPointerEnter={event=>{if(event.pointerType==='mouse')setPreviewed(p.id);}}
-          onPointerLeave={()=>setPreviewed(id=>id===p.id?null:id)}
-          onFocus={event=>{if(event.currentTarget.matches(':focus-visible'))setPreviewed(p.id);}}
-          onBlur={()=>setPreviewed(id=>id===p.id?null:id)}
-          onClick={()=>selectPlace(p.id)}>
-          <div className="place-card-content">
-            <h3>{p.name}</h3>
-            <span className="place-type" style={{color:markerColor(c)}}><Icon name={c.icon} size={13}/>{lang==='en'?c.nameEn:c.name}</span>
-            <p><Icon name="pin" size={13}/><span>{p.address}</span></p>
-            {isAlert(p)?<span className={`place-alert alert-${p.status}`}>{t(p.status)}</span>:p.status==='inactive'?<span className="place-alert">{t('inactive')}</span>:null}
-          </div>
-          <span className={`place-category-icon place-thumbnail category-${c.kind}`} style={{'--category-color':markerColor(c)}}>
-            <Icon name={c.icon} size={21}/>
-            {image&&<img src={image} alt="" loading="lazy" onError={e=>{e.currentTarget.hidden=true;}}/>}
-          </span>
-          <span className="card-distance">{position?formatDistance(haversine(position,p)):<Icon name="right" size={16}/>}</span>
-        </button>}):<div className="empty-state"><h3>{t('empty')}</h3><p>{t('emptyHint')}</p><button className="text-button" onClick={clear}>{t('clearFilters')}</button></div>}</div>
+        <div className="public-sheet-content" id="public-sheet-content">
+          {place&&<PlaceDetails key={place.id} place={place} categories={data.categories} position={position} t={t} lang={lang} routing={routing} onClose={closeDetails}/>}
+          <PlaceCards places={visible} categories={data.categories} selected={selected} previewed={previewed}
+            position={position} t={t} lang={lang} actions={placeCardActions} listRef={placesList}/>
         </div><div className="list-footer"><span className="live-dot"/>{t('community')}<span>{t('area')}</span></div>
       </aside>
       </div>
       </div>
-      <MapView welcomePhase={welcomePhase} focusRevision={focusRevision} navigation={navigation}
+      <MapView style={mapStyle} setStyle={setMapStyle} welcomePhase={welcomePhase} focusRevision={focusRevision} navigation={navigation}
         routeGuide={result?.route
           ? <RouteGuide key={activeRequest.mode+':'+lastRouteRequest.current} route={navigation.route} navigation={navigation} mode={activeRequest.mode} destination={place.name} onExit={exitRoute} onModeChange={mode=>requestRoute(activeRequest.origin,mode)} t={t}/>
           : routeState&&<section className="route-guide route-request-status">

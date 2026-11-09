@@ -6,6 +6,8 @@ export default function PlaceGallery({images, name, t}) {
   const track = useRef(null);
   const [index, setIndex] = useState(0);
   const [zoom, setZoom] = useState(null);
+  const [failedPhoto,setFailedPhoto]=useState(null);
+  const direction=useRef(0);
   const swipe = useRef(null);
   if (!images.length) return null;
   const go = next => {
@@ -13,7 +15,13 @@ export default function PlaceGallery({images, name, t}) {
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     element.scrollTo({left: next * element.clientWidth, behavior: reduced ? 'instant' : 'smooth'});
   };
-  const show = next => setZoom(Math.max(0,Math.min(images.length-1,next)));
+  const show = next => {
+    const target=Math.max(0,Math.min(images.length-1,next));
+    if(target===zoom)return;
+    direction.current=zoom===null?0:Math.sign(target-zoom);
+    setFailedPhoto(null);
+    setZoom(target);
+  };
   const enlarged = zoom===null?null:images[zoom];
   return <><figure className="place-gallery">
     <div className="place-gallery-frame">
@@ -31,7 +39,9 @@ export default function PlaceGallery({images, name, t}) {
         {images.map((src,i)=><button type="button" className="place-gallery-slide" key={src}
           aria-label={`${t('photoEnlarge')} ${i+1}`} onClick={()=>show(i)}>
           <Icon name="pin" size={24}/>
-          <img src={src} alt={name} loading={i===0?'eager':'lazy'} onError={e=>{e.currentTarget.hidden=true;}}/>
+          <img src={src} alt={name} loading={i===0?'eager':'lazy'} decoding="async"
+            onLoad={event=>{event.currentTarget.dataset.loaded='true';}}
+            onError={event=>{event.currentTarget.hidden=true;}}/>
         </button>)}
       </div>
       {images.length>1&&<>
@@ -42,7 +52,7 @@ export default function PlaceGallery({images, name, t}) {
     </div>
   </figure>
   {enlarged&&<Modal title={name} onClose={()=>setZoom(null)} className="photo-modal" t={t}>
-    <div className="photo-viewer" onKeyDown={e=>{
+    <div className="photo-viewer" style={{'--photo-enter':`${direction.current*16}px`}} onKeyDown={e=>{
       if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();show(zoom+(e.key==='ArrowRight'?1:-1));}
     }} onTouchStart={e=>{swipe.current=e.touches.length===1?e.touches[0].clientX:null;}} onTouchEnd={e=>{
       if(swipe.current===null)return;
@@ -50,7 +60,10 @@ export default function PlaceGallery({images, name, t}) {
       swipe.current=null;
       if(Math.abs(delta)>50)show(zoom+(delta<0?1:-1));
     }} onTouchCancel={()=>{swipe.current=null;}}>
-      <img key={enlarged} src={enlarged} alt={name}/>
+      <img key={enlarged} src={enlarged} alt={name} decoding="async"
+        onLoad={event=>{event.currentTarget.dataset.loaded='true';}}
+        onError={()=>setFailedPhoto(enlarged)} style={failedPhoto===enlarged?{visibility:'hidden'}:undefined}/>
+      {failedPhoto===enlarged&&<span className="photo-load-error" role="status"><Icon name="image" size={22}/>{t('removeImage')}</span>}
       {images.length>1&&<>
         <button type="button" autoFocus className="place-gallery-arrow previous" aria-label={t('photoPrevious')} aria-disabled={zoom===0} onClick={()=>show(zoom-1)}><Icon name="left" size={20}/></button>
         <button type="button" className="place-gallery-arrow next" aria-label={t('photoNext')} aria-disabled={zoom===images.length-1} onClick={()=>show(zoom+1)}><Icon name="right" size={20}/></button>

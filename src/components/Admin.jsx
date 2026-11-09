@@ -3,7 +3,7 @@ import Icon, { categoryIconOptions } from './Icon';
 import Modal from './Modal';
 import Dropdown from './Dropdown';
 import { catalogGroups } from '../lib/catalogGroups';
-import PlaceForm from './PlaceForm';
+import PlaceForm, { usePlaceEditor } from './PlaceForm';
 import PlaceGallery from './PlaceGallery';
 import TrafficDashboard from './TrafficDashboard';
 import { AdminPlacesMap } from './MapView';
@@ -39,13 +39,38 @@ function moveCardHighlight(event) {
 
 function CategoryForm({category,initialKind,onSave,onClose,t,busy,saveError}) {
  const [v,setV]=useState(category||{id:crypto.randomUUID(),name:'',nameEn:'',color:'#199569',icon:'store',kind:initialKind||'safe'});
- return <Modal title={t(category?'edit':'addCategory')} onClose={onClose} t={t}><form onSubmit={e=>{e.preventDefault();if(v.name.trim()&&v.nameEn.trim())onSave({...v,name:v.name.trim(),nameEn:v.nameEn.trim()});}}><div className="form-scroll"><div className="form-grid"><label className="span-2"><span>{t('categoryName')} *</span><input required value={v.name} maxLength={60} onChange={e=>setV({...v,name:e.target.value})}/></label><label className="span-2"><span>{t('nameEn')} *</span><input required value={v.nameEn} maxLength={60} onChange={e=>setV({...v,nameEn:e.target.value})}/></label><div className="form-dropdown span-2"><span>{t('kind')}</span><Dropdown label={t('kind')} value={v.kind} disabled={!!category} onChange={kind=>setV({...v,kind})}>
+ return <Modal title={t(category?'edit':'addCategory')} onClose={onClose} t={t} dismissible={!busy}><form onSubmit={e=>{e.preventDefault();if(v.name.trim()&&v.nameEn.trim())onSave({...v,name:v.name.trim(),nameEn:v.nameEn.trim()});}}><div className="form-scroll"><div className="form-grid"><label className="span-2"><span>{t('categoryName')} *</span><input required value={v.name} maxLength={60} onChange={e=>setV({...v,name:e.target.value})}/></label><label className="span-2"><span>{t('nameEn')} *</span><input required value={v.nameEn} maxLength={60} onChange={e=>setV({...v,nameEn:e.target.value})}/></label><div className="form-dropdown span-2"><span>{t('kind')}</span><Dropdown label={t('kind')} value={v.kind} disabled={!!category} onChange={kind=>setV({...v,kind})}>
    {catalogGroups.map(group=><option key={group.id} value={group.id}>{t(group.label)}</option>)}
  </Dropdown></div><label><span>{t('color')}</span><input type="color" value={v.color} onChange={e=>setV({...v,color:e.target.value})}/></label><div className="form-dropdown"><span>{t('icon')}</span><Dropdown label={t('icon')} value={v.icon} onChange={icon=>setV({...v,icon})}>
    {categoryIconOptions.map(icon=><option key={icon} value={icon}>{icon}</option>)}
- </Dropdown></div><div className="category-preview span-2"><CategoryIcon category={v}/><strong>{v.name||t('categoryName')}</strong><small>{v.nameEn}</small></div></div></div>{saveError&&<p className="form-error place-form-error" role="alert">{t(saveError)}</p>}<div className="modal-footer"><button className="button secondary" type="button" onClick={onClose}>{t('cancel')}</button><button className="button primary" disabled={busy}>{t(busy?'saving':'save')}</button></div></form></Modal>;
+ </Dropdown></div><div className="category-preview span-2"><CategoryIcon category={v}/><strong>{v.name||t('categoryName')}</strong><small>{v.nameEn}</small></div></div></div>{saveError&&<p className="form-error place-form-error" role="alert">{t(saveError)}</p>}<div className="modal-footer"><button className="button secondary" type="button" data-dialog-dismiss disabled={busy}>{t('cancel')}</button><button className="button primary" disabled={busy}>{t(busy?'saving':'save')}</button></div></form></Modal>;
 }
 const mobileAdminQuery='(max-width: 700px)';
+const overviewTabs=[
+  ['summary','overviewSummary','dashboard'],
+  ['activity','overviewActivity','clock'],
+  ['traffic','overviewTraffic','chart'],
+];
+
+function OverviewTabs({value,onChange,t}) {
+  const active=overviewTabs.findIndex(([id])=>id===value);
+  function moveTab(event){
+    const last=overviewTabs.length-1;
+    const offsets={ArrowLeft:active-1,ArrowRight:active+1,Home:0,End:last};
+    if(!Object.hasOwn(offsets,event.key))return;
+    event.preventDefault();
+    const index=(offsets[event.key]+overviewTabs.length)%overviewTabs.length;
+    onChange(overviewTabs[index][0]);
+    event.currentTarget.querySelectorAll('[role="tab"]')[index]?.focus({preventScroll:true});
+  }
+  return <div className="overview-switch" role="tablist" aria-label={t('overview')} onKeyDown={moveTab}
+    style={{'--overview-index':active}}>
+    {overviewTabs.map(([id,label,icon])=><button type="button" key={id} role="tab" id={`overview-tab-${id}`}
+      aria-controls="overview-panel" aria-selected={value===id} tabIndex={value===id?0:-1} onClick={()=>onChange(id)}>
+      <Icon name={icon} size={15}/><span>{t(label)}</span>
+    </button>)}
+  </div>;
+}
 const isMobileAdmin=()=>window.matchMedia?.(mobileAdminQuery).matches??false;
 function subscribeMobileAdmin(notify) {
   const media=window.matchMedia?.(mobileAdminQuery);
@@ -53,7 +78,7 @@ function subscribeMobileAdmin(notify) {
   return ()=>media?.removeEventListener?.('change',notify);
 }
 
-function MobilePlaceCard({place,category,categoryName,groupLabel,t,index,onDetails,onEdit,onDelete}) {
+function MobilePlaceCard({place,category,categoryName,groupLabel,t,index,onDetails}) {
   const [image]=placePhotoUrls(place);
   return <li className="admin-mobile-place" style={{'--card-delay':`${index*34}ms`,'--category-color':category.color}}>
     <button type="button" className="admin-mobile-place-main" aria-haspopup="dialog" onClick={onDetails}>
@@ -70,16 +95,15 @@ function MobilePlaceCard({place,category,categoryName,groupLabel,t,index,onDetai
     <div className="admin-mobile-place-meta">
       <span className="admin-category-tag">{categoryName}</span>
       <Status value={place.status} t={t}/>
-    </div>
-    <div className="admin-mobile-place-actions">
-      <span>{groupLabel}</span>
-      <button type="button" className="text-button" onClick={onEdit}><Icon name="edit" size={15}/>{t('edit')}</button>
-      <button type="button" className="text-button danger-text" aria-label={`${t('delete')} ${place.name}`} onClick={onDelete}><Icon name="delete" size={15}/></button>
+      <small>{groupLabel}</small>
     </div>
   </li>;
 }
 
-function PlacePreview({place,category,groupLabel,t,lang,onClose,onEdit,inDialog=false}) {
+function PlacePreview({place,categories,groupLabel,t,lang,editing,busy,saveError,onEdit,onSave,onCancel,onDelete,onClose,inDialog=false}) {
+  const editor=usePlaceEditor({place,categories,onSave,t,lang,busy,saveError,active:editing});
+  const [metadataOpen,setMetadataOpen]=useState(false);
+  const category=getCategory(categories,place.category);
   const images=placePhotoUrls(place);
   const demoPhone=isDemoPhone(place.phone);
   const number=phoneHref(place.phone);
@@ -87,40 +111,104 @@ function PlacePreview({place,category,groupLabel,t,lang,onClose,onEdit,inDialog=
   const updated=Number.isFinite(timestamp)
     ? new Intl.DateTimeFormat(lang,{dateStyle:'medium',timeZone:'Asia/Ho_Chi_Minh'}).format(timestamp)
     : null;
-  const facts=[['owner',place.owner],...placeHourRows(place),['waste',place.waste],['description',place.description]]
-    .filter(([,value])=>value);
-  return <section className="admin-preview-content" aria-label={t('details')}>
+  const hours=Object.fromEntries(placeHourRows(place));
+  const contact=<>{number!=='tel:'&&!demoPhone?<a href={number}>{place.phone}</a>:place.phone||t('noPhone')}
+    {demoPhone&&<small> · {t('demoPhone')}</small>}</>;
+  const facts=[
+    ['phone','phone',contact], ['owner','building',place.owner],
+    ['opensAt','clock',hours.opensAt], ['closesAt','clock',hours.closesAt],
+    ['hours','',hours.hours,true], ['waste','recycle',place.waste,true], ['description','list',place.description,true],
+  ];
+  const gallery=images.length?<PlaceGallery images={images} name={place.name} t={t}/>:
+    <p className="admin-preview-no-photo"><Icon name="image" size={18}/>{t('noPlacePhotos')}</p>;
+  function factField(key,icon){
+    if(key==='phone')return editor.phoneField(icon);
+    if(key==='opensAt'||key==='closesAt')return editor.timeField(key,icon);
+    return editor.field(key,{
+      icon, label:key==='hours'?'hoursNotes':key, textarea:key==='description', rows:2,
+      maxLength:{owner:150,hours:100,waste:250}[key],
+    });
+  }
+  return <><form className="admin-preview-content" aria-label={t('details')} data-editing={editing}
+    style={{'--preview-accent':category?.color}} onSubmit={editing?editor.submit:event=>event.preventDefault()}
+    onInvalid={event=>{
+      const details=event.target.closest('details');
+      if(details)details.open=true;
+    }}>
     <header className="admin-sheet-heading">
-      <span className="preview-category"><CategoryIcon category={category} size={16}/>
+      {category&&<span className="preview-category"><CategoryIcon category={category} size={16}/>
         <span><small>{groupLabel}</small><strong>{lang==='en'?category.nameEn:category.name}</strong></span>
-      </span>
-      {!inDialog&&<button type="button" className="icon-button" onClick={onClose} aria-label={t('closeDetails')}><Icon name="x" size={17}/></button>}
+      </span>}
+      {editing&&<span className="admin-preview-edit-label"><Icon name="edit" size={13}/>{t('edit')}</span>}
+      {!inDialog&&<button type="button" className="icon-button" onClick={onClose} disabled={busy} aria-label={t('closeDetails')} title={t('closeDetails')}><Icon name="x" size={19}/></button>}
     </header>
-    {!inDialog&&<h3>{place.name}</h3>}
-    <div className="admin-preview-summary">
-      <span><Icon name="pin" size={15}/>{place.address}</span>
-      <Status value={place.status} t={t}/>
-    </div>
-    {images.length?<PlaceGallery images={images} name={place.name} t={t}/>:
-      <p className="admin-preview-no-photo"><Icon name="image" size={18}/>{t('noPlacePhotos')}</p>}
-    <dl className="admin-preview-facts">
-      <div><dt>{t('phone')}</dt><dd>{number!=='tel:'&&!demoPhone?<a href={number}>{place.phone}</a>:place.phone||t('noPhone')}
-        {demoPhone&&<small> · {t('demoPhone')}</small>}</dd></div>
-      {facts.map(([key,value])=><div key={key}><dt>{t(key)}</dt><dd>{value}</dd></div>)}
-    </dl>
-    <details className="admin-preview-metadata">
-      <summary>{t('dataDetails')}</summary>
-      <dl>
-        <div><dt>{t('coordinates')}</dt><dd>{place.lat.toFixed(6)}, {place.lng.toFixed(6)}</dd></div>
-        {place.source&&<div><dt>{t('source')}</dt><dd>{place.source}</dd></div>}
-        {updated&&<div><dt>{t('updated')}</dt><dd><time dateTime={place.updatedAt}>{updated}</time></dd></div>}
+    <div className="admin-preview-body" inert={editing&&busy}>
+      <section className="admin-preview-section admin-preview-identity">
+        <h4><Icon name="pin" size={15}/>{t('basicInfo')}</h4>
+        <div className="admin-preview-fields">
+        {editing?<>
+          {editor.field('name',{required:true,maxLength:150})}
+          {editor.field('address',{required:true,maxLength:250,icon:'pin'})}
+        </>:<>
+          <div className="admin-preview-field"><small>{t('name')}</small><h3>{place.name}</h3></div>
+          <div className="admin-preview-field"><small><Icon name="pin" size={13}/>{t('address')}</small><p>{place.address}</p></div>
+        </>}
+        <div className="admin-preview-classification">
+          {editing?<>{editor.groupField}{editor.categoryField}{editor.statusField}</>:<>
+            <div className="admin-preview-field"><small>{t('kind')}</small><p>{groupLabel}</p></div>
+            <div className="admin-preview-field"><small>{t('category')}</small><p>{category&&(lang==='en'?category.nameEn:category.name)}</p></div>
+            <div className="admin-preview-field"><small>{t('status')}</small><Status value={place.status} t={t}/></div>
+          </>}
+        </div>
+        </div>
+      </section>
+      <section className="admin-preview-section">
+      <h4><Icon name="list" size={15}/>{t('details')}</h4>
+      <dl className="admin-preview-facts">
+        {facts.filter(([key,,value])=>editing?(key!=='waste'||editor.acceptsWaste):value).map(([key,icon,value,wide])=>
+          <div key={key} className={wide?'admin-preview-wide-fact':undefined}>
+            {editing?<><dt className="sr-only">{t(key)}</dt><dd>{factField(key,icon)}</dd></>:<>
+              <dt>{icon&&<Icon name={icon} size={13}/>} {t(key)}</dt><dd>{value}</dd>
+            </>}
+          </div>)}
+        {editing&&editor.hoursHint&&<div className="admin-preview-wide-fact"><dt className="sr-only">{t('hours')}</dt><dd>{editor.hoursHint}</dd></div>}
       </dl>
-    </details>
-    <div className="admin-preview-actions">
-      <button className="button primary" type="button" onClick={onEdit}><Icon name="edit" size={16}/>{t('edit')}</button>
-      {!inDialog&&<a className="button secondary" href={directionsUrl(place)} target="_blank" rel="noopener noreferrer"><Icon name="navigation" size={16}/>Google Maps</a>}
+      </section>
+      <section className="admin-preview-section admin-preview-photos">
+        <h4><Icon name="image" size={15}/>{t('placeImages')}{images.length>0&&<span>{images.length}</span>}</h4>
+        {gallery}
+        {editing&&<details className="admin-preview-photo-editor">
+          <summary>{t('edit')} · {t('placeImages')}</summary>
+          {editor.imageFields}
+        </details>}
+      </section>
+      <details className="admin-preview-section admin-preview-metadata" onToggle={event=>setMetadataOpen(event.currentTarget.open)}>
+        <summary><Icon name="info" size={15}/>{t('dataDetails')}<Icon name="down" size={14}/></summary>
+        {editing?<div className="admin-preview-fields">
+          <div className="admin-preview-coordinates">{editor.coordinateFields}</div>
+          {metadataOpen&&editor.coordinatePicker}
+          {editor.field('source',{maxLength:150})}
+        </div>:<dl>
+          <div><dt>{t('coordinates')}</dt><dd>{place.lat.toFixed(6)}, {place.lng.toFixed(6)}</dd></div>
+          {place.source&&<div><dt>{t('source')}</dt><dd>{place.source}</dd></div>}
+          {updated&&<div><dt>{t('updated')}</dt><dd><time dateTime={place.updatedAt}>{updated}</time></dd></div>}
+          {!inDialog&&<div><dt>{t('directions')}</dt><dd><a href={directionsUrl(place)} target="_blank" rel="noopener noreferrer">Google Maps ↗</a></dd></div>}
+        </dl>}
+      </details>
     </div>
-  </section>;
+    <div className="admin-preview-footer">
+      {editing&&editor.errorMessage}
+      <div className="admin-preview-actions">
+        {editing?<>
+          <button className="button secondary" type="button" onClick={onCancel} disabled={busy}>{t('cancel')}</button>
+          <button className="button primary" type="submit" disabled={busy}><Icon name="check" size={16}/>{t(busy?'saving':'save')}</button>
+        </>:<>
+          <button className="button primary" type="button" onClick={()=>{editor.reset();onEdit();}} disabled={busy}><Icon name="edit" size={16}/>{t('edit')}</button>
+          <button className="button secondary danger-text" type="button" onClick={onDelete} disabled={busy}><Icon name="delete" size={16}/>{t('delete')}</button>
+        </>}
+      </div>
+    </div>
+  </form>{editor.imagePreview}</>;
 }
 
 export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdToken}) {
@@ -136,6 +224,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
  const [editCategory,setEditCategory]=useState(null);
  const [deleting,setDeleting]=useState(null);
  const [previewId,setPreviewId]=useState(null);
+ const [hoveredPlaceId,setHoveredPlaceId]=useState(null);
  const mapPanel=useRef(null);
  const [busy,setBusy]=useState(false);
  const [exporting,setExporting]=useState(false);
@@ -161,7 +250,13 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
  const pages=Math.max(1,Math.ceil(filtered.length/7));
  const current=Math.min(page,pages);
  const visible=filtered.slice((current-1)*7,current*7);
- const preview=filtered.find(place=>place.id===previewId);
+ const inlineEdit=Boolean(edit?.place);
+ const preview=places.find(place=>place.id===previewId)??edit?.place;
+ const mapPlaces=useMemo(()=>{
+   if(!preview||filtered.some(place=>place.id===preview.id))return filtered;
+   return [...filtered,preview];
+ },[filtered,preview]);
+ const mapHoverId=!inlineEdit&&visible.some(place=>place.id===hoveredPlaceId)?hoveredPlaceId:null;
  const recent=[...places].sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))).slice(0,5);
  const title=tab==='overview'?'overview':tab==='categories'?'manageCategories':group?.label??'managePlaces';
 
@@ -169,7 +264,8 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
    setQuery('');setGroupFilter('all');setCategory('all');setStatus('all');setPage(1);
  }
  function navigate(next){
-   setTab(next);setPreviewId(null);clearFilters();
+   if(inlineEdit){if(saving.current)return;closeDialog(setEdit);}
+   setTab(next);setPreviewId(null);setHoveredPlaceId(null);clearFilters();
    if(window.scrollY>0)window.scrollTo({top:0,behavior:'instant'});
  }
  function revealMap(){
@@ -185,8 +281,14 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
    setCategory(value);setPage(1);
  }
  function selectPreview(id){
+   if(inlineEdit)return;
    setPreviewId(id);
    revealMap();
+ }
+ function closePreview(){
+   if(saving.current)return;
+   if(inlineEdit)closeDialog(setEdit);
+   setPreviewId(null);
  }
  function closeDialog(setDialog){
    if(!saving.current){setSaveError('');setDialog(null);}
@@ -223,6 +325,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
      setSaveError('categoryInUse');return;
    }
    return apply({...data,[collection]:records.filter(item=>item.id!==deleting.record.id)},()=>{
+     if(collection==='places'&&previewId===deleting.record.id)setPreviewId(null);
      setDeleting(null);notify(t(collection==='categories'?'categoryDeleted':'deleted'));
    });
  }
@@ -230,6 +333,11 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
    if(group&&!groupHasCategories(group.id)){notify(t('noCategory'));return;}
    setEdit({initialKind:group?.id});
  }
+ const placeCard=preview&&<PlacePreview key={preview.id} place={preview} categories={categories}
+   groupLabel={groupName(getCategory(categories,preview.category)?.kind??'safe')} t={t} lang={lang} inDialog={mobile}
+   editing={inlineEdit} busy={busy} saveError={saveError} onClose={closePreview}
+   onEdit={()=>setEdit({place:preview})} onSave={savePlace} onCancel={()=>closeDialog(setEdit)}
+   onDelete={()=>setDeleting({type:'place',record:preview})}/>;
  function groupHasCategories(id){return categories.some(category=>category.kind===id);}
  async function exportData(){
    if(exporting)return;
@@ -248,8 +356,8 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
  return <div className="admin-layout">
    <aside className="admin-sidebar">
      <div className="admin-sidebar-label">{t('workspace')}</div>
-     <nav aria-label={t('workspace')}>{nav.map(item=><button key={item.id} data-section={item.id}
-       className={tab===item.id?'active':''} aria-current={tab===item.id?'page':undefined} onClick={()=>navigate(item.id)}>
+     <nav aria-label={t('workspace')} style={{'--dock-index':nav.findIndex(item=>item.id===tab)}}>{nav.map(item=><button key={item.id} data-section={item.id}
+       className={tab===item.id?'active':''} aria-label={t(item.label)} title={t(item.label)} aria-current={tab===item.id?'page':undefined} onClick={()=>navigate(item.id)}>
        <Icon name={item.icon}/><span>{t(item.label)}</span>{item.id==='green'&&alerts.length>0&&<b>{alerts.length}</b>}
      </button>)}</nav>
      <div className="admin-sidebar-bottom">
@@ -262,15 +370,13 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
        <div><div className="eyebrow">{t('dataLabel')}</div><h1>{t(title)}</h1>{tab==='overview'&&<p>{t('adminSubtitle')}</p>}</div>
        <div className="admin-heading-actions">
          <button className="button secondary" onClick={exportData} disabled={exporting}><Icon name="download" size={16}/>{t(exporting?'exportingExcel':'exportExcel')}</button>
-         {tab!=='categories'&&<button className="button primary" onClick={add}><Icon name="plus" size={16}/>{t('add')}</button>}
+         {tab!=='categories'&&<button className="button primary" onClick={add} disabled={inlineEdit}><Icon name="plus" size={16}/>{t('add')}</button>}
        </div>
      </div>
      <div className="admin-content" key={tab}>
        {tab==='overview'?<>
-         <nav className="overview-switch" aria-label={t('overview')}>{[['summary','overviewSummary'],['activity','overviewActivity'],['traffic','overviewTraffic']].map(([id,label])=>
-           <button type="button" key={id} aria-pressed={overview===id} onClick={()=>setOverview(id)}>{t(label)}</button>
-         )}</nav>
-         <div className="overview-view" key={overview}>
+         <OverviewTabs value={overview} onChange={setOverview} t={t}/>
+         <div className="overview-view" key={overview} id="overview-panel" role="tabpanel" aria-labelledby={`overview-tab-${overview}`} tabIndex={0}>
            {overview==='summary'?<>
              <div className="stats-grid">
                {[{id:'places',label:'total',icon:'pin',count:places.length},...groups].map((item,index)=><button key={item.id}
@@ -301,7 +407,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
                </div>
                {alerts.length?alerts.map(place=><div className="attention-row" key={place.id}>
                  <CategoryIcon category={getCategory(categories,place.category)}/><div><strong>{place.name}</strong><p>{place.address}</p><Status value={place.status} t={t}/></div>
-                 <button className="icon-button" aria-label={`${t('edit')} ${place.name}`} onClick={()=>setEdit({place})}><Icon name="edit" size={16}/></button>
+                 <button className="icon-button" aria-label={`${t('edit')} ${place.name}`} onClick={()=>{navigate('green');selectPreview(place.id);setEdit({place});}}><Icon name="edit" size={16}/></button>
                </div>):<div className="empty-state"><Icon name="check"/><p>{t('noAlerts')}</p></div>}
              </section>
              <section className="panel recent-panel">
@@ -341,6 +447,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
            })}</div>:<div className="empty-state">{t('noCategory')}</div>}
          </section>)}
        </div>:<section className="admin-places">
+       <div className={`admin-places-layout ${mobile?'is-mobile':''}`}>
        <div className="panel admin-places-toolbar">
          <div className="panel-heading"><h2>{t(group?.label??'allPlaces')} <span className="count-pill">{filtered.length}</span></h2>
            {!mobile&&<button type="button" className="button secondary admin-open-map" onClick={revealMap}><Icon name="map" size={16}/>{t('viewMap')}</button>}
@@ -348,108 +455,85 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
          <div className="table-toolbar">
            <div className="search-field"><Icon name="search" size={18}/><input aria-label={t('search')} placeholder={t('search')} value={query} onChange={event=>{setQuery(event.target.value);setPage(1);}}/>
              {query&&<button aria-label={t('clearSearch')} onClick={()=>{setQuery('');setPage(1);}}><Icon name="x" size={14}/></button>}</div>
-           {mobile?<div className="admin-mobile-filters">
-             <div className="admin-mobile-filter"><span>{t('kind')}</span>
-               <div className="category-chips" role="group" aria-label={t('kind')}>
-                 <button type="button" aria-pressed={!group&&groupFilter==='all'} onClick={()=>changeGroup('all')}>{t('allGroups')}</button>
-                 {catalogGroups.map(item=><button type="button" key={item.id} aria-pressed={(group?.id??groupFilter)===item.id}
-                   style={{'--chip-color':item.color}} onClick={()=>changeGroup(item.id)}><Icon name={item.icon} size={14}/>{t(item.label)}</button>)}
-               </div>
+           <div className="admin-filter-row">
+             <span>{t('kind')}</span>
+             <div className="category-chips" role="group" aria-label={t('kind')}>
+               <button type="button" aria-pressed={!group&&groupFilter==='all'} onClick={()=>changeGroup('all')}>{t('allGroups')}</button>
+               {catalogGroups.map(item=><button type="button" key={item.id} aria-pressed={(group?.id??groupFilter)===item.id}
+                 style={{'--chip-color':item.color}} onClick={()=>changeGroup(item.id)}><Icon name={item.icon} size={14}/>{t(item.label)}</button>)}
              </div>
-             <div className="admin-mobile-filter"><span>{t('category')}</span>
-               <div className="category-chips" key={scope} role="group" aria-label={t('category')}>
-                 <button type="button" aria-pressed={category==='all'} onClick={()=>changeCategory('all')}>{t('allCategories')}</button>
-                 {visibleCategories.map(item=><button type="button" key={item.id} aria-pressed={category===item.id}
-                   style={{'--chip-color':item.color}} onClick={()=>changeCategory(item.id)}><Icon name={item.icon} size={14}/>{categoryName(item)}</button>)}
-               </div>
+           </div>
+           <div className="admin-filter-row">
+             <span>{t('category')}</span>
+             <div className="category-chips" key={scope} role="group" aria-label={t('category')}>
+               <button type="button" aria-pressed={category==='all'} onClick={()=>changeCategory('all')}>{t('allCategories')}</button>
+               {visibleCategories.map(item=><button type="button" key={item.id} aria-pressed={category===item.id}
+                 style={{'--chip-color':item.color}} onClick={()=>changeCategory(item.id)}><Icon name={item.icon} size={14}/>{categoryName(item)}</button>)}
              </div>
-             {(query||groupFilter!=='all'||category!=='all'||status!=='all')&&
-               <div className="admin-mobile-filter-footer">
-                 {status!=='all'&&<Status value={status==='alerts'?'alertStatus':status} t={t}/>}
-                 <button className="text-button admin-clear-filters" onClick={clearFilters}><Icon name="x" size={15}/>{t('clearFilters')}</button>
-               </div>}
-           </div>:<div className="admin-filter-controls">
-           <Dropdown label={t('kind')} value={group?.id??groupFilter} onChange={changeGroup}>
-             <option value="all">{t('allGroups')}</option>{catalogGroups.map(item=><option key={item.id} value={item.id}>{t(item.label)}</option>)}
-           </Dropdown>
-           <Dropdown label={t('category')} value={category} onChange={changeCategory}>
-             <option value="all">{t('allCategories')}</option>{visibleCategories.map(item=><option key={item.id} value={item.id}>{categoryName(item)}</option>)}
-           </Dropdown>
-           <Dropdown label={t('status')} value={status} onChange={value=>{setStatus(value);setPage(1);}}>
-             <option value="all">{t('allStatus')}</option>{(scope==='map'||scope==='green')&&<option value="alerts">{t('alertStatus')}</option>}
-             {states.map(item=><option key={item} value={item}>{t(item)}</option>)}
-           </Dropdown>
-           {(query||groupFilter!=='all'||category!=='all'||status!=='all')&&<button className="text-button admin-clear-filters" aria-label={t('clearFilters')} onClick={clearFilters}><Icon name="x" size={15}/><span>{t('clearFilters')}</span></button>}
-           </div>}
-
+           </div>
+           {(query||groupFilter!=='all'||category!=='all'||status!=='all')&&
+             <div className="admin-filter-footer">
+               {status!=='all'&&<Status value={status==='alerts'?'alertStatus':status} t={t}/>}
+               <button type="button" className="text-button admin-clear-filters" onClick={clearFilters}><Icon name="x" size={15}/>{t('clearFilters')}</button>
+             </div>}
          </div>
        </div>
-       <div className={`admin-places-layout ${mobile?'is-mobile':''}`}>
-       <div className="panel admin-places-list">
+       <div className="panel admin-places-list" aria-label={t('places')}>
          {mobile?<ul className="admin-mobile-places" key={`${scope}:${category}:${current}`}>
            {visible.map((place,index)=>{
              const item=getCategory(categories,place.category);
              return <MobilePlaceCard key={place.id} place={place} category={item} categoryName={categoryName(item)} groupLabel={groupName(item.kind)}
-               index={index} t={t} onDetails={()=>selectPreview(place.id)} onEdit={()=>setEdit({place})}
-               onDelete={()=>setDeleting({type:'place',record:place})}/>;
+               index={index} t={t} onDetails={()=>selectPreview(place.id)}/>;
            })}
-         </ul>:<div className="table-scroll"><table><thead><tr><th>{t('name')}</th><th>{t('category')}</th><th>{t('status')}</th><th>{t('actions')}</th></tr></thead>
-           <tbody>{visible.map(place=>{
+         </ul>:<div className="table-scroll"><table><thead><tr><th scope="col">{t('name')}</th><th scope="col">{t('category')}</th><th scope="col">{t('status')}</th></tr></thead>
+           <tbody key={current}>{visible.map((place,index)=>{
              const item=getCategory(categories,place.category);
              return <tr key={place.id} className={previewId===place.id?'is-previewed':undefined}
+               style={{'--ui-order':index}}
+               onPointerEnter={event=>{if(event.pointerType==='mouse')setHoveredPlaceId(place.id);}}
+               onPointerLeave={()=>setHoveredPlaceId(id=>id===place.id?null:id)}
                onClick={event=>{if(!event.target.closest('button'))selectPreview(place.id);}}>
                <td><div className="table-place"><CategoryIcon category={item} size={17}/><div>
-                 <button className="admin-place-name" type="button" aria-expanded={previewId===place.id} onClick={()=>selectPreview(place.id)}>{place.name}</button>
+                 <button className="admin-place-name" type="button" aria-disabled={inlineEdit} aria-expanded={previewId===place.id} onClick={()=>selectPreview(place.id)}>{place.name}</button>
                  <small>{place.address}</small>{group?.id==='green'&&place.waste&&<small>{place.waste}</small>}
                </div></div></td>
                <td><span className="admin-category-tag" style={{'--category-color':item.color}}>{categoryName(item)}</span>{!group&&<small className="table-group-label">{groupName(item.kind)}</small>}</td>
                <td><Status value={place.status} t={t}/></td>
-               <td><div className="table-actions">
-                 <button className="icon-button" aria-label={`${t('viewMap')} ${place.name}`} title={t('viewMap')} onClick={()=>selectPreview(place.id)}><Icon name="map" size={16}/></button>
-                 <button className="icon-button" aria-label={`${t('edit')} ${place.name}`} title={t('edit')} onClick={()=>setEdit({place})}><Icon name="edit" size={16}/></button>
-                 <button className="icon-button danger-text" aria-label={`${t('delete')} ${place.name}`} title={t('delete')} onClick={()=>setDeleting({type:'place',record:place})}><Icon name="delete" size={16}/></button>
-               </div></td>
              </tr>;
            })}</tbody></table>
            {!visible.length&&<div className="empty-state"><Icon name="search" size={30}/><h3>{t('noResults')}</h3></div>}
          </div>}
          {mobile&&!visible.length&&<div className="empty-state"><Icon name="search" size={30}/><h3>{t('noResults')}</h3></div>}
-         <div className="pagination"><span>{filtered.length} {t('results')}</span><div>
+         <div className="pagination"><span aria-live="polite">{filtered.length} {t('results')}</span><div>
            <button className="icon-button" disabled={current<=1} aria-label={t('previousPage')} onClick={()=>setPage(current-1)}><Icon name="left" size={16}/></button>
            <span>{t('page')} {current} {t('of')} {pages}</span>
            <button className="icon-button" disabled={current>=pages} aria-label={t('nextPage')} onClick={()=>setPage(current+1)}><Icon name="right" size={16}/></button>
          </div></div>
        </div>
-       {!mobile&&<aside ref={mapPanel} className="admin-place-preview" aria-label={t('viewMap')}
-         onKeyDown={event=>{if(event.key==='Escape')setPreviewId(null);}}>
+       {!mobile&&<aside ref={mapPanel} className={`admin-place-preview ${preview?'has-place':''}`} aria-label={t('viewMap')}
+         onKeyDown={event=>{if(event.key==='Escape'&&!event.defaultPrevented&&!inlineEdit)closePreview();}}>
          <div className="admin-preview-map">
-           <AdminPlacesMap places={filtered} categories={categories} selected={preview?.id} onSelect={setPreviewId} t={t} lang={lang}/>
-           <div className="admin-preview-header"><h2>{t('viewMap')}</h2>
-             {preview&&<button type="button" className="icon-button" onClick={()=>setPreviewId(null)} aria-label={t('closeDetails')}><Icon name="x" size={19}/></button>}
-           </div>
+           <AdminPlacesMap places={mapPlaces} categories={categories} selected={preview?.id} hovered={mapHoverId} onSelect={selectPreview} t={t} lang={lang}/>
+           <div className="admin-preview-header"><h2>{t('viewMap')}</h2></div>
          </div>
-         {preview&&<PlacePreview key={preview.id} place={preview} category={getCategory(categories,preview.category)}
-           groupLabel={groupName(getCategory(categories,preview.category).kind)} t={t} lang={lang}
-           onClose={()=>setPreviewId(null)} onEdit={()=>setEdit({place:preview})}/>}
+         {placeCard}
        </aside>}
        </div>
        </section>}
      </div>
      <p className="admin-notice"><Icon name="help" size={16}/><span>{t('adminFirebase')}</span></p>
    </main>
-   {mobile&&preview&&<Modal title={preview.name} className="admin-place-dialog" onClose={()=>setPreviewId(null)} t={t}>
-     <PlacePreview key={preview.id} place={preview} category={getCategory(categories,preview.category)}
-       groupLabel={groupName(getCategory(categories,preview.category).kind)} t={t} lang={lang} inDialog
-       onEdit={()=>{setPreviewId(null);setEdit({place:preview});}}/>
+   {mobile&&preview&&<Modal title={t('details')} className="admin-place-dialog" onClose={closePreview} t={t} dismissible={!busy}>
+     {placeCard}
    </Modal>}
-   {edit&&<PlaceForm place={edit.place} initialKind={edit.initialKind} categories={categories} onSave={savePlace}
+   {edit&&!inlineEdit&&<PlaceForm initialKind={edit.initialKind} categories={categories} onSave={savePlace}
      onClose={()=>closeDialog(setEdit)} t={t} lang={lang} busy={busy} saveError={saveError}/>}
    {editCategory&&<CategoryForm category={editCategory.category} initialKind={editCategory.initialKind} onSave={saveCategory}
      onClose={()=>closeDialog(setEditCategory)} t={t} busy={busy} saveError={saveError}/>}
-   {deleting&&<Modal title={t(deleting.type==='category'?'confirmCategory':'confirmDelete')} onClose={()=>closeDialog(setDeleting)} t={t}>
+   {deleting&&<Modal title={t(deleting.type==='category'?'confirmCategory':'confirmDelete')} onClose={()=>closeDialog(setDeleting)} t={t} dismissible={!busy}>
      <div className="delete-content"><span className="delete-icon"><Icon name="delete" size={25}/></span><strong>{deleting.record.name}</strong><p>{t('deleteHint')}</p></div>
      {saveError&&<p className="form-error place-form-error" role="alert">{t(saveError)}</p>}
-     <div className="modal-footer"><button className="button secondary" onClick={()=>closeDialog(setDeleting)} disabled={busy}>{t('cancel')}</button>
+     <div className="modal-footer"><button className="button secondary" type="button" data-dialog-dismiss disabled={busy}>{t('cancel')}</button>
        <button className="button danger" onClick={remove} disabled={busy}>{t(busy?'saving':'delete')}</button></div>
    </Modal>}
  </div>;

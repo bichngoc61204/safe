@@ -3,6 +3,7 @@ import Icon from './Icon';
 import Dropdown from './Dropdown';
 import { formatDistance } from '../lib/domain';
 import { routeModes } from '../lib/routing';
+import { routeSteps } from '../lib/navigation';
 
 function instruction(step, t) {
   const { type, modifier, exit } = step.maneuver;
@@ -18,7 +19,7 @@ function instruction(step, t) {
 
 export default function RouteGuide({route, mode, destination, navigation, onExit, onModeChange, t}) {
   const [{index:previewIndex,direction}, setStep] = useState({index:0,direction:1});
-  const steps = (route.legs || []).flatMap(leg => leg.steps || []).filter(step => step.maneuver);
+  const steps = routeSteps(route);
   const index = navigation.active ? navigation.step : previewIndex;
   const step = steps[index];
   const distance = navigation.remaining?.remainingDistance ?? route.distance;

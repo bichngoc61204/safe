@@ -11,13 +11,15 @@ export default function Dropdown({ children, value, onChange, label, className='
   const menu = useRef(null);
   const id = useId();
   const selected = options.findIndex(option => option.value === value);
+  const firstEnabled = options.findIndex(option => !option.disabled);
 
   useLayoutEffect(() => {
     if (!open || !menu.current?.showPopover) return;
     const panel = menu.current;
     panel.showPopover();
-    function place(event) {
-      if (event?.target === panel) return;
+    let frame;
+    function place() {
+      frame = undefined;
       const rect = trigger.current.getBoundingClientRect();
       const below = window.innerHeight - rect.bottom - 12;
       const above = rect.top - 12;
@@ -33,13 +35,17 @@ export default function Dropdown({ children, value, onChange, label, className='
       });
       panel.dataset.upward = upward;
     }
+    function schedulePlace(event) {
+      if(event.target!==panel&&frame===undefined)frame=requestAnimationFrame(place);
+    }
     place();
-    window.addEventListener('resize', place);
-    window.addEventListener('scroll', place, true);
+    window.addEventListener('resize', schedulePlace);
+    window.addEventListener('scroll', schedulePlace, true);
     return () => {
+      if(frame!==undefined)cancelAnimationFrame(frame);
       panel.hidePopover();
-      window.removeEventListener('resize', place);
-      window.removeEventListener('scroll', place, true);
+      window.removeEventListener('resize', schedulePlace);
+      window.removeEventListener('scroll', schedulePlace, true);
     };
   }, [open,compact]);
 
@@ -51,8 +57,19 @@ export default function Dropdown({ children, value, onChange, label, className='
   }, [open]);
 
   useEffect(() => {
-    if (open && active >= 0) menu.current?.querySelector('[data-active=true]')?.scrollIntoView?.({ block:'nearest' });
+    const panel=menu.current;
+    const option=panel?.querySelector('[data-active=true]');
+    if(!open||!option)return;
+    const panelBounds=panel.getBoundingClientRect();
+    const optionBounds=option.getBoundingClientRect();
+    if(optionBounds.top<panelBounds.top)panel.scrollTop-=panelBounds.top-optionBounds.top;
+    else if(optionBounds.bottom>panelBounds.bottom)panel.scrollTop+=optionBounds.bottom-panelBounds.bottom;
   }, [active, open]);
+
+  function openMenu(fallback=firstEnabled) {
+    setActive(selected>=0&&!options[selected].disabled?selected:fallback);
+    setOpen(true);
+  }
 
   function choose(index) {
     const option = options[index];
@@ -73,12 +90,15 @@ export default function Dropdown({ children, value, onChange, label, className='
     if (key === 'Enter' || key === ' ') {
       event.preventDefault();
       if (open) choose(active);
-      else { setActive(Math.max(0, selected)); setOpen(true); }
+      else openMenu();
       return;
     }
     if (!['ArrowDown','ArrowUp','Home','End'].includes(key)) return;
     event.preventDefault();
-    if (!open) { setOpen(true); setActive(Math.max(0, selected)); return; }
+    if (!open) {
+      openMenu(key==='ArrowUp'||key==='End'?options.findLastIndex(option=>!option.disabled):firstEnabled);
+      return;
+    }
     const step = key === 'ArrowUp' || key === 'End' ? -1 : 1;
     let next = key === 'Home' ? 0 : key === 'End' ? options.length - 1 : active + step;
     while (options[next]?.disabled) next += step;
@@ -89,8 +109,8 @@ export default function Dropdown({ children, value, onChange, label, className='
     <button type="button" ref={trigger} className={`dropdown-trigger ${triggerClass}`} role="combobox"
       aria-label={label} aria-expanded={open} aria-controls={open?id:undefined}
       aria-activedescendant={open&&active>=0?`${id}-${active}`:undefined}
-      disabled={disabled||!options.length} onKeyDown={keyDown} onBlur={()=>setOpen(false)}
-      onClick={()=>{setActive(Math.max(0, selected));setOpen(!open);}}>
+      disabled={disabled||firstEnabled<0} onKeyDown={keyDown} onBlur={()=>setOpen(false)}
+      onClick={()=>open?setOpen(false):openMenu()}>
       <span>{options[selected]?.children??label}</span>
     </button>
     {open&&<div id={id} className={`dropdown-menu ${menuClass}`} popover={typeof HTMLElement.prototype.showPopover==='function'?'manual':undefined}

@@ -9,11 +9,16 @@ function rotatePoint(point, angle) {
 export function addMapRotation(map, viewport, frame, onBearing) {
   let bearing = 0;
   let gesture;
-  let pendingBearing = 0;
   let animation = 0;
   const defaultMousePoint = map.mouseEventToContainerPoint;
   const draggable = map.dragging._draggable;
-  const angle = touches => Math.atan2(touches[1].clientY - touches[0].clientY, touches[1].clientX - touches[0].clientX);
+  const measure = touches => {
+    const dx=touches[1].clientX-touches[0].clientX;
+    const dy=touches[1].clientY-touches[0].clientY;
+    const a=map.mouseEventToContainerPoint(touches[0]);
+    const b=map.mouseEventToContainerPoint(touches[1]);
+    return {distance:Math.hypot(dx,dy),angle:Math.atan2(dy,dx),midpoint:a.add(b).divideBy(2)};
+  };
 
   const screenToMap = offset => rotatePoint(L.point(offset), -bearing);
 
@@ -24,42 +29,72 @@ export function addMapRotation(map, viewport, frame, onBearing) {
     map.invalidateSize({ debounceMoveend: true });
   }
 
-  function draw() {
-    animation = 0;
-    const next = Math.atan2(Math.sin(pendingBearing), Math.cos(pendingBearing));
-    const resizeNeeded = Boolean(bearing) !== Boolean(next);
-    bearing = next;
+  function setBearing(next) {
+    const changed=Boolean(bearing)!==Boolean(next);
+    bearing=next;
     viewport.style.setProperty('--map-bearing', `${bearing}rad`);
-    if (resizeNeeded) resize();
+    if (changed) resize();
     onBearing(bearing);
   }
 
+  function drawZoom(zoom, midpoint) {
+    const offset=midpoint.subtract(map.getSize().divideBy(2));
+    const center=map.unproject(map.project(gesture.anchor,zoom).subtract(offset),zoom);
+    map._move(center,zoom,{pinch:true,round:false});
+  }
+
+  function draw() {
+    animation=0;
+    if (gesture.mode==='rotate') setBearing(gesture.bearing+gesture.rotation);
+    else drawZoom(gesture.zoom,gesture.midpoint);
+  }
+
   function start(event) {
-    if (event.touches.length !== 2 || gesture) return;
-    const firstAngle = angle(event.touches);
-    gesture = { firstAngle, bearing, rotating: false };
+    if (event.touches.length!==2 || gesture) return;
+    const initial=measure(event.touches);
+    if(initial.distance<1)return;
+    event.preventDefault();
+    map.stop();
+    gesture={
+      initial,bearing,startZoom:map.getZoom(),
+      anchor:map.containerPointToLatLng(initial.midpoint),
+    };
     map.fire('gesturestart');
-    // Leaflet's pinch handler stops the running pan and keeps zoom centered.
   }
 
   function move(event) {
-    if (!gesture || event.touches.length !== 2) return;
-    const delta = angle(event.touches) - gesture.firstAngle;
-    if (!gesture.rotating && Math.abs(Math.atan2(Math.sin(delta), Math.cos(delta))) < .065) return;
-    gesture.rotating = true;
-    pendingBearing = gesture.bearing + delta;
-    if (!animation) animation = requestAnimationFrame(draw);
+    if (!gesture || event.touches.length!==2) return;
+    event.preventDefault();
+    const current=measure(event.touches);
+    if(current.distance<1)return;
+    const ratio=current.distance/gesture.initial.distance;
+    const angle=current.angle-gesture.initial.angle;
+    const rotation=Math.atan2(Math.sin(angle),Math.cos(angle));
+    if (!gesture.mode) {
+      const zoomIntent=Math.abs(Math.log(ratio))/.075;
+      const rotateIntent=Math.abs(rotation)/.17;
+      if (zoomIntent<1 && rotateIntent<1)return;
+      gesture.mode=rotateIntent>=1&&rotateIntent>zoomIntent*1.2?'rotate':'zoom';
+      if(gesture.mode==='zoom')map._moveStart(true,false);
+    }
+    gesture.rotation=rotation;
+    gesture.zoom=Math.max(map.getMinZoom(),Math.min(map.getMaxZoom(),map.getScaleZoom(ratio,gesture.startZoom)));
+    gesture.midpoint=current.midpoint;
+    if(!animation)animation=requestAnimationFrame(draw);
   }
 
   function end(event) {
-    if (!gesture || event.touches.length === 2) return;
-    gesture = null;
+    if (!gesture || event.type!=='touchcancel'&&event.touches.length===2) return;
+    if(animation){cancelAnimationFrame(animation);draw();}
+    if(gesture.mode==='zoom'){
+      drawZoom(map._limitZoom(gesture.zoom),gesture.midpoint);
+      map._moveEnd(true);
+    }
+    gesture=null;
   }
 
   function reset() {
-    cancelAnimationFrame(animation);
-    pendingBearing = 0;
-    draw();
+    setBearing(0);
   }
 
   function adjustDrag() {
@@ -78,8 +113,8 @@ export function addMapRotation(map, viewport, frame, onBearing) {
   };
 
   draggable?.on('predrag', adjustDrag);
-  viewport.addEventListener('touchstart', start, { capture: true, passive: true });
-  document.addEventListener('touchmove', move, { capture: true, passive: true });
+  viewport.addEventListener('touchstart', start, { capture: true, passive: false });
+  document.addEventListener('touchmove', move, { capture: true, passive: false });
   document.addEventListener('touchend', end, true);
   document.addEventListener('touchcancel', end, true);
   const observer = new ResizeObserver(resize);
