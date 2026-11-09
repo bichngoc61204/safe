@@ -5,5 +5,6 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import './styles.css';
 import './theme.css';
 import './admin.css';
+import './dropdown.css';
 import App from './App';
 createRoot(document.getElementById('root')).render(<React.StrictMode><App/></React.StrictMode>);

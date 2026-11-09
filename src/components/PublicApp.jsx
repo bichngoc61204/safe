@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Icon from './Icon';
+import Dropdown from './Dropdown';
 import MapView from './MapView';
 import PlaceGallery from './PlaceGallery';
-import { demoPlacePhotos } from '../lib/data';
+import { CENTER, demoPlacePhotos } from '../lib/data';
 import RouteGuide from './RouteGuide';
 import useNavigation from './useNavigation';
 import { fetchRoute, routeModes } from '../lib/routing';
@@ -10,13 +11,17 @@ import { Status } from './Admin';
 import { filterPlaces, getCategory, directionsUrl, haversine, formatDistance, safeImage, phoneHref, isDemoPhone, isAlert, markerColor } from '../lib/domain';
 
 const scopes=[['map','explore','map'],['safe','safe','shield'],['green','green','recycle'],['partner','partner','leaf']];
+const areaCenter={lat:CENTER[0],lng:CENTER[1]};
 
-function PlaceDetails({place,categories,position,t,lang,onClose,routing}) {
+function PlaceDetails({place,categories,position,t,lang,onClose,routing,demo}) {
   const c=getCategory(categories,place.category);
   const [demoCall,setDemoCall]=useState(false);
   const image=safeImage(place.image);
   const demoPhotos=demoPlacePhotos[place.id];
-  const images=image===demoPhotos?.[0].src?demoPhotos:image?[{src:image}]:[];
+  const extraImages=Array.isArray(place.images)?place.images.map(safeImage).filter(Boolean):[];
+  const images=extraImages.length
+    ? [...new Set([image,...extraImages].filter(Boolean))].map(src=>demoPhotos?.find(photo=>photo.src===src)??{src})
+    : image===demoPhotos?.[0].src?demoPhotos:image?[{src:image}]:[];
   const phone=String(place.phone||'').replace(/[^+\d]/g,'');
   const demoPhone=isDemoPhone(place.phone);
   return <section className="place-details" aria-label={t('details')}>
@@ -44,30 +49,27 @@ function PlaceDetails({place,categories,position,t,lang,onClose,routing}) {
         </dd></div>
         {[['owner',place.owner],['waste',place.waste],['hours',place.hours],['description',place.description]].filter(([,value])=>value).map(([key,value])=><div key={key}><dt>{t(key)}</dt><dd>{value}</dd></div>)}
       </dl>
-      <details className="detail-metadata"><summary>{t('dataDetails')}<Icon name="down" size={14}/></summary><dl><div><dt>{t('coordinates')}</dt><dd>{place.lat.toFixed(6)}, {place.lng.toFixed(6)}</dd></div><div><dt>{t('source')}</dt><dd>{place.source||t('demo')}</dd></div></dl></details>
-      <p className="detail-demo">{t('demoNote')}</p>
+      <details className="detail-metadata"><summary>{t('dataDetails')}<Icon name="down" size={14}/></summary><dl><div><dt>{t('coordinates')}</dt><dd>{place.lat.toFixed(6)}, {place.lng.toFixed(6)}</dd></div>{(place.source||demo)&&<div><dt>{t('source')}</dt><dd>{place.source||t('demo')}</dd></div>}</dl></details>
+      {(demo||place.source==='Dữ liệu minh họa')&&<p className="detail-demo">{t('demoNote')}</p>}
     </div>
   </section>;
 }
 
-export default function PublicApp({welcomePhase,data,scope,setScope,selected,setSelected,t,lang,position,onLocate,onRouteLocate,locating,onSos}) {
+export default function PublicApp({welcomePhase,data,scope,setScope,selected,setSelected,t,lang,position,onLocate,onRouteLocate,locating,onSos,demo}) {
   const [query,setQuery]=useState('');
   const [category,setCategory]=useState('all');
   const [status,setStatus]=useState('all');
   const [expanded,setExpanded]=useState(Boolean(selected));
   const [searchOpen,setSearchOpen]=useState(false);
   const [previewed,setPreviewed]=useState(null);
+  const [focusRevision,setFocusRevision]=useState(0);
   const touchStart=useRef(null);
   const placesList=useRef(null);
-  const searchInput=useRef(null);
   const searchToggle=useRef(null);
   const listToggle=useRef(null);
   useEffect(()=>{
     if(placesList.current)placesList.current.scrollTop=0;
   },[scope,query,category,status]);
-  useEffect(()=>{
-    if(searchOpen)searchInput.current?.focus({preventScroll:true});
-  },[searchOpen]);
   const [origin,setOrigin]=useState(null);
   const [picking,setPicking]=useState(null);
   const [request,setRequest]=useState(null);
@@ -158,7 +160,14 @@ export default function PublicApp({welcomePhase,data,scope,setScope,selected,set
   const scopeCats=data.categories.filter(c=>scope==='map'||c.kind===scope);
   const clearSelection=()=>{cancelRoute();setSelected(null);};
   const clear=()=>{setQuery('');setCategory('all');setStatus('all');clearSelection();};
-  const changeScope=next=>{if(next!==scope){clear();setScope(next);}};
+  const resetMobileSearch=()=>{clear();setScope('map');};
+  const changeScope=next=>{
+    if(next===scope)return;
+    setCategory('all');
+    setStatus('all');
+    clearSelection();
+    setScope(next);
+  };
   const showResults=()=>{setSearchOpen(false);setExpanded(true);listToggle.current?.focus({preventScroll:true});};
   const closeSearch=()=>{setSearchOpen(false);searchToggle.current?.focus({preventScroll:true});};
   const toggleSearch=()=>{
@@ -172,13 +181,19 @@ export default function PublicApp({welcomePhase,data,scope,setScope,selected,set
     setSearchOpen(false);
     setPreviewed(null);
     setSelected(id);
+    setFocusRevision(revision=>revision+1);
     setExpanded(true);
   };
   const closeDetails=clearSelection;
   const hasFilters=Boolean(query.trim())||category!=='all'||status!=='all'||scope!=='map';
+  const searchPreview=useMemo(()=>{
+    if(hasFilters)return visible;
+    if(position)return visible.slice(0,4);
+    return [...visible].sort((a,b)=>haversine(areaCenter,a)-haversine(areaCenter,b)).slice(0,4);
+  },[hasFilters,position,visible]);
   const scopeIndex=scopes.findIndex(([id])=>id===scope);
   const [, scopeLabel, scopeIcon]=scopes[scopeIndex];
-  return <main className="public-app">
+  return <main className="public-app" data-welcome={welcomePhase}>
     <div className={`map-workspace ${expanded?'sheet-expanded':''} ${place?'has-detail':''}`} data-scope={scope}>
       <div className="mobile-map-actions">
         <button ref={searchToggle} className={`map-tool ${hasFilters?'has-filters':''}`} aria-label={t('search')} aria-expanded={searchOpen} aria-controls="map-search-panel" onClick={toggleSearch}><Icon name={searchOpen?'x':'search'} size={21}/></button>
@@ -196,14 +211,49 @@ export default function PublicApp({welcomePhase,data,scope,setScope,selected,set
             <Icon name={scopeIcon} size={30}/>
           </span>
         </div>
-        <nav className="public-tabs" aria-label={t('modules')} style={{'--scope-index':scopeIndex}}>{scopes.map(([id,label,icon])=><button key={id} className={scope===id?'active':''} aria-pressed={scope===id} onClick={()=>changeScope(id)}><Icon name={icon} size={15}/><span>{t(label)}</span></button>)}</nav>
+        <nav className="public-tabs" aria-label={t('modules')} style={{'--scope-index':scopeIndex}}>{scopes.map(([id,label,icon])=><button key={id} data-group={id} className={scope===id?'active':''} aria-pressed={scope===id} onClick={()=>changeScope(id)}><Icon name={icon} size={15}/><span>{t(label)}</span></button>)}</nav>
         <div className="public-toolbar">
-          <div className="search-field"><Icon name="search" size={18}/><input ref={searchInput} placeholder={t('search')} aria-label={t('search')} value={query} onKeyDown={e=>{if(e.key==='Enter'&&searchOpen&&visible.length)showResults();}} onChange={e=>{setQuery(e.target.value);clearSelection();}}/>{query&&<button onClick={()=>{setQuery('');clearSelection();}} aria-label={t('clearFilters')}><Icon name="x" size={15}/></button>}</div>
-          <div className="filter-row" id="public-filters"><label className="filter-select"><select aria-label={t('category')} value={category} onChange={e=>{setCategory(e.target.value);clearSelection();}}><option value="all">{t('allCategories')}</option>{scopeCats.map(c=><option key={c.id} value={c.id}>{lang==='en'?c.nameEn:c.name}</option>)}</select></label>{scope==='green'?<select className="public-status" aria-label={t('status')} value={status} onChange={e=>{setStatus(e.target.value);clearSelection();}}><option value="all">{t('allStatus')}</option><option value="alerts">{t('alertStatus')}</option>{['clean','warning','overloaded','inactive'].map(s=><option key={s} value={s}>{t(s)}</option>)}</select>:null}</div>
+          <div className="search-field"><Icon name="search" size={18}/><input placeholder={t('search')} aria-label={t('search')} value={query} onKeyDown={e=>{if(e.key==='Enter'&&searchOpen&&visible.length)showResults();}} onChange={e=>{setQuery(e.target.value);clearSelection();}}/>{query&&<button type="button" onClick={()=>{setQuery('');clearSelection();}} aria-label={t('clearSearch')}><Icon name="x" size={15}/></button>}</div>
+          <div className="filter-row" id="public-filters">
+            {scope==='safe'
+              ? <div className="category-chips" role="group" aria-label={t('category')}>
+                  <button type="button" aria-pressed={category==='all'} onClick={()=>{setCategory('all');clearSelection();}}>{t('all')}</button>
+                  {scopeCats.map(c=><button type="button" key={c.id} aria-pressed={category===c.id} style={{'--chip-color':markerColor(c)}} onClick={()=>{setCategory(c.id);clearSelection();}}>
+                    <Icon name={c.icon} size={14}/>{lang==='en'?c.nameEn:c.name}
+                  </button>)}
+                </div>
+              : <Dropdown className="filter-select" label={t('category')} value={category} onChange={value=>{setCategory(value);clearSelection();}}>
+                  <option value="all">{t('allCategories')}</option>
+                  {scopeCats.map(c=><option key={c.id} value={c.id}>{lang==='en'?c.nameEn:c.name}</option>)}
+                </Dropdown>}
+            {scope==='green'&&<Dropdown className="public-status" label={t('status')} value={status} onChange={value=>{setStatus(value);clearSelection();}}>
+              <option value="all">{t('allStatus')}</option><option value="alerts">{t('alertStatus')}</option>
+              {['clean','warning','overloaded','inactive'].map(s=><option key={s} value={s}>{t(s)}</option>)}
+            </Dropdown>}
+          </div>
         </div>
-        {visible.length
-          ? <button className="button primary mobile-search-results" onClick={showResults}>{t('viewResults')} · {visible.length} {t('results')}</button>
-          : <div className="mobile-search-empty"><span role="status">{t('empty')}</span>{hasFilters&&<button className="text-button" onClick={clear}>{t('clearFilters')}</button>}</div>}
+        <div className="mobile-search-footer">
+          <div className="mobile-search-summary">
+            <p className="mobile-search-caption" role="status">
+              {!searchPreview.length?t('empty'):hasFilters?`${visible.length} ${t('results')}`:t(position?'nearby':'nearAreaCenter')}
+              {searchPreview.length>0&&hasFilters&&!position&&<span> · {t('fromAreaCenter')}</span>}
+            </p>
+            {hasFilters&&<button type="button" className="mobile-clear-filters" onClick={resetMobileSearch}><Icon name="x" size={14}/>{t('clearFilters')}</button>}
+          </div>
+          {searchPreview.length>0&&<ul className="mobile-search-preview" aria-label={t('nearby')}>
+            {searchPreview.map((p,index)=>{
+              const c=getCategory(data.categories,p.category);
+              const distance=formatDistance(haversine(position||areaCenter,p));
+              return <li key={p.id} style={{'--preview-index':Math.min(index,3)}}>
+                <button type="button" onClick={()=>selectPlace(p.id)} style={{'--preview-color':markerColor(c)}}>
+                  <Icon name={c.icon} size={17}/><span><strong>{p.name}</strong><small>{p.address}</small></span>
+                  <span className="search-preview-trailing"><span className="search-preview-distance">{distance}</span><Icon name="right" size={13}/></span>
+                </button>
+              </li>;
+            })}
+          </ul>}
+          <button className="button primary mobile-search-results" onClick={showResults} disabled={!visible.length}>{t('showAllPlaces')}<Icon name="right" size={16}/></button>
+        </div>
       </section>
       <aside className="places-sidebar">
         <div className="sheet-header" onTouchStart={e=>{touchStart.current=e.touches[0].clientY;}} onTouchEnd={e=>{const start=touchStart.current;touchStart.current=null;if(start!==null){const delta=e.changedTouches[0].clientY-start;if(Math.abs(delta)>45)setExpanded(delta<0);}}}>
@@ -211,7 +261,7 @@ export default function PublicApp({welcomePhase,data,scope,setScope,selected,set
             <span className="sheet-grip" aria-hidden="true"/>
             <div className="sheet-detail-bar">
               <button type="button" aria-label={t('nearby')} onClick={closeDetails}><Icon name="back" size={18}/></button>
-              <h2><Icon name="pin" size={15}/><span>{place.name}</span></h2>
+              <h2>{place.name}</h2>
               <button type="button" aria-label={t('close')} aria-expanded={expanded} aria-controls="public-sheet-content" onClick={()=>setExpanded(false)}><Icon name="down" size={18}/></button>
             </div>
           </div>:<button className="sheet-handle" aria-expanded={expanded} aria-controls="public-sheet-content" onClick={()=>setExpanded(open=>!open)}>
@@ -220,7 +270,7 @@ export default function PublicApp({welcomePhase,data,scope,setScope,selected,set
           </button>}
           <div className="list-heading"><h2>{t('nearby')}<span>{visible.length}</span></h2>{position&&<span>{t('nearest')}</span>}</div>
         </div>
-        <div className="public-sheet-content" id="public-sheet-content">{place&&<PlaceDetails key={place.id} place={place} categories={data.categories} position={position} t={t} lang={lang} routing={routing} onClose={closeDetails}/>}<div className="places-list" ref={placesList}>{visible.length?visible.map(p=>{const c=getCategory(data.categories,p.category);const image=safeImage(p.image);return <button className={`place-card ${p.status==='inactive'?'is-inactive':''} ${previewed===p.id?'is-previewed':''}`} aria-pressed={p.id===selected} key={p.id}
+        <div className="public-sheet-content" id="public-sheet-content">{place&&<PlaceDetails key={place.id} place={place} categories={data.categories} position={position} t={t} lang={lang} routing={routing} onClose={closeDetails} demo={demo}/>}<div className="places-list" ref={placesList}>{visible.length?visible.map((p,index)=>{const c=getCategory(data.categories,p.category);const image=safeImage(p.image);return <button className={`place-card ${p.status==='inactive'?'is-inactive':''} ${previewed===p.id?'is-previewed':''}`} style={{'--place-accent':markerColor(c),'--place-index':Math.min(index,5)}} aria-pressed={p.id===selected} key={p.id}
           onPointerEnter={event=>{if(event.pointerType==='mouse')setPreviewed(p.id);}}
           onPointerLeave={()=>setPreviewed(id=>id===p.id?null:id)}
           onFocus={event=>{if(event.currentTarget.matches(':focus-visible'))setPreviewed(p.id);}}
@@ -238,9 +288,9 @@ export default function PublicApp({welcomePhase,data,scope,setScope,selected,set
           </span>
           <span className="card-distance">{position?formatDistance(haversine(position,p)):<Icon name="right" size={16}/>}</span>
         </button>}):<div className="empty-state"><h3>{t('empty')}</h3><p>{t('emptyHint')}</p><button className="text-button" onClick={clear}>{t('clearFilters')}</button></div>}</div>
-        </div><div className="list-footer"><span className="live-dot"/>{t('demo')}<span>{t('area')}</span></div>
+        </div><div className="list-footer"><span className="live-dot"/>{t(demo?'demo':'community')}<span>{t('area')}</span></div>
       </aside>
-      <MapView welcomePhase={welcomePhase} navigation={navigation}
+      <MapView welcomePhase={welcomePhase} focusRevision={focusRevision} navigation={navigation}
         routeGuide={result?.route
           ? <RouteGuide key={activeRequest.mode+':'+lastRouteRequest.current} route={navigation.route} navigation={navigation} mode={activeRequest.mode} destination={place.name} onExit={exitRoute} onModeChange={mode=>requestRoute(activeRequest.origin,mode)} t={t}/>
           : routeState&&<section className="route-guide route-request-status">

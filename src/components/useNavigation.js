@@ -36,13 +36,13 @@ export default function useNavigation(preview, destination, mode) {
         return;
       }
       const point = {lat: coords.latitude, lng: coords.longitude};
-      setPosition(point);
       const progress = routeProgress(currentRoute, point);
+      setPosition({...point, matched: progress.distance <= Math.min(20, Math.max(8, coords.accuracy))});
       if (progress.arrived && coords.accuracy <= 30) {
         active = false;
         request?.abort();
         gps.clearWatch(watch);
-        setRemaining({remainingCoordinates:[],remainingDistance:0});
+        setRemaining({arrived:true,remainingCoordinates:[],remainingDistance:0});
         setStep(progress.index);
         setStatus('navigationArrived');
         return;

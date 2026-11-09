@@ -2,7 +2,7 @@
 
 Bản đồ số an toàn – tiện ích cộng đồng – môi trường xanh.
 
-Dự án **React + Vite + Leaflet + MapLibre**, chưa có backend. Giai đoạn này tập trung duyệt màn hình và luồng frontend. Mã nguồn đã tách component; không còn mở trực tiếp `index.html` như bản HTML trước.
+Dự án **React + Vite + Leaflet + MapLibre** hỗ trợ Firebase Auth và Firestore. Khi chưa có cấu hình Firebase, ứng dụng chạy bản demo cục bộ. Chạy dự án qua Vite.
 
 ## Chạy dự án
 
@@ -28,13 +28,33 @@ npm run preview
 
 - **Khám phá bản đồ:** bản đồ An Thượng tại `[16.0505, 108.2435]`, zoom 15; tìm kiếm không dấu theo tên, địa chỉ, đơn vị, vật liệu; lọc danh mục; danh sách và chi tiết địa điểm; hình ảnh tùy chọn; liên hệ; GPS; khoảng cách Haversine; chỉ đường Google Maps; SOS.
 - **SafePoint:** nhóm an toàn, hành chính, y tế và giáo dục.
-- **GreenPoint:** 10 điểm thu gom mẫu, vật liệu tiếp nhận, đơn vị phụ trách, trạng thái sạch/cần vệ sinh/quá tải/tạm ngưng và bộ lọc cảnh báo.
+- **GreenPoint:** 2 điểm thu gom mẫu, vật liệu tiếp nhận, đơn vị phụ trách, trạng thái sạch/cần vệ sinh/quá tải/tạm ngưng và bộ lọc cảnh báo.
 - **Đối tác xanh:** các cửa hàng/đơn vị hợp tác, thông tin liên hệ và vật liệu tiếp nhận.
-- **Đăng nhập quản trị demo.**
-- **Tổng quan quản trị:** thống kê, điểm cần xử lý, phân bổ danh mục và địa điểm mới cập nhật.
-- **Quản lý địa điểm / GreenPoint / đối tác:** tìm kiếm, lọc, phân trang, thêm/sửa/xóa có xác nhận, chọn tọa độ bằng click bản đồ hoặc kéo ghim.
+- **Quản trị tại `/admin`:** đăng nhập Firebase khi đã cấu hình, hoặc đăng nhập demo khi chạy cục bộ.
+- **Tổng quan quản trị:** biểu đồ nhóm, trạng thái, điểm cần xử lý và địa điểm mới cập nhật. Tab lượt truy cập mở Firebase Console để xem nguồn thống kê khi đã cấu hình.
+- **Tất cả địa điểm và từng nhóm SafePoint, GreenPoint, Đối tác xanh:** tìm kiếm, lọc, phân trang, thêm/sửa/xóa có xác nhận, chọn tọa độ bằng click bản đồ hoặc kéo ghim.
 - **Quản lý danh mục:** thêm, đổi tên Việt/Anh, biểu tượng, màu; ngăn xóa danh mục đang chứa địa điểm. Nhóm chức năng không đổi sau khi tạo để tránh thay đổi ý nghĩa dữ liệu hiện có.
-- Chuyển Việt/Anh, bố cục responsive, danh sách dạng bottom sheet trên mobile, trạng thái rỗng, lỗi định vị/lưu dữ liệu/ảnh, xuất bản sao JSON.
+- Chuyển Việt/Anh, bố cục responsive, danh sách dạng bottom sheet trên mobile, trạng thái rỗng, lỗi định vị/lưu dữ liệu/ảnh, xuất danh sách địa điểm và danh mục ra Excel.
+
+## Kết nối Firebase
+
+1. Tạo dự án Firebase và đăng ký một **Web App**. Sao chép `.env.example` thành `.env.local` rồi điền bốn trường Web config. Khi deploy lên Vercel, thêm bốn biến tương ứng ở phần Environment Variables và build lại.
+2. Bật **Authentication → Sign-in method → Email/Password** và tạo Cloud Firestore ở **Production mode**. Triển khai tệp `firestore.rules` từ Firebase Console hoặc dùng `firebase deploy --only firestore:rules --project PROJECT_ID` với Firebase CLI đã đăng nhập.
+3. Tạo tài khoản cán bộ trong **Authentication → Users**. Sao chép UID và tạo document `editors/{UID}` trong Firestore với trường **`active` kiểu boolean = `true`**. Đặt trường này thành `false` để thu hồi quyền. Mỗi cán bộ dùng một tài khoản riêng.
+4. Nạp dữ liệu ban đầu bằng script bên dưới. Danh mục và địa điểm dùng chung nằm trong document `catalogs/an-thuong`. Ai cũng đọc được document công khai này. Chỉ tài khoản được cấp quyền mới được cập nhật. Ảnh chính lưu trường `image`, ảnh phụ lưu trong `images`. Trang quản trị nhận link ảnh, và bản đồ hiển thị các link qua slider hiện có.
+
+Danh mục và địa điểm được lưu cùng một document để đồng bộ trong một lần đọc và cập nhật nhất quán. Phiên bản hiện tại giới hạn 200 địa điểm, 40 danh mục và khoảng 800 KB dữ liệu JSON. Số phiên bản được kiểm tra khi lưu để phát hiện thay đổi từ máy khác. Dữ liệu công khai chỉ nên chứa thông tin địa điểm được phép công bố.
+
+### Nạp dữ liệu bằng JavaScript
+
+```bash
+npm run seed:firebase
+npm run seed:firebase -- --write
+```
+
+Lệnh đầu kiểm tra bộ dữ liệu mẫu trong `src/lib/data.js`. Lệnh có `--write` ghi vào dự án được cấu hình. Để đăng nhập khi nạp dữ liệu, đặt `SAFEMAP_SEED_EMAIL` và `SAFEMAP_SEED_PASSWORD` trong tệp riêng `.seed.local`. Hai tệp `.env.local` và `.seed.local` được Git bỏ qua. Tài khoản nạp dữ liệu phải có document editor đang bật.
+
+Nếu đã có bản sao JSON từ phiên bản trước, chạy `npm run seed:firebase -- --write đường-dẫn-backup.json` thay cho lệnh nạp mẫu. Script chỉ tạo danh sách lần đầu và dừng nếu dự án đã có dữ liệu.
 
 ## Tài khoản trải nghiệm
 
@@ -43,15 +63,15 @@ npm run preview
 
 Có nút điền tài khoản mẫu ngay trên màn hình đăng nhập. Đây là **đăng nhập mô phỏng phía client**, không xác thực hay phân quyền bảo mật. Phiên được lưu trong sessionStorage. Không dùng mật khẩu thật.
 
-## Dữ liệu
+## Dữ liệu và bản đồ
 
 - 11 địa điểm minh họa, gồm 2 GreenPoint, 6 địa điểm thuộc nhóm hỗ trợ cộng đồng, 2 đối tác xanh và 1 dịch vụ.
 - Địa chỉ, tọa độ, đơn vị và trạng thái là dữ liệu phục vụ duyệt FE, chưa được xác minh thực địa. Ảnh và số điện thoại minh họa có ghi chú trong chi tiết. Chạm ảnh để mở khung xem lớn và chuyển qua các ảnh khác.
 - SOS hiển thị đầu số khẩn cấp toàn quốc 113 / 115 / 114, không giả làm số trực tiếp của phường.
-- Lưu dữ liệu địa điểm và danh mục chung dưới khóa `safemap-react-v2` trong localStorage. Không lưu GPS vào localStorage.
+- Bản demo lưu dữ liệu địa điểm và danh mục dưới khóa `safemap-react-v2` trong localStorage. GPS chạy trong phiên trình duyệt.
 - Nếu cùng origin có dữ liệu khóa `safemap-anthuong-v1`, ứng dụng ưu tiên giữ dữ liệu cũ; không tự thêm điểm mẫu mới vào danh sách đã chỉnh sửa.
 - Muốn dùng lại bộ 11 điểm: xuất JSON nếu cần giữ bản sao; xóa cả hai khóa dữ liệu ở Developer Tools → Application → Local Storage rồi tải lại. Trình duyệt/origin khác nhau có kho dữ liệu riêng.
-- Không có đồng bộ thiết bị, cơ sở dữ liệu, tài khoản cán bộ thật, import OSM POI tự động.
+- Khi bật Firebase, các thiết bị đọc cùng một danh mục Firestore. Dữ liệu bản demo chỉ được chuyển lên khi người vận hành chọn tệp JSON đã xuất và chạy script nạp.
 - Nền mặc định: Tối giản (OpenFreeMap Positron). Có thể đổi sang bản đồ màu hoặc ảnh vệ tinh. Chỉ lọc nhãn nền trong hai vùng hiển thị Hoàng Sa–Trường Sa. Không cần API key. Nếu thiết bị không hỗ trợ WebGL hoặc dịch vụ vector lỗi, ứng dụng dùng ảnh vệ tinh không nhãn; không quay lại nền OSM có chữ.
 - Bấm **Chỉ đường trên bản đồ** để xem ngay tuyến xe máy từ GPS. Nếu GPS không khả dụng, chạm bản đồ để chọn điểm xuất phát. Đổi phương tiện trong bảng tuyến, rồi bấm **Bắt đầu dẫn đường**. Đường xanh thu ngắn theo phần đường đã đi và ứng dụng tính lại tuyến nếu GPS xác nhận bạn đi lệch. Google Maps vẫn là lựa chọn thay thế.
 - Cần Internet cho bản đồ vector/OSM, font và ảnh URL tùy chọn. React, Leaflet và biểu tượng được cài bằng npm, đóng gói khi build.
@@ -83,7 +103,7 @@ src/
 
 Xem [docs/QA.md](docs/QA.md). Đã kiểm tra bằng trình duyệt ở kích thước desktop và mobile, gồm bản đồ vector, tìm kiếm, lọc, chi tiết và bottom sheet. Các DOM test không thay thế kiểm tra trên thiết bị thực tế.
 
-Sau khi chốt FE, có thể thay lớp localStorage bằng API, xác thực và phân quyền thật. Cần chốt danh sách POI, đơn vị phụ trách, phạm vi địa lý và ngôn ngữ với khách hàng trước khi đưa vào sử dụng.
+Cần xác minh danh sách địa điểm, số điện thoại và đơn vị phụ trách trước khi công bố dữ liệu cho người dân.
 
 ## Tham khảo nền bản đồ
 

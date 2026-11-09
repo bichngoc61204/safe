@@ -3,3 +3,4 @@ dist/
 .DS_Store
 *.local
 .ui-check-generated.mjs
+.ui-check-cloud-generated.mjs

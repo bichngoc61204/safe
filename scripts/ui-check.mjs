@@ -37,6 +37,7 @@ dom.window.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('o
 dom.window.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;
 const output=new URL('../.ui-check-generated.mjs',import.meta.url);
+const cloudOutput=new URL('../.ui-check-cloud-generated.mjs',import.meta.url);
 const result=await build({entryPoints:['src/App.jsx'],bundle:true,format:'esm',platform:'node',packages:'external',jsx:'automatic',write:false});
 await writeFile(output,result.outputFiles[0].text);
 let root;let checks=0;
@@ -48,12 +49,23 @@ try{
  const button=(text,scope=document)=>[...scope.querySelectorAll('button')].find(b=>b.textContent.trim()===text);
  const click=async el=>{assert.ok(el,'Clickable element exists');await act(async()=>el.click());};
  const input=async(el,value)=>{assert.ok(el,'Input exists');await act(async()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event('input',{bubbles:true}));});};
- const select=async(el,value)=>{await act(async()=>{el.value=value;el.dispatchEvent(new dom.window.Event('change',{bubbles:true}));});};
+ const select=async(el,value)=>{
+   await click(el.querySelector('[role=combobox]')??el);
+   await click(document.querySelector(`[role=listbox] [data-value="${value}"]`));
+ };
+ const goAdmin=async()=>act(async()=>{
+   window.history.pushState(null,'','/admin');
+   window.dispatchEvent(new dom.window.PopStateEvent('popstate'));
+ });
  const submit=async form=>act(async()=>form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true})));
  await render();
  check(!!document.querySelector('.map-welcome[open]'),'First-time visitors see an introduction');
  const welcome=document.querySelector('.map-welcome');
- check(!welcome.querySelector('button'),'The introduction uses gesture instructions without buttons');
+ check(welcome.querySelectorAll('.welcome-pagination button').length===3,'The introduction has three slides');
+ await click(welcome.querySelectorAll('.welcome-pagination button')[1]);
+ check(welcome.dataset.slide==='search','The second slide explains search');
+ await act(async()=>welcome.querySelector('h2').dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true})));
+ check(welcome.dataset.slide==='route','The third slide explains directions and is reachable by keyboard');
  await act(async()=>{
    const start=new dom.window.Event('touchstart',{bubbles:true});
    const end=new dom.window.Event('touchend',{bubbles:true});
@@ -78,19 +90,39 @@ try{
  await input(document.querySelector('.public-toolbar input'),'phuoc thien');
  check(document.querySelectorAll('.place-card').length===1,'Live search works in React');
  await input(document.querySelector('.public-toolbar input'),'');
+ await click(document.querySelector('.mobile-map-actions button'));
+ check(document.querySelectorAll('.mobile-search-preview li').length===4,'Mobile search starts with four nearby suggestions');
+ check(document.querySelectorAll('.search-preview-distance').length===4,'Nearby suggestions show distance even before GPS permission');
  await click(button('SafePoint',document.querySelector('.public-tabs')));
  check(document.querySelectorAll('.public-intro h1').length===1&&document.querySelector('.public-intro h1').textContent==='Điểm hỗ trợ cộng đồng','Changing groups replaces the hero heading');
  check(document.querySelectorAll('.place-card').length===6,'SafePoint screen groups all support categories');
+ check(document.querySelectorAll('.mobile-search-preview li').length===6,'Filtered places are all reachable in the search panel');
+ await input(document.querySelector('.public-toolbar input'),'phuoc thien');
+ await click(button('GreenPoint',document.querySelector('.public-tabs')));
+ check(document.querySelector('.public-toolbar input').value==='phuoc thien'&&document.querySelectorAll('.place-card').length===0,'Switching groups keeps the search text and filters the new group');
+ await click(button('SafePoint',document.querySelector('.public-tabs')));
+ await click(button('Y tế',document.querySelector('.category-chips')));
+ await click(button('Hiển thị tất cả',document.querySelector('.mobile-search-footer')));
+ check(document.querySelector('.map-workspace.sheet-expanded')?.dataset.scope==='safe'&&document.querySelectorAll('.place-card').length===1&&document.querySelector('.public-toolbar input').value==='phuoc thien','Show all opens the full list with the active scope, category and search');
+ await click(document.querySelector('.mobile-map-actions button'));
+ await click(document.querySelector('.mobile-clear-filters'));
+ check(document.querySelector('.map-workspace').dataset.scope==='map'&&document.querySelector('.public-toolbar input').value===''&&document.querySelectorAll('.place-card').length===11,'Clear filters resets search, category and group');
+ await click(document.querySelector('.mobile-map-actions button'));
+ await click(button('SafePoint',document.querySelector('.public-tabs')));
+ await click(button('Y tế',document.querySelector('.category-chips')));
+ await input(document.querySelector('.public-toolbar input'),'');
+ check(document.querySelectorAll('.place-card').length===2,'SafePoint category chips filter the public list');
+ await click(button('Tất cả',document.querySelector('.category-chips')));
  await click(button('GreenPoint',document.querySelector('.public-tabs')));
  check(document.querySelectorAll('.place-card').length===2,'GreenPoint screen has two points');
  await select(document.querySelector('.public-status'),'alerts');
  check(document.querySelectorAll('.place-card').length===1,'Green alert filter works');
  await click(button('Đối tác xanh',document.querySelector('.public-tabs')));
- check(document.querySelectorAll('.place-card').length===2,'Partner screen has two records');
+ check(document.querySelectorAll('.place-card').length===3,'Partner screen includes the service category');
  await click(document.querySelector('.place-card'));
  check(!!document.querySelector('.place-details h2'),'Selecting a card opens details');
  check(document.querySelector('.detail-metadata')?.open===false,'Technical metadata is collapsed by default');
- check(document.querySelectorAll('.place-card').length===2&&!!document.querySelector('.place-card img'),'Place details preserve the list and its thumbnails');
+ check(document.querySelectorAll('.place-card').length===3&&!!document.querySelector('.place-card img'),'Place details preserve the list and its thumbnails');
  check(document.querySelector('.detail-info').textContent.includes('Số minh họa')&&!document.querySelector('.route-entry a[href^="tel:"]'),'Sample numbers are labeled and do not initiate calls');
  check(!document.querySelector('.leaflet-popup'),'Details are not duplicated in a map popup');
  check(document.querySelector('.detail-buttons a').href.includes('destination='),'Details provide coordinate directions');
@@ -135,12 +167,32 @@ try{
  check(resumeButton()&&gpsWatch,'Panning away through the map controls pauses the camera while GPS stays active');
  await click(resumeButton());
  check(!resumeButton(),'The follow control resumes camera tracking');
+ const mapSurface=document.querySelector('.leaflet-map');
+ const touchMap=async(type,touches)=>act(async()=>{
+   const event=new dom.window.Event(type,{bubbles:true,cancelable:true});
+   Object.defineProperty(event,'touches',{value:touches});
+   mapSurface.dispatchEvent(event);
+ });
+ await touchMap('touchstart',[{clientX:140,clientY:200},{clientX:240,clientY:200}]);
+ await touchMap('touchmove',[{clientX:190,clientY:150},{clientX:190,clientY:250}]);
+ await touchMap('touchend',[]);
+ await act(async()=>{await new Promise(resolve=>setTimeout(resolve,40));});
+ const compass=document.querySelector('.map-north');
+ check(compass&&resumeButton()&&gpsWatch,'A two-finger rotation shows north and pauses camera follow without stopping GPS');
+ check(!document.querySelector('.map-rotation-viewport .leaflet-control-zoom'),'Zoom controls stay outside the rotating viewport');
+ await click(compass);
+ check(!document.querySelector('.map-north'),'The north control restores the original orientation');
+ await click(resumeButton());
  const move=(latitude,longitude,accuracy=10)=>act(async()=>gpsWatch({coords:{latitude,longitude,accuracy}}));
  const line=document.querySelector('.navigation-line');
  const fullLine=line.getAttribute('d');
  const remaining=()=>document.querySelector('.route-remaining-distance')?.textContent;
  await move(16.0512,108.242);
- check(remaining()==='110m'&&line===document.querySelector('.navigation-line')&&line.getAttribute('d')!==fullLine,'The existing blue line redraws from the projected GPS position');
+ const firstFrame=line.getAttribute('d');
+ await act(async()=>{await new Promise(resolve=>setTimeout(resolve,180));});
+ const intermediateFrame=line.getAttribute('d');
+ await act(async()=>{await new Promise(resolve=>setTimeout(resolve,850));});
+ check(remaining()==='110m'&&line===document.querySelector('.navigation-line')&&intermediateFrame!==firstFrame&&line.getAttribute('d')!==intermediateFrame&&line.getAttribute('d')!==fullLine,'The existing blue line moves through an intermediate frame before reaching the GPS position');
  await move(16.0512,108.2418);
  check(remaining()==='110m','A slightly backward GPS fix cannot restore traveled distance');
  check(document.querySelector('.route-step-text').textContent.includes('Rẽ trái'),'Movement along the route advances the instruction');
@@ -156,9 +208,10 @@ try{
  await click(button('Chỉ đường trên bản đồ'));
  const waitForRoute=()=>act(async()=>{await new Promise(resolve=>setTimeout(resolve,1150));});
  await waitForRoute();
- await select(document.querySelector('.route-mode-select'),'foot');
+ await click(document.querySelector('.route-mode-trigger'));
+ await click(button('Đi bộ',document.querySelector('.route-mode-options')));
  await waitForRoute();
- check(routeRequests.at(-1).mode==='routed-foot'&&document.querySelector('.route-mode-select').value==='foot'&&!gpsWatch,'Changing transport recalculates the preview without starting GPS tracking');
+ check(routeRequests.at(-1).mode==='routed-foot'&&document.querySelector('.route-mode-trigger').textContent.trim()==='Đi bộ'&&!gpsWatch,'Changing transport recalculates the preview without starting GPS tracking');
  await click(button('Thoát chỉ đường'));
  gpsDenied=true;
  gpsPermission.state='denied';
@@ -167,16 +220,18 @@ try{
  check(!!document.querySelector('.route-pick-notice'),'If GPS is denied, the map offers a starting point');
  await act(async()=>document.querySelector('.leaflet-map').dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true,clientX:430,clientY:310})));
  await waitForRoute();
- check(!!document.querySelector('.route-mode-select')&&routeRequests.at(-1).mode==='motor_scooter','Picking a starting point immediately previews a motorbike route');
+ check(!!document.querySelector('.route-mode-trigger')&&routeRequests.at(-1).mode==='motor_scooter','Picking a starting point immediately previews a motorbike route');
  routeUnavailable=true;
- await select(document.querySelector('.route-mode-select'),'foot');
+ await click(document.querySelector('.route-mode-trigger'));
+ await click(button('Đi bộ',document.querySelector('.route-mode-options')));
  await waitForRoute();
  check(document.querySelector('.route-request-status a')?.href.startsWith('https://www.google.com/maps/dir/'),'Routing errors offer a Google Maps fallback without leaving the guide');
  await click(document.querySelector('.route-request-status button[aria-label="Thoát chỉ đường"]'));
  gpsDenied=false;
  globalThis.fetch=originalFetch;
 
- await click(button('Quản trị',document.querySelector('.view-switch')));
+ check(!button('Quản trị',document.querySelector('.site-header')),'The public header contains no Admin link');
+ await goAdmin();
  check(!!document.querySelector('.login-form'),'Admin opens demo login');
  await input(document.querySelector('input[type=email]'),'wrong@example.com');
  await input(document.querySelector('input[type=password]'),'wrong');
@@ -185,13 +240,15 @@ try{
  await click(button('Điền tài khoản demo'));
  await submit(document.querySelector('.login-form'));
  check(document.querySelectorAll('.stat-card').length===4,'Demo login opens dashboard');
- check([...document.querySelectorAll('.stat-card>strong')].map(x=>x.textContent).join(',')==='11,06,02,01','Dashboard uses shared data');
+ check([...document.querySelectorAll('.admin-sidebar nav [data-section]')].map(button=>button.dataset.section).join(',')==='overview,places,safe,green,partner,categories','The admin sidebar exposes all three groups separately');
+ check([...document.querySelectorAll('.stat-card>strong')].map(x=>x.textContent).join(',')==='11,06,02,03','Dashboard uses shared data');
  await click(document.querySelector('.stat-1'));
- check(document.querySelectorAll('tbody tr').length===6&&!!document.querySelector('.admin-applied-filters button'),'The support metric opens only support places');
- await click(document.querySelector('.admin-applied-filters button'));
- check(document.querySelectorAll('tbody tr').length===7,'Clearing the support filter restores all places');
+ check(document.querySelectorAll('tbody tr').length===6,'The SafePoint metric opens only SafePoint places');
  await click([...document.querySelectorAll('.admin-sidebar nav button')].find(b=>b.textContent==='Địa điểm'));
  check(document.querySelectorAll('tbody tr').length===7,'Admin table paginates');
+ await click(document.querySelector('.admin-place-name'));
+ check(!!document.querySelector('.admin-place-preview .coordinate-map')&&document.querySelectorAll('tbody tr').length===7,'Admin opens a map preview alongside the current table');
+ await click(document.querySelector('.admin-preview-header button'));
  await click(button('Thêm địa điểm'));
  const form=document.querySelector('dialog form');
  check(!!form&&!!document.querySelector('.coordinate-map'),'Add form includes map picker');
@@ -217,13 +274,16 @@ try{
  check(!JSON.parse(localStorage.getItem('safemap-react-v2')).places.some(p=>p.name==='Điểm test đã sửa'),'Confirmed delete persists');
  await click([...document.querySelectorAll('.admin-sidebar nav button')].find(b=>b.textContent==='Danh mục'));
  check(document.querySelectorAll('.category-card').length===7,'Category management renders');
+ check(document.querySelectorAll('.category-group-panel').length===3,'Categories are grouped under the three primary groups');
  await click(document.querySelector('.category-card .danger-text'));
  check(document.querySelector('.toast').textContent.includes('đang có địa điểm'),'In-use category deletion is blocked');
- await select(document.querySelector('.language-control select'),'en');
+ await select(document.querySelector('.language-control'),'en');
  check(document.documentElement.lang==='en'&&document.querySelector('.admin-heading h1').textContent==='Manage categories','English updates the dashboard');
  await click(document.querySelector('.header-logout'));
  check(!sessionStorage.getItem('safemap-demo-session'),'Header sign-out clears demo session');
- check(!!document.querySelector('.public-tabs'),'Sign-out returns to public view');
+ check(window.location.pathname==='/admin'&&!!document.querySelector('.login-form'),'Sign-out stays on the admin route');
+ await click(document.querySelector('.login-form-area > button'));
+ check(window.location.pathname==='/'&&!!document.querySelector('.public-tabs'),'The community link returns to the map');
  check(!document.querySelector('.map-welcome'),'Switching views does not reopen the introduction');
  await act(async()=>root.unmount());
  gpsPermission.state='granted';
@@ -234,8 +294,64 @@ try{
  const reloadedWelcome=document.querySelector('.map-welcome');
  await act(async()=>reloadedWelcome.dispatchEvent(new dom.window.WheelEvent('wheel',{bubbles:true,deltaY:80})));
  check(reloadedWelcome.classList.contains('is-leaving'),'Scrolling down starts the transition on desktop');
+
+ await act(async()=>root.unmount());
+ root=null;
+ const cloudBuild=await build({
+   entryPoints:['src/App.jsx'],bundle:true,format:'esm',platform:'node',packages:'external',jsx:'automatic',write:false,
+   define:{'import.meta.env':JSON.stringify({
+     VITE_FIREBASE_API_KEY:'fixture',VITE_FIREBASE_AUTH_DOMAIN:'example.invalid',
+     VITE_FIREBASE_PROJECT_ID:'demo-safemap',VITE_FIREBASE_APP_ID:'fixture',
+   })},
+   plugins:[{name:'firebase-fixture',setup(builder){
+     builder.onResolve({filter:/firebaseBackend\.js$/},()=>({path:'fixture',namespace:'firebase-fixture'}));
+     builder.onLoad({filter:/.*/,namespace:'firebase-fixture'},()=>({contents:'export const connectFirebase = () => window.firebaseFixture;'}));
+   }}],
+ });
+ await writeFile(cloudOutput,cloudBuild.outputFiles[0].text);
+ const storedDemo=localStorage.getItem('safemap-react-v2');
+ const cloudData=JSON.parse(storedDemo);
+ cloudData.places=[{...cloudData.places[0],name:'Điểm Firebase kiểm thử'}];
+ let publishCatalog,publishEditor,cloudSave;
+ window.firebaseFixture={
+   observeCatalog(receive){publishCatalog=receive;receive({data:cloudData,revision:1});return ()=>{};},
+   observeEditor(receive){publishEditor=receive;receive({status:'signedOut'});return ()=>{};},
+   async login(){publishEditor({status:'denied'});},
+   async logout(){publishEditor({status:'signedOut'});},
+   async save(next,revision){return cloudSave(next,revision);},
+ };
+ const {default:CloudApp}=await import(cloudOutput.href);
+ root=createRoot(document.getElementById('root'));
+ await act(async()=>root.render(React.createElement(CloudApp)));
+ check(document.querySelectorAll('.place-card').length===1&&document.querySelector('.place-card h3').textContent==='Điểm Firebase kiểm thử','Configured Firebase mode reads the cloud catalog instead of local data');
+ await act(async()=>document.querySelector('.map-welcome').dispatchEvent(new dom.window.Event('cancel',{cancelable:true})));
+ await act(async()=>{await new Promise(resolve=>setTimeout(resolve,750));});
+ check(!button('Quản trị',document.querySelector('.site-header')),'The public header contains no Admin link');
+ await goAdmin();
+ check(!document.querySelector('.demo-account'),'Firebase mode hides demo credentials');
+ await input(document.querySelector('input[type=email]'),'editor@example.invalid');
+ await input(document.querySelector('input[type=password]'),'fixture');
+ await submit(document.querySelector('.login-form'));
+ check(!!document.querySelector('.login-form [role=alert]')&&!document.querySelector('.admin-layout'),'A signed-in account without editor access stays outside Admin');
+ await act(async()=>publishEditor({status:'editor',email:'editor@example.invalid'}));
+ await click(button('Thêm địa điểm'));
+ const cloudForm=document.querySelector('dialog form');
+ await input(cloudForm.querySelector('input[required]'),'Điểm được đồng bộ');
+ await input([...cloudForm.querySelectorAll('label')].find(label=>label.textContent.startsWith('Địa chỉ')).querySelector('input'),'An Thượng');
+ cloudSave=async()=>{throw Error('catalogConflict');};
+ await submit(cloudForm);
+ check(!!cloudForm.querySelector('[role=alert]')&&cloudForm.isConnected,'A rejected cloud save keeps the form open with an error');
+ cloudSave=async(next,revision)=>{
+   assert.equal(revision,1);
+   publishCatalog({data:next,revision:2});
+ };
+ await submit(cloudForm);
+ check(!cloudForm.isConnected&&localStorage.getItem('safemap-react-v2')===storedDemo,'An accepted cloud save closes the form without changing local demo data');
+ await click(document.querySelector('.header-logout'));
+ await click(document.querySelector('.login-form-area > button'));
+ check([...document.querySelectorAll('.place-card h3')].some(heading=>heading.textContent==='Điểm được đồng bộ'),'The cloud update appears on the public map after sign-out');
  console.log(`PASS: ${checks} React DOM integration checks. No visual/layout assertions were performed.`);
 }finally{
  if(root){const {act}=await import('react');await act(async()=>root.unmount());}
- dom.window.close();await unlink(output).catch(()=>{});
+ dom.window.close();await Promise.all([output,cloudOutput].map(file=>unlink(file).catch(()=>{})));
 }

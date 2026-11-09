@@ -1,7 +1,8 @@
 import { defaultCategories, defaultPlaces, demoPhotoPaths } from './data.js';
+import { organizeCatalog } from './catalogGroups.js';
 export const STORAGE_KEY = 'safemap-react-v2';
 export const statuses = ['active','clean','warning','overloaded','inactive'];
-export const cloneDefaults = () => structuredClone({ categories: defaultCategories, places: defaultPlaces });
+export const cloneDefaults = () => organizeCatalog(structuredClone({ categories: defaultCategories, places: defaultPlaces }));
 export const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase();
 export const isAlert = p => ['warning','overloaded'].includes(p.status);
 export function haversine(a,b) {
@@ -38,10 +39,10 @@ export function loadData(storage) {
         if(!oldSample)return [place];
         return sample?[{...place,phone:sample.phone,image:sample.image}]:[];
       });
-      return {data:{...data,places},error:false};
+      return {data:organizeCatalog({...data,places}),error:false};
     }
     const legacy=storage.getItem('safemap-anthuong-v1');
-    if(legacy){const old=JSON.parse(legacy);const candidate={categories:structuredClone(defaultCategories),places:old};if(!validData(candidate))throw Error('invalid legacy');return {data:candidate,error:false,migrated:true};}
+    if(legacy){const old=JSON.parse(legacy);const candidate={categories:structuredClone(defaultCategories),places:old};if(!validData(candidate))throw Error('invalid legacy');return {data:organizeCatalog(candidate),error:false,migrated:true};}
     return {data:cloneDefaults(),error:false};
   } catch {return {data:cloneDefaults(),error:true};}
 }

@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isEditor() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/editors/$(request.auth.uid)).data.active == true;
+    }
+
+    function validCatalog() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['categories', 'places', 'schemaVersion', 'revision', 'updatedAt'])
+        && data.keys().hasOnly(['categories', 'places', 'schemaVersion', 'revision', 'updatedAt'])
+        && data.schemaVersion == 1
+        && data.revision is int
+        && data.categories is list && data.categories.size() > 0 && data.categories.size() <= 40
+        && data.places is list && data.places.size() <= 200
+        && data.updatedAt == request.time;
+    }
+
+    match /catalogs/an-thuong {
+      allow get: if true;
+      allow create: if isEditor() && validCatalog() && request.resource.data.revision == 1;
+      allow update: if isEditor() && validCatalog()
+        && request.resource.data.revision == resource.data.revision + 1;
+    }
+
+    match /editors/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}

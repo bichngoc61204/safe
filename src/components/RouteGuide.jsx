@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Icon from './Icon';
+import Dropdown from './Dropdown';
 import { formatDistance } from '../lib/domain';
 import { routeModes } from '../lib/routing';
 
@@ -53,9 +54,10 @@ export default function RouteGuide({route, mode, destination, navigation, onExit
     </div>}
     <div className="route-navigation-actions">
       {!navigation.active&&<>
-        <select className="route-mode-select" aria-label={t('routeMode')} value={mode} onChange={e=>onModeChange(e.target.value)}>
+        <Dropdown className="route-mode-picker" triggerClass="route-mode-trigger" menuClass="route-mode-options"
+          value={mode} onChange={onModeChange} label={t('routeMode')}>
           {routeModes.map(id=><option key={id} value={id}>{t(`route_${id}`)}</option>)}
-        </select>
+        </Dropdown>
         <button className="button primary" type="button" onClick={navigation.start}>{t('navigationStart')}</button>
       </>}
       {navigation.active&&navigation.status&&<span role="status">{t(navigation.status)}</span>}
