@@ -15,7 +15,7 @@ Object.assign(messages.vi, {
   invalidImageUrl: 'Đường dẫn ảnh không hợp lệ. Kiểm tra lại URL hoặc để trống trường ảnh.',
  title:'Khám phá An Thượng', safeTitle:'Điểm hỗ trợ cộng đồng', greenTitle:'Thu gom & tái chế', partnerTitle:'Đối tác địa phương',
  subtitle:'An toàn, tiện ích và môi trường quanh bạn.', localGuide:'BẢN ĐỒ CỘNG ĐỒNG', explore:'Khám phá', modules:'Các nhóm địa điểm', allCategories:'Tất cả danh mục',
- osmDirections:'Mở chỉ đường trên OpenStreetMap', mapLight:'Tiêu chuẩn', mapDark:'Nền tối', mapStreets:'Chi tiết', mapStyle:'Nền bản đồ', vectorFallback:'Đang dùng nền cơ bản vì bản đồ vector không khả dụng.',
+ osmDirections:'Mở chỉ đường trên OpenStreetMap', mapLight:'Tiêu chuẩn', mapDark:'Nền tối', mapStyle:'Nền bản đồ', vectorFallback:'Đang dùng nền cơ bản vì bản đồ vector không khả dụng.',
  previousPage:'Trang trước',nextPage:'Trang sau',adminTitle:'Tổng quan hệ thống',adminSubtitle:'Quản lý địa điểm và trạng thái điểm thu gom tại An Thượng.',
  loginTitle:'Quản trị SafeMap',loginSubtitle:'Quản lý dữ liệu địa điểm cộng đồng.', defaultSort:'Danh sách địa điểm'
 });
@@ -28,22 +28,22 @@ Object.assign(messages.en, {
   invalidImageUrl: 'The image link is invalid. Check the URL or leave the image field blank.',
  title:'Explore An Thuong', safeTitle:'Community support', greenTitle:'Collection & recycling', partnerTitle:'Local partners',
  subtitle:'Safety, local services and the environment around you.',localGuide:'COMMUNITY MAP',explore:'Explore',modules:'Location groups',allCategories:'All categories',
- osmDirections:'Open directions on OpenStreetMap',mapLight:'Standard',mapDark:'Dark',mapStreets:'Detailed',mapStyle:'Map style',vectorFallback:'Using the basic map because vector maps are unavailable.',
+ osmDirections:'Open directions on OpenStreetMap',mapLight:'Standard',mapDark:'Dark',mapStyle:'Map style',vectorFallback:'Using the basic map because vector maps are unavailable.',
  previousPage:'Previous page',nextPage:'Next page',adminTitle:'System overview',adminSubtitle:'Manage local places and collection point statuses in An Thuong.',loginTitle:'SafeMap administration',loginSubtitle:'Manage your community location data.',defaultSort:'Locations'
 });
 
 messages.vi.loadingMap='Đang tải bản đồ…';
 messages.en.loadingMap='Loading map…';
 
-Object.assign(messages.vi,{mapStreets:'Bản đồ màu',civic:'Cộng đồng',dataDetails:'Thông tin dữ liệu'});
-Object.assign(messages.en,{mapStreets:'Color map',civic:'Community',dataDetails:'Data details'});
+Object.assign(messages.vi,{civic:'Cộng đồng',dataDetails:'Thông tin dữ liệu'});
+Object.assign(messages.en,{civic:'Community',dataDetails:'Data details'});
 
 messages.vi.mapCredits='Nguồn bản đồ và giấy phép';
 messages.en.mapCredits='Map sources and licenses';
 
 
-Object.assign(messages.vi,{mapSatellite:'Vệ tinh',mapStreets:'Bản đồ',vectorFallback:'Đang dùng ảnh vệ tinh vì nền vector không khả dụng.'});
-Object.assign(messages.en,{mapSatellite:'Satellite',mapStreets:'Map',vectorFallback:'Using satellite imagery because the vector map is unavailable.'});
+Object.assign(messages.vi,{mapSatellite:'Vệ tinh',vectorFallback:'Đang dùng ảnh vệ tinh vì nền vector không khả dụng.'});
+Object.assign(messages.en,{mapSatellite:'Satellite',vectorFallback:'Using satellite imagery because the vector map is unavailable.'});
 
 
 Object.assign(messages.vi, {
@@ -262,3 +262,14 @@ Object.assign(messages.en,{
 
 Object.assign(messages.vi,{collapseSidebar:'Thu gọn thanh bên',expandSidebar:'Mở thanh bên'});
 Object.assign(messages.en,{collapseSidebar:'Collapse sidebar',expandSidebar:'Expand sidebar'});
+
+Object.assign(messages.vi,{
+  language:'Ngôn ngữ', brandTagline:'AN TOÀN · TIỆN ÍCH · MÔI TRƯỜNG', headerLocation:'Đà Nẵng, Việt Nam',
+  zoomIn:'Phóng to', zoomOut:'Thu nhỏ', showPassword:'Hiện mật khẩu', hidePassword:'Ẩn mật khẩu',
+  englishPlaceDetails:'Thông tin địa điểm bằng tiếng Anh', englishOptional:'Các bản dịch đều tùy chọn. Ô trống sẽ dùng thông tin gốc.',
+});
+Object.assign(messages.en,{
+  language:'Language', brandTagline:'SAFETY · LOCAL SERVICES · ENVIRONMENT', headerLocation:'Đà Nẵng, Vietnam',
+  zoomIn:'Zoom in', zoomOut:'Zoom out', showPassword:'Show password', hidePassword:'Hide password',
+  englishPlaceDetails:'Place details in English', englishOptional:'Translations are optional. Empty fields use the original information.',
+});

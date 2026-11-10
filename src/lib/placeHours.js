@@ -1,3 +1,5 @@
+import { placeText } from './locale.js';
+
 export const isClockTime = value => typeof value === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
 
 export function readPlaceHours(place = {}) {
@@ -12,7 +14,7 @@ export function readPlaceHours(place = {}) {
   return { opensAt:'', closesAt:'', hours:note };
 }
 
-export function placeHourRows(place) {
+export function placeHourRows(place,lang) {
   const { opensAt, closesAt, hours } = readPlaceHours(place);
-  return [['opensAt',opensAt],['closesAt',closesAt],['hours',hours]].filter(([,value])=>value);
+  return [['opensAt',opensAt],['closesAt',closesAt],['hours',placeText(place,'hours',lang,hours)]].filter(([,value])=>value);
 }

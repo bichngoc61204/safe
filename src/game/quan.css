@@ -1,0 +1,120 @@
+:root { color-scheme: light; background: #f7efdc; color: #244235; }
+body { background: #f7efdc; }
+.quan-shell { width: min(100%, 540px); margin-inline: auto; min-height: 100dvh; padding: env(safe-area-inset-top) clamp(12px,4vw,22px) max(22px, env(safe-area-inset-bottom)); }
+.quan-header { min-height: 73px; display: grid; grid-template-columns: 42px 1fr 42px; align-items: center; gap: 10px; text-align: center; }
+.quan-header small { display: block; color: #5b705c; font-size: 9px; letter-spacing: .13em; font-weight: 800; }
+.quan-header strong { display: block; font-size: 22px; font-weight: 850; letter-spacing: -.05em; }
+.quan-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 13px; border: 1px solid #dacfb5; background: #fff8e8; color: #2d5242; font-size: 18px; font-weight: 820; text-decoration: none; }
+.quan-hero { position: relative; overflow: hidden; isolation: isolate; min-height: 257px; padding: 20px 19px 110px; border: 1px solid #9cb98d; border-radius: 23px; background: #dce8c4; box-shadow: 0 4px 0 #d8d3b4; }
+.quan-hero::after { content: ''; position: absolute; z-index: -1; width: 115%; height: 94px; bottom: -46px; left: -9%; border-radius: 50%; background: #bad0a0; transform: rotate(-8deg); }
+.quan-hero > span { display: flex; align-items: center; gap: 5px; color: #335f4b; font-size: 10px; letter-spacing: .15em; font-weight: 850; }
+.quan-hero h1 { margin: 8px 0 7px; font-size: clamp(38px, 11vw, 61px); line-height: .97; letter-spacing: -.07em; }
+.quan-hero p { max-width: 27ch; color: #385644; font-size: 13px; line-height: 1.35; }
+.quan-hero-art { position: absolute; right: 10px; bottom: 5px; display: flex; align-items: center; }
+.quan-hero-art svg { width: clamp(72px, 26vw, 114px); transform: rotate(-8deg); animation: quan-rise 500ms var(--ease) backwards; }
+.quan-hero-art svg:last-child { transform: rotate(10deg); animation-delay: 95ms; }
+.quan-hero-art i { align-self: start; margin: 16px -10px 0; color: #aa582a; font-size: 24px; font-style: normal; }
+@keyframes quan-rise { from { opacity:0; translate:0 9px; } }
+.quan-entry { display: grid; gap: 13px; margin-top: 19px; }
+.quan-primary, .quan-local, .quan-join button, .quan-directions button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 7px 12px; border: 1px solid transparent; border-radius: 12px; font-size: 14px; font-weight: 800; touch-action: manipulation; transition: translate 180ms var(--ease), background-color 200ms; }
+.quan-primary { width: 100%; background: #305e4e; color: #fff8e7; box-shadow: 0 3px 0 #20463a; }
+.quan-primary > svg:last-child:not(:first-child) { margin-left:auto; }
+.quan-entry > .quan-primary { justify-content: start; min-height: 51px; }
+.quan-local { background: #fff8e8; border-color: #d7c9a8; color: #3c5d46; }
+.quan-primary:active, .quan-local:active, .quan-directions button:active { translate: 0 2px; }
+.quan-join { display: grid; gap: 6px; padding: 12px; background: #fff9ea; border: 1px solid #ded0ae; border-radius: 15px; }
+.quan-join label { font-size: 12px; font-weight: 750; }
+.quan-join > div { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 7px; }
+.quan-join input { width: 100%; padding: 8px 10px; min-height: 45px; background: #faf2df; border: 1px solid #d1c4a3; border-radius: 10px; color: #244235; font: inherit; }
+.quan-join button { min-height: 44px; background: #e4ebce; color: #234637; }
+.quan-shell button:disabled:not(.quan-pit) { opacity: .54; cursor: default; }
+.quan-room-bar { display: flex; gap: 5px; align-items: center; justify-content: space-between; border-bottom: 1px solid #e0d4b5; margin-bottom: 10px; }
+.quan-room-bar span { display: flex; gap: 5px; align-items: center; font-size: 12px; }
+.quan-room-bar b { letter-spacing: .06em; }
+.quan-room-bar button, .quan-notice button { border: 0; background: transparent; color: #406753; font-size: 12px; font-weight: 750; min-height: 42px; text-decoration: underline; }
+.quan-wait { display: grid; justify-items: center; gap: 12px; margin: 16px 0; padding: 17px; background: #e8edcf; border: 1px solid #d0d7ad; border-radius: 18px; text-align: center; }
+.quan-wait svg:first-child { width: 96px; }
+.quan-wait h1 { font-size: 27px; letter-spacing: -.06em; }
+.quan-wait p { font-size: 13px; color: #53694e; }
+.quan-wait > strong { padding: 7px 12px; border: 1px dashed #8ba280; border-radius: 9px; background: #f7f3df; font: 800 24px ui-monospace, monospace; letter-spacing: .11em; user-select: all; }
+.quan-wait button { width: auto; }
+.quan-wait button svg:first-child { width: 19px; }
+.quan-match { display: grid; gap: 10px; animation: quan-rise 300ms var(--ease) both; }
+.quan-player { display: flex; align-items: center; gap: 8px; padding: 5px 10px 5px 7px; border: 1px solid #b3c6a0; border-radius: 15px; background: #e1ebce; }
+.quan-player.peach { border-color: #dfb184; background: #f7dfbb; }
+.quan-player[data-turn='true'] { box-shadow: inset 0 0 0 1px #5f8a62; }
+.quan-player.peach[data-turn='true'] { box-shadow: inset 0 0 0 1px #b77b4a; }
+.quan-player > svg { width: 51px; height: 51px; }
+.quan-player strong { display: block; font-size: 16px; }
+.quan-player small { display: block; color: #52644c; font-size: 9px; font-weight: 780; letter-spacing: .1em; }
+.quan-score { margin-left: auto; padding-left: 8px; text-align: center; }
+.quan-score b { display: block; font-size: 23px; font-variant-numeric: tabular-nums; line-height: 1; }
+.quan-board { display: grid; grid-template-areas: 'left t0 t1 t2 t3 t4 right' 'left b0 b1 b2 b3 b4 right'; grid-template-columns: .84fr repeat(5, minmax(0, 1fr)) .84fr; grid-template-rows: repeat(2, clamp(60px, 19vw, 95px)); gap: 4px; padding: 6px; border: 1px solid #b38461; border-radius: 20px; background: #d6ad83; box-shadow: 0 3px 0 #b38461; }
+.quan-pit { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 4px; min-width: 0; padding: 2px; border: 1px solid #a27a5d; border-radius: 10px; background: #eee0bd; color: #234637; box-shadow: inset 0 2px 3px #805a382e; touch-action: manipulation; transition: background-color 170ms var(--ease), box-shadow 170ms var(--ease); }
+.quan-pit:disabled { cursor: default; }
+.quan-pit:not(:disabled) { border-color: #6e906b; background: #f1f0cf; }
+.quan-pit[data-current='true'], .quan-pit[data-rain='true'] { background: #c2d79d; box-shadow: inset 0 0 0 2px #5f865a; }
+.quan-pit[data-royal='true'] { background: #c98e66; color: #342418; border-radius: 17px; }
+.quan-pit strong { font-size: 14px; font-variant-numeric: tabular-nums; }
+.quan-pit[data-royal='true'] strong { font-size: 8px; letter-spacing: .05em; }
+.pit-stones {
+  display: flex;
+  justify-content: center;
+  align-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  min-height: 26px;
+  width: min(100%, 36px);
+}
+.pebble, .king-stone {
+  flex: none;
+  box-shadow: inset 0 -1px 1px #382e284d, 0 1px 1px #4b39254d;
+}
+.pebble {
+  width: clamp(7px, 2.45vw, 10px);
+  height: clamp(6px, 2.15vw, 9px);
+  border-radius: 46% 54% 40% 60% / 56% 44% 56% 44%;
+  background: radial-gradient(ellipse at 34% 23%, #b3b5a5, #72796e 74%);
+  rotate: -14deg;
+}
+.pebble:nth-of-type(3n + 2) {
+  border-radius: 60% 40% 53% 47% / 48% 60% 40% 52%;
+  background: radial-gradient(ellipse at 32% 24%, #c8af93, #9b7d62 76%);
+  rotate: 19deg;
+}
+.pebble:nth-of-type(3n) {
+  background: radial-gradient(ellipse at 30% 22%, #a6b6ad, #637c71 78%);
+  rotate: 7deg;
+}
+.king-stone {
+  width: clamp(20px, 5.8vw, 25px);
+  height: clamp(17px, 5vw, 22px);
+  border: 1px solid #99724e;
+  border-radius: 58% 42% 45% 55% / 47% 53% 48% 52%;
+  background: linear-gradient(156deg, transparent 38%, #fff1d0a1 41% 45%, transparent 49%), radial-gradient(ellipse at 30% 16%, #e9c598, #ad805a 80%);
+  rotate: -9deg;
+}
+.pebble[data-drop='true'] { animation: pebble-drop 160ms var(--ease) both; }
+@keyframes pebble-drop {
+  from { opacity: .35; translate: 0 -6px; scale: .78; }
+  75% { opacity: 1; translate: 0 1px; scale: 1.08 .94; }
+  to { opacity: 1; translate: 0; scale: 1; }
+}
+.quan-turn { display: grid; gap: 7px; align-content: start; min-height: 113px; padding: 9px 11px; border-radius: 13px; background: #fff7e5; border: 1px solid #e2d6b7; }
+.quan-turn strong { display:block; font-size: 14px; }
+.quan-turn small { display:block; margin-top: 3px; color: #586751; font-size: 11px; }
+.quan-turn[data-over='true'] strong { font-size: 23px; }
+.quan-directions, .quan-bottom-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.quan-directions button { min-height: 43px; background: #dde8c9; color: #244939; }
+.quan-bottom-actions { margin-top: 10px; }
+.quan-bottom-actions > button:only-child { grid-column: 1 / -1; }
+.quan-notice, .quan-error { margin-block: 10px; padding: 8px 10px; border-radius: 9px; font-size: 12px; }
+.quan-notice { background: #e9edda; }
+.quan-error { background: #fbe2ce; color: #813d27; }
+.quan-rules { width: min(calc(100% - 28px), 450px); padding: 20px; border: 1px solid #c9bb9a; border-radius: 17px; background: #fff9ea; color: #244235; }
+.quan-rules::backdrop { background: #172b28a8; backdrop-filter: blur(4px); }
+.quan-rules .quan-icon { position: absolute; top: 10px; right: 10px; }
+.quan-rules ol { display: grid; gap: 10px; padding-left: 20px; font-size: 14px; line-height: 1.5; }
+@media(max-width:340px) { .quan-board { gap: 3px; padding: 4px; } .quan-pit { border-radius: 8px; } }
+@media(min-width:580px) { .quan-shell { border-inline: 1px solid #e1d5b6; background: #fbf2df; } }

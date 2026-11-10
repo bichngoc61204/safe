@@ -14,14 +14,17 @@ const overviewLabels = [
 export function addArchipelagoLayer(map,lang='vi',{imagery=false}={}) {
   if(!map.getPane('archipelago-land')){const pane=map.createPane('archipelago-land');pane.style.zIndex='420';pane.style.pointerEvents='none';}
   const group=L.layerGroup().addTo(map);
+  const labels=[];
   L.geoJSON(land,{pane:'archipelago-land',interactive:false,style:{color:imagery?'#d9e9dc':'#3f866d',weight:1,opacity:imagery?0.5:0.9,fillColor:'#dbecc9',fillOpacity:imagery?0:1}}).addTo(group);
   for(const island of ARCHIPELAGOS){
     const label=document.createElement('span');label.className='archipelago-name';label.textContent=island[lang]||island.vi;
+    labels.push([label,island]);
     L.marker([island.lat,island.lng],{interactive:false,keyboard:false,zIndexOffset:-500,icon:L.divIcon({className:'archipelago-label',html:label,iconSize:[180,20],iconAnchor:[90,10]})}).addTo(group);
   }
   const overview = L.layerGroup(overviewLabels.map(item=>{
     const label=document.createElement('span');
     label.textContent=item[lang]||item.vi;
+    labels.push([label,item]);
     if(item.vi==='Biển Đông')label.className='archipelago-name';
     return L.marker([item.lat,item.lng],{interactive:false,keyboard:false,zIndexOffset:-600,
       icon:L.divIcon({className:'regional-overview-label',html:label,iconSize:[110,20],iconAnchor:[55,10]})});
@@ -31,5 +34,9 @@ export function addArchipelagoLayer(map,lang='vi',{imagery=false}={}) {
   syncOverview();
   const source='<a href="https://www.naturalearthdata.com/">Natural Earth</a>';
   map.attributionControl?.addAttribution(source);
-  return ()=>{map.off('zoomend',syncOverview);group.remove();map.attributionControl?.removeAttribution(source);};
+  const remove=()=>{map.off('zoomend',syncOverview);group.remove();map.attributionControl?.removeAttribution(source);};
+  remove.setLanguage=value=>{
+    for(const [label,item] of labels)label.textContent=item[value]||item.vi;
+  };
+  return remove;
 }

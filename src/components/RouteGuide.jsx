@@ -4,6 +4,7 @@ import Dropdown from './Dropdown';
 import { formatDistance } from '../lib/domain';
 import { routeModes } from '../lib/routing';
 import { routeSteps } from '../lib/navigation';
+import { roadName } from '../lib/locale';
 
 function instruction(step, t) {
   const { type, modifier, exit } = step.maneuver;
@@ -17,7 +18,7 @@ function instruction(step, t) {
   return t('maneuver_continue');
 }
 
-export default function RouteGuide({route, mode, destination, navigation, onExit, onModeChange, t}) {
+export default function RouteGuide({route, mode, destination, navigation, onExit, onModeChange, t, lang}) {
   const [{index:previewIndex,direction}, setStep] = useState({index:0,direction:1});
   const steps = routeSteps(route);
   const index = navigation.active ? navigation.step : previewIndex;
@@ -41,7 +42,7 @@ export default function RouteGuide({route, mode, destination, navigation, onExit
       <div className="route-step-copy" aria-live="polite" aria-atomic="true">
         <div className="route-step-text" key={index} style={{'--step-enter':direction>0?'12px':'-12px'}}>
           <strong>{step?instruction(step,t):t('routeOnMap')}</strong>
-          {step&&<span>{[step.name, step.distance > 0 && formatDistance(step.distance)].filter(Boolean).join(' · ')}</span>}
+          {step&&<span>{[roadName(step.name,lang), step.distance > 0 && formatDistance(step.distance)].filter(Boolean).join(' · ')}</span>}
         </div>
       </div>
       {!navigation.active&&steps.length>1&&<div className="route-step-controls">

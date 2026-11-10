@@ -27,5 +27,44 @@ service cloud.firestore {
     match /editors/{uid} {
       allow get: if request.auth != null && request.auth.uid == uid;
     }
+
+    match /gameQuanRooms/{code} {
+      function openRoom() {
+        return resource.data.createdAt + duration.value(24, 'h') > request.time;
+      }
+
+      function joinsRoom() {
+        return resource.data.guest == null
+          && request.auth.uid != resource.data.host
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['guest'])
+          && request.resource.data.guest == request.auth.uid;
+      }
+
+      function addsMove() {
+        let before = resource.data.moves;
+        let after = request.resource.data.moves;
+        let index = before.size();
+        let move = after[index];
+        let first = index % 2 == 0;
+        return resource.data.guest != null
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['moves'])
+          && index < 400
+          && move is int
+          && after == before.concat([move])
+          && ((first && request.auth.uid == resource.data.host && move >= 2 && move <= 11)
+            || (!first && request.auth.uid == resource.data.guest && move >= 14 && move <= 23));
+      }
+
+      allow get: if request.auth != null && (resource == null || (openRoom()
+        && (resource.data.guest == null || request.auth.uid in [resource.data.host, resource.data.guest])));
+      allow create: if request.auth != null
+        && code.matches('^[A-HJ-NP-Z2-9]{8}$')
+        && request.resource.data.keys().hasOnly(['host', 'guest', 'moves', 'createdAt'])
+        && request.resource.data.host == request.auth.uid
+        && request.resource.data.guest == null
+        && request.resource.data.moves == []
+        && request.resource.data.createdAt == request.time;
+      allow update: if request.auth != null && openRoom() && (joinsRoom() || addsMove());
+    }
   }
 }

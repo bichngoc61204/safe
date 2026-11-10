@@ -1,11 +1,9 @@
 import L from 'leaflet';
-import { regionalLabelStyle, standardPaint, VIETNAM_VIEW, VIETNAM_PAN } from './cartography';
+import { mapLabelText, regionalLabelStyle, standardPaint, VIETNAM_VIEW, VIETNAM_PAN } from './cartography';
 
 export const DEFAULT_MAP_STYLE='light';
-export const MAP_STYLES = {
-  light:'https://tiles.openfreemap.org/styles/positron',
-  streets:'https://tiles.openfreemap.org/styles/bright',
-};
+const STANDARD_STYLE_URL='https://tiles.openfreemap.org/styles/positron';
+const SATELLITE_LABEL_STYLE_URL='https://tiles.openfreemap.org/styles/bright';
 const vectorAttribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · <a href="https://openfreemap.org/">OpenFreeMap</a> · <a href="https://openmaptiles.org/">OpenMapTiles</a>';
 const imageryAttribution='Imagery &copy; <a href="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer">Esri, Vantor, Earthstar Geographics &amp; GIS User Community</a>';
 const IMAGERY_URL='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
@@ -31,24 +29,33 @@ export function limitVietnamZoom(map, frame) {
   observer.observe(frame);
   return ()=>{observer.disconnect();map.off('zoomend',showCountryAtLimit);};
 }
-async function loadCleanStyle(url,signal,{labelsOnly,standard,buildingDepth}){
-  const cacheKey=url+(labelsOnly?'#labels':buildingDepth?'#standard-depth':standard?'#standard':'#map');
-  if(stylesCache.has(cacheKey))return structuredClone(stylesCache.get(cacheKey));
+async function loadCleanStyle(signal,hybrid){
+  const url=hybrid?SATELLITE_LABEL_STYLE_URL:STANDARD_STYLE_URL;
+  if(stylesCache.has(url))return structuredClone(stylesCache.get(url));
   const response=await fetch(url,{signal});
   if(!response.ok)throw Error('Basemap style unavailable');
-  const style=regionalLabelStyle(await response.json(),{labelsOnly,standard,buildingDepth});stylesCache.set(cacheKey,style);
+  const style=regionalLabelStyle(await response.json(),{labelsOnly:hybrid,standard:!hybrid});
+  stylesCache.set(url,style);
   return structuredClone(style);
 }
 
-export function addBasemap(map,{style=DEFAULT_MAP_STYLE,buildingDepth=false,onStatus=()=>{}}={}) {
+export function addBasemap(map,{style=DEFAULT_MAP_STYLE,onStatus=()=>{}}={}) {
   let disposed=false,layer=null,rasterLayer=null,timer=null,vectorMap=null,loadedStyle=null;
   let vectorReady=false,contextLost=false,dark=false,appliedDark=false;
-  const standard=style===DEFAULT_MAP_STYLE;
+  let language='vi',appliedLanguage='vi';
   const hybrid=style==='satellite';
   const request=new AbortController();
   const report=value=>{if(!disposed)onStatus(value);};
+  function localizeLabels(){
+    if(!vectorReady||contextLost||appliedLanguage===language)return;
+    for(const layer of loadedStyle.layers){
+      const text=mapLabelText(layer,language);
+      if(text)vectorMap.setLayoutProperty(layer.id,'text-field',text);
+    }
+    appliedLanguage=language;
+  }
   function paintTheme(){
-    if(!standard||!vectorReady||contextLost||appliedDark===dark)return;
+    if(hybrid||!vectorReady||contextLost||appliedDark===dark)return;
     const reduceMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     for(const layerStyle of loadedStyle.layers){
       const next=dark?standardPaint(layerStyle,true):layerStyle.paint;
@@ -87,6 +94,7 @@ export function addBasemap(map,{style=DEFAULT_MAP_STYLE,buildingDepth=false,onSt
     clearTimeout(timer);
     if(contextLost)return;
     vectorReady=true;
+    localizeLabels();
     layer.getContainer().style.visibility='';
     paintTheme();
     if(!hybrid)removeImagery();
@@ -111,9 +119,7 @@ export function addBasemap(map,{style=DEFAULT_MAP_STYLE,buildingDepth=false,onSt
         const [gl,{maplibreGL},{default:workerUrl},cleanStyle]=await Promise.all([
           import('maplibre-gl'),import('@maplibre/maplibre-gl-leaflet'),
           import('maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'),
-          loadCleanStyle(MAP_STYLES[style]||MAP_STYLES.streets,request.signal,{
-            labelsOnly:hybrid,standard,buildingDepth:standard&&buildingDepth,
-          }),
+          loadCleanStyle(request.signal,hybrid),
         ]);
         if(disposed)return;
         gl.setWorkerUrl(workerUrl);
@@ -156,5 +162,6 @@ export function addBasemap(map,{style=DEFAULT_MAP_STYLE,buildingDepth=false,onSt
     removeImagery();
   }
   remove.setDark=value=>{dark=value;paintTheme();};
+  remove.setLanguage=value=>{language=value;localizeLabels();};
   return remove;
 }

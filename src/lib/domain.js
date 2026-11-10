@@ -1,3 +1,5 @@
+import { placeText } from './locale.js';
+
 export const statuses = ['active','clean','warning','overloaded','inactive'];
 export const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase();
 export const isAlert = p => ['warning','overloaded'].includes(p.status);
@@ -8,13 +10,15 @@ export function haversine(a,b) {
 }
 export function formatDistance(m) { return m<1000 ? `${Math.round(m)}m` : `${(m/1000).toFixed(1)}km`; }
 export function getCategory(categories,id) { return categories.find(c=>c.id===id); }
+const searchablePlaceFields=['name','address','owner','waste'];
 export function filterPlaces(places,categories,{query='',category='all',scope='map',status='all',position=null}={}) {
   const term=normalize(query);
   const groupCategories=scope==='map'?null:new Set(categories.filter(item=>item.kind===scope).map(item=>item.id));
   const matches=places.filter(p=>
     (category==='all'||p.category===category) && (!groupCategories||groupCategories.has(p.category)) &&
     (status==='all'||(status==='alerts'?isAlert(p):p.status===status)) &&
-    (!term||normalize(`${p.name} ${p.address} ${p.owner} ${p.waste}`).includes(term)));
+    (!term||normalize(searchablePlaceFields.map(field=>p[field]).join(' ')).includes(term)||
+      normalize(searchablePlaceFields.map(field=>placeText(p,field,'en')).join(' ')).includes(term)));
   if(!position)return matches;
   return matches.map(place=>({place,distance:haversine(position,place)}))
     .sort((a,b)=>a.distance-b.distance).map(({place})=>place);

@@ -7,6 +7,7 @@ import { catalogGroups } from '../lib/catalogGroups';
 import { CoordinatePicker } from './MapView';
 import { CENTER } from '../lib/mapCenter';
 import { getCategory, safeImage, statuses } from '../lib/domain';
+import { translatedPlaceFields } from '../lib/locale';
 const maxExtraImages=5;
 
 function placeValues(place,categories,initialKind) {
@@ -64,8 +65,8 @@ export function usePlaceEditor({place,categories,initialKind,onSave,t,lang,busy,
   const kind=getCategory(categories,values.category)?.kind;
   const field=(key,options={})=><label className={options.full?'span-2':undefined}>
     <span>{options.icon&&<Icon name={options.icon} size={13}/>}<span>{t(options.label||key)}</span>{options.required&&<em>*</em>}</span>
-    {options.textarea?<textarea value={values[key]||''} onChange={e=>set(key,e.target.value)} maxLength={1000} rows={options.rows||3}/>:
-      <input name={key} value={values[key]??''} onChange={e=>set(key,e.target.value)} type={options.type||'text'}
+    {options.textarea?<textarea name={key} lang={options.lang} value={values[key]||''} onChange={e=>set(key,e.target.value)} maxLength={1000} rows={options.rows||3}/>:
+      <input name={key} lang={options.lang} value={values[key]??''} onChange={e=>set(key,e.target.value)} type={options.type||'text'}
         required={options.required} maxLength={options.maxLength} pattern={options.pattern} placeholder={options.placeholder}/>}
   </label>;
   const phoneField=icon=>field('phone',{icon,type:'tel',pattern:'[+0-9 \\(\\)\\-]{0,25}',maxLength:25});
@@ -97,7 +98,13 @@ export function usePlaceEditor({place,categories,initialKind,onSave,t,lang,busy,
       return;
     }
     const p={...values,name,address,opensAt,closesAt,lat:Number(values.lat),lng:Number(values.lng),id:place?.id||crypto.randomUUID(),image,images,updatedAt:new Date().toISOString()};
-    if(!['green','partner'].includes(kind))p.waste='';
+    for(const key of Object.keys(translatedPlaceFields)){
+      const field=`${key}En`;
+      const translation=values[field]?.trim();
+      if(translation)p[field]=translation;
+      else delete p[field];
+    }
+    if(!['green','partner'].includes(kind)){p.waste='';delete p.wasteEn;}
     if(kind!=='green'&&['clean','warning','overloaded'].includes(p.status))p.status='active';
     onSave(p);
   }
@@ -116,12 +123,22 @@ export function usePlaceEditor({place,categories,initialKind,onSave,t,lang,busy,
   const statusField=<div className="form-dropdown"><span>{t('status')}</span><Dropdown label={t('status')} value={values.status} onChange={value=>set('status',value)}>
       {statuses.filter(s=>kind==='green'||['active','inactive'].includes(s)).map(s=><option key={s} value={s}>{t(s)}</option>)}
     </Dropdown></div>;
-  const coordinateFields=[['lat','Latitude',90],['lng','Longitude',180]].map(([key,label,max])=>
-    <label key={key}><span>{label} <em>*</em></span>
+  const coordinateFields=[['lat','latitude',90],['lng','longitude',180]].map(([key,label,max])=>
+    <label key={key}><span>{t(label)} <em>*</em></span>
       <input type="number" step="any" min={-max} max={max} required value={values[key]} onChange={e=>set(key,e.target.value)}/>
     </label>);
   const coordinatePicker=<CoordinatePicker lat={Number(values.lat)} lng={Number(values.lng)}
-    onChange={coords=>{setError('');setValues(v=>({...v,...coords}));}} t={t}/>;
+    onChange={coords=>{setError('');setValues(v=>({...v,...coords}));}} t={t} lang={lang}/>;
+  const englishFields=<details className="span-2 admin-preview-section admin-preview-metadata">
+    <summary><Icon name="globe" size={15}/>{t('englishPlaceDetails')}<Icon name="down" size={14}/></summary>
+    <p className="field-hint">{t('englishOptional')}</p>
+    <div className="form-grid">
+      {Object.entries(translatedPlaceFields).filter(([key])=>key!=='waste'||['green','partner'].includes(kind))
+        .map(([key,maxLength])=><div key={key} className="span-2">
+          {field(`${key}En`,{label:key,lang:'en',maxLength,textarea:key==='description',rows:2})}
+        </div>)}
+    </div>
+  </details>;
   const imageFields=<fieldset className="span-2 place-image-fields">
       <legend>{t('placeImages')}</legend>
       <div className="main-image-field">
@@ -164,7 +181,7 @@ export function usePlaceEditor({place,categories,initialKind,onSave,t,lang,busy,
       </div>
     </fieldset>;
   return {
-    field, phoneField, timeField, hoursHint, groupField, categoryField, statusField, coordinateFields, coordinatePicker, imageFields,
+    field, phoneField, timeField, hoursHint, groupField, categoryField, statusField, coordinateFields, coordinatePicker, imageFields, englishFields,
     acceptsWaste:['green','partner'].includes(kind), reset, submit,
     errorMessage:(error||saveError)&&<p className="form-error place-form-error" role="alert">{t(error||saveError)}</p>,
     imagePreview:preview&&<Modal title={t('previewImages')} onClose={()=>setPreview(null)} t={t} className="image-link-modal">
@@ -203,6 +220,7 @@ export default function PlaceForm({categories,initialKind,onSave,onClose,t,lang,
             {editor.imageFields}
             {field('description',{full:true,textarea:true})}
             {field('source',{full:true,maxLength:150})}
+            {editor.englishFields}
           </div>
         </div>
         {editor.errorMessage}

@@ -1,6 +1,7 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Icon from './Icon';
 import { placeHourRows } from '../lib/placeHours';
+import { placeText } from '../lib/locale';
 import MapView from './MapView';
 import PlaceGallery from './PlaceGallery';
 import { CENTER } from '../lib/mapCenter';
@@ -27,9 +28,9 @@ const PlaceCards=memo(function PlaceCards({places,categories,selected,previewed,
       onFocus={event=>{if(event.currentTarget.matches(':focus-visible'))preview();}} onBlur={leave}
       onClick={()=>actions.current.select(p.id)}>
       <div className="place-card-content">
-        <h3>{p.name}</h3>
+        <h3>{placeText(p,'name',lang)}</h3>
         <span className="place-type" style={{color}}><Icon name={c.icon} size={13}/><span>{lang==='en'?c.nameEn:c.name}</span></span>
-        <p><Icon name="pin" size={13}/><span>{p.address}</span></p>
+        <p><Icon name="pin" size={13}/><span>{placeText(p,'address',lang)}</span></p>
         {isAlert(p)?<span className={`place-alert alert-${p.status}`}>{t(p.status)}</span>:
           p.status==='inactive'?<span className="place-alert">{t('inactive')}</span>:null}
       </div>
@@ -54,11 +55,11 @@ function PlaceDetails({place,categories,position,t,lang,onClose,routing}) {
       <span>{t('details')}</span>
       <button className="icon-button detail-panel-close" onClick={onClose} aria-label={t('close')}><Icon name="x" size={19}/></button>
     </div>
-    <PlaceGallery images={images} name={place.name} t={t}/>
+    <PlaceGallery images={images} name={placeText(place,'name',lang)} t={t}/>
     <div className="detail-content">
       <div className="detail-category"><span className="detail-category-icon" style={{color:markerColor(c),background:markerColor(c)+'13'}}><Icon name={c.icon} size={18}/></span>{lang==='en'?c.nameEn:c.name}</div>
-      <h2>{place.name}</h2>
-      <p className="detail-address">{place.address}</p>
+      <h2>{placeText(place,'name',lang)}</h2>
+      <p className="detail-address">{placeText(place,'address',lang)}</p>
       <div className="detail-status"><Status value={place.status} t={t}/><span>{position?formatDistance(haversine(position,place)):t('gpsHint')}</span></div>
       <div className="detail-buttons route-entry">
         <button className="button primary" onClick={routing.start}><Icon name="navigation" size={16}/>{t('routeOnMap')}</button>
@@ -69,9 +70,9 @@ function PlaceDetails({place,categories,position,t,lang,onClose,routing}) {
           <span>{place.phone||t('noPhone')}{demoPhone&&<small>{t('demoPhone')}</small>}</span>
           {phone&&!demoPhone&&<a className="button secondary" href={phoneHref(phone)}><Icon name="phone" size={16}/>{t('call')}</a>}
         </dd></div>
-        {[['owner',place.owner],['waste',place.waste],...placeHourRows(place),['description',place.description]].filter(([,value])=>value).map(([key,value])=><div key={key}><dt>{t(key)}</dt><dd>{value}</dd></div>)}
+        {[...['owner','waste'].map(key=>[key,placeText(place,key,lang)]),...placeHourRows(place,lang),['description',placeText(place,'description',lang)]].filter(([,value])=>value).map(([key,value])=><div key={key}><dt>{t(key)}</dt><dd>{value}</dd></div>)}
       </dl>
-      <details className="detail-metadata"><summary>{t('dataDetails')}<Icon name="down" size={14}/></summary><dl><div><dt>{t('coordinates')}</dt><dd>{place.lat.toFixed(6)}, {place.lng.toFixed(6)}</dd></div>{place.source&&<div><dt>{t('source')}</dt><dd>{place.source}</dd></div>}</dl></details>
+      <details className="detail-metadata"><summary>{t('dataDetails')}<Icon name="down" size={14}/></summary><dl><div><dt>{t('coordinates')}</dt><dd>{place.lat.toFixed(6)}, {place.lng.toFixed(6)}</dd></div>{place.source&&<div><dt>{t('source')}</dt><dd>{placeText(place,'source',lang)}</dd></div>}</dl></details>
       {place.source==='Dữ liệu minh họa'&&<p className="detail-demo">{t('demoNote')}</p>}
     </div>
   </section>;
@@ -361,7 +362,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
               const distance=formatDistance(haversine(position||areaCenter,p));
               return <li key={p.id} style={{'--preview-index':Math.min(index,3)}}>
                 <button type="button" onClick={()=>selectPlace(p.id)} style={{'--preview-color':markerColor(c)}}>
-                  <Icon name={c.icon} size={17}/><span><strong>{p.name}</strong><small>{p.address}</small></span>
+                  <Icon name={c.icon} size={17}/><span><strong>{placeText(p,'name',lang)}</strong><small>{placeText(p,'address',lang)}</small></span>
                   <span className="search-preview-trailing"><span className="search-preview-distance">{distance}</span><Icon name="right" size={13}/></span>
                 </button>
               </li>;
@@ -378,7 +379,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
             <span className="sheet-grip" aria-hidden="true"/>
             <div className="sheet-detail-bar">
               <button type="button" aria-label={t('nearby')} onClick={closeDetails}><Icon name="back" size={18}/></button>
-              <h2>{place.name}</h2>
+              <h2>{placeText(place,'name',lang)}</h2>
               <button type="button" aria-label={t('close')} aria-expanded={expanded} aria-controls="public-sheet-content" onClick={dismissPopup}><Icon name="x" size={18}/></button>
             </div>
           </div>:<button className="sheet-handle" aria-label={t('close')} aria-expanded={expanded} aria-controls="public-sheet-content" onClick={dismissPopup}>
@@ -397,7 +398,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
       </div>
       <MapView style={mapStyle} setStyle={setMapStyle} welcomePhase={welcomePhase} focusRevision={focusRevision} navigation={navigation}
         routeGuide={result?.route
-          ? <RouteGuide key={activeRequest.mode+':'+lastRouteRequest.current} route={navigation.route} navigation={navigation} mode={activeRequest.mode} destination={place.name} onExit={exitRoute} onModeChange={mode=>requestRoute(activeRequest.origin,mode)} t={t}/>
+          ? <RouteGuide key={activeRequest.mode+':'+lastRouteRequest.current} route={navigation.route} navigation={navigation} mode={activeRequest.mode} destination={placeText(place,'name',lang)} onExit={exitRoute} onModeChange={mode=>requestRoute(activeRequest.origin,mode)} t={t} lang={lang}/>
           : routeState&&<section className="route-guide route-request-status">
               <div className="route-guide-heading"><span role="status">{t(routeState)}</span><button className="route-exit" onClick={exitRoute} aria-label={t('routeExit')}><Icon name="x" size={16}/></button></div>
               {result&&<div className="route-navigation-actions">

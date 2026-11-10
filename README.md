@@ -45,6 +45,14 @@ npm run preview
 
 Danh mục và địa điểm được lưu cùng một document để đồng bộ trong một lần đọc và cập nhật nhất quán. Phiên bản hiện tại giới hạn 200 địa điểm, 40 danh mục và khoảng 800 KB dữ liệu JSON. Số phiên bản được kiểm tra khi lưu để phát hiện thay đổi từ máy khác. Dữ liệu công khai chỉ nên chứa thông tin địa điểm được phép công bố.
 
+### Ô Ăn Quan trên hai điện thoại
+
+1. Trong Firebase Console, mở **Authentication → Sign-in method → Anonymous** và bật đăng nhập ẩn danh. Người chơi nhận một danh tính tự động khi tạo hoặc vào phòng.
+2. Xuất bản bản cập nhật `firestore.rules` trong **Firestore Database → Rules**. Phần `gameQuanRooms` dùng mã phòng ngẫu nhiên, khóa hai ghế theo tài khoản và giới hạn lượt ghi. Phòng hết hạn sau 24 giờ.
+3. Deploy lại lên Vercel với cùng bốn biến cấu hình Firebase `VITE_FIREBASE_*` của dự án. Hai điện thoại mở cùng một tên miền tại `/game` và chọn **Ô Ăn Quan**. Máy đầu tạo phòng rồi gửi link hoặc mã 8 ký tự. Máy thứ hai mở link mời và bấm **Vào phòng**.
+
+Mỗi lượt được kiểm tra trong giao dịch Firestore rồi đồng bộ đến hai máy. Trình duyệt dựng lại bàn từ nhật ký nước đi. Ô Ăn Quan và ba trò arcade cũng có chế độ chơi chung máy.
+
 ### Báo cáo lượt truy cập
 
 - Liên kết dự án Firebase với Google Analytics, sau đó đặt `VITE_FIREBASE_MEASUREMENT_ID` của Web App trên Vercel và deploy lại. Bản production ghi lượt mở bản đồ công cộng. Máy phát triển dùng Vite không gửi lượt xem.
@@ -64,7 +72,7 @@ Lệnh đầu kiểm tra tệp JSON có `categories` và `places`. Lệnh thứ 
 
 - Danh mục công khai đọc từ Firestore. Ảnh chính và ảnh phụ dùng URL trên từng địa điểm. Mục còn tham chiếu ảnh mẫu đã bỏ sẽ hiện biểu tượng danh mục khi chưa có ảnh thay thế.
 - SOS hiển thị đầu số khẩn cấp toàn quốc 113 / 115 / 114.
-- Nền mặc định là Tiêu chuẩn (OpenFreeMap Positron). Có thể đổi sang bản đồ màu, nền tối hoặc ảnh vệ tinh. Nhãn nền được giới hạn theo vùng đất Việt Nam, còn nhãn hai quần đảo do SafeMap hiển thị. Không cần API key. Nếu thiết bị không hỗ trợ WebGL hoặc dịch vụ vector lỗi, ứng dụng dùng ảnh vệ tinh không nhãn; không quay lại nền OSM có chữ.
+- Có hai nền bản đồ, Tiêu chuẩn (OpenFreeMap Positron) và Vệ tinh. Nền Tiêu chuẩn mặc định ưu tiên đường và tên đường, với dấu nền nhà mờ khi zoom gần. Nút mặt trời/mặt trăng đổi màu sáng tối cho nền Tiêu chuẩn. Nhãn nền được giới hạn theo vùng đất Việt Nam, còn nhãn hai quần đảo do SafeMap hiển thị. Không cần API key. Nếu thiết bị không hỗ trợ WebGL hoặc dịch vụ vector lỗi, ứng dụng dùng ảnh vệ tinh không nhãn từ nhà cung cấp.
 - Bấm **Chỉ đường trên bản đồ** để xem ngay tuyến xe máy từ GPS. Nếu GPS không khả dụng, chạm bản đồ để chọn điểm xuất phát. Đổi phương tiện trong bảng tuyến, rồi bấm **Bắt đầu dẫn đường**. Đường xanh thu ngắn theo phần đường đã đi và ứng dụng tính lại tuyến nếu GPS xác nhận bạn đi lệch. Google Maps vẫn là lựa chọn thay thế.
 - Cần Internet cho bản đồ vector/OSM, font và ảnh URL tùy chọn. React, Leaflet và biểu tượng được cài bằng npm, đóng gói khi build.
 

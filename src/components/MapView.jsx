@@ -4,7 +4,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import Icon from './Icon';
 import { CENTER } from '../lib/mapCenter';
 import { getCategory, markerColor } from '../lib/domain';
-import { addBasemap, limitVietnamZoom, vietnamMapOptions } from '../lib/basemap';
+import { placeText } from '../lib/locale';
+import { addBasemap, DEFAULT_MAP_STYLE, limitVietnamZoom, vietnamMapOptions } from '../lib/basemap';
 import { addCollapsibleAttribution } from '../lib/attribution';
 import { addArchipelagoLayer } from '../lib/archipelagos';
 import { blendPosition, routeShape, routeTarget, sampleRoute } from '../lib/mapMotion';
@@ -30,7 +31,31 @@ const zoomIcons = {
 };
 const creditsIcon = renderToStaticMarkup(<Icon name="info" size={16}/>);
 
-const MAP_MODES = [['streets','mapStreets'], ['light','mapLight'], ['satellite','mapSatellite']];
+function useMapLabels(mapRef, lang, t, { style=DEFAULT_MAP_STYLE, onStatus, controlsRoot }={}) {
+  const basemap=useRef(null);
+  const islands=useRef(null);
+  useEffect(()=>{
+    if(!mapRef.current)return;
+    const stop=addBasemap(mapRef.current,{style,onStatus});
+    const removeIslands=addArchipelagoLayer(mapRef.current,'vi',{imagery:style==='satellite'});
+    basemap.current=stop;
+    islands.current=removeIslands;
+    return ()=>{basemap.current=null;islands.current=null;removeIslands();stop();};
+  },[mapRef,style,onStatus]);
+  const zoomIn=t('zoomIn'),zoomOut=t('zoomOut');
+  useEffect(()=>{
+    basemap.current?.setLanguage(lang);
+    islands.current?.setLanguage(lang);
+    const root=controlsRoot?.current||mapRef.current?.getContainer();
+    for(const [selector,label] of [['.leaflet-control-zoom-in',zoomIn],['.leaflet-control-zoom-out',zoomOut]]){
+      const button=root?.querySelector(selector);
+      if(button){button.title=label;button.setAttribute('aria-label',label);}
+    }
+  },[lang,style,onStatus,mapRef,controlsRoot,zoomIn,zoomOut]);
+  return basemap;
+}
+
+const MAP_MODES = [[DEFAULT_MAP_STYLE,'mapLight'], ['satellite','mapSatellite']];
 const WELCOME_CENTER = [16.061, 108.231];
 const DEFAULT_ZOOM = 15;
 // A visual guide to the area served by SafeMap, not an administrative boundary.
@@ -72,8 +97,7 @@ export default function MapView({style,setStyle,welcomePhase,focusRevision,place
   const container=useRef(null),mapRef=useRef(null),markers=useRef(new Map()),userRef=useRef(null),onSelectRef=useRef(onSelect),creditsRef=useRef(null),selectedRef=useRef(selected);
   const stage=useRef(null),frame=useRef(null),viewport=useRef(null),rotation=useRef(null);
   const routeLayers=useRef(null);
-  const basemap=useRef(null);
-  const mapFamily=style==='dark'?'light':style;
+  const mapFamily=style==='satellite'?'satellite':DEFAULT_MAP_STYLE;
   const motion=useRef({shape:null,distance:0,sampledAt:0});
   const camera=useRef({following:false,target:null});
   const previewRef=useRef(previewed);
@@ -117,7 +141,7 @@ export default function MapView({style,setStyle,welcomePhase,focusRevision,place
     const map=mapRef.current;
     focusMap(map,CENTER,DEFAULT_ZOOM,rotation.current,1.8);
   },[welcomePhase]);
-  useEffect(()=>{if(mapRef.current)return addArchipelagoLayer(mapRef.current,lang,{imagery:mapFamily==='satellite'});},[lang,mapFamily]);
+  const basemap=useMapLabels(mapRef,lang,t,{style:mapFamily,onStatus:setMapStatus,controlsRoot:stage});
   useEffect(()=>{creditsRef.current?.setLabel(t('mapCredits'));},[lang]);
   useEffect(()=>{
     const credits=creditsRef.current;
@@ -128,13 +152,7 @@ export default function MapView({style,setStyle,welcomePhase,focusRevision,place
     const attribution=`${provider} · <a href="https://www.openstreetmap.org/fixthemap">${t('routeFixMap')}</a>`;
     return credits.add(attribution);
   },[Boolean(route),routeMode,lang]);
-  useEffect(()=>{
-    if(!mapRef.current)return;
-    const remove=addBasemap(mapRef.current,{style:mapFamily,buildingDepth:true,onStatus:setMapStatus});
-    basemap.current=remove;
-    return ()=>{basemap.current=null;remove();};
-  },[mapFamily]);
-  useEffect(()=>{basemap.current?.setDark(style==='dark');},[style]);
+  useEffect(()=>{basemap.current?.setDark(style==='dark');},[basemap,style]);
   useEffect(()=>{
     const map=mapRef.current;if(!map)return;
     const visibleIds=new Set(places.map(place=>place.id));
@@ -146,6 +164,7 @@ export default function MapView({style,setStyle,welcomePhase,focusRevision,place
     places.forEach(p=>{
       const category=getCategory(categories,p.category);
       if(!category)return;
+      const name=placeText(p,'name',lang);
       const isSelected=p.id===selected;
       const icon=pinIcon(category,isSelected,p.status);
       const point=[p.lat,p.lng];
@@ -153,21 +172,21 @@ export default function MapView({style,setStyle,welcomePhase,focusRevision,place
       if(existing){
         if(existing.options.icon.options.html!==icon.options.html)existing.setIcon(icon);
         if(!existing.getLatLng().equals(point))existing.setLatLng(point);
-        if(existing.options.title!==p.name){
-          existing.options.title=p.name;
-          existing.getTooltip().getContent().textContent=p.name;
+        if(existing.options.title!==name){
+          existing.options.title=name;
+          existing.getTooltip().getContent().textContent=name;
         }
         const offset=isSelected?1000:0;
         if(existing.options.zIndexOffset!==offset)existing.setZIndexOffset(offset);
         return;
       }
       const tooltip=document.createElement('span');
-      tooltip.textContent=p.name;
+      tooltip.textContent=name;
       const marker=L.marker(point,{
         icon,
         keyboard:true,
         autoPanOnFocus:!window.matchMedia?.('(max-width: 700px)').matches,
-        title:p.name,
+        title:name,
         zIndexOffset:isSelected?1000:0,
       }).bindTooltip(tooltip,{direction:'top',offset:[0,-30],opacity:1});
       marker.on('click',event=>{
@@ -198,7 +217,7 @@ export default function MapView({style,setStyle,welcomePhase,focusRevision,place
     syncVisibility();
     map.on('zoomend',syncVisibility);
     return()=>map.off('zoomend',syncVisibility);
-  },[places,categories,selected,onPreview]);
+  },[places,categories,selected,onPreview,lang]);
   useEffect(()=>{
     for(const [id,marker] of markers.current)setGroupMarkerState(marker.getElement(),id,hoverIds);
   },[hoverIds]);
@@ -227,6 +246,7 @@ export default function MapView({style,setStyle,welcomePhase,focusRevision,place
   },[previewed]);
   const livePosition=navigation.active?navigation.position:null;
   const displayedPosition=livePosition||position;
+  const userLabel=t('you');
   const shape=useMemo(()=>routeShape(route),[route]);
   const {active, following, pause, resume, remaining}=navigation;
   useEffect(()=>{
@@ -236,9 +256,10 @@ export default function MapView({style,setStyle,welcomePhase,focusRevision,place
       userRef.current=null;
       return;
     }
-    if(!userRef.current)userRef.current=L.circleMarker(displayedPosition,{radius:7,color:'white',weight:3,fillColor:'#3678bc',fillOpacity:1}).addTo(map).bindTooltip(t('you'));
+    if(!userRef.current)userRef.current=L.circleMarker(displayedPosition,{radius:7,color:'white',weight:3,fillColor:'#3678bc',fillOpacity:1}).addTo(map).bindTooltip(userLabel);
     else if(!livePosition)userRef.current.setLatLng(displayedPosition);
-  },[displayedPosition,livePosition]);
+    if(userRef.current.getTooltip().getContent()!==userLabel)userRef.current.setTooltipContent(userLabel);
+  },[displayedPosition,livePosition,userLabel]);
   useEffect(()=>{
     if(position?.recenter)focusMap(mapRef.current,position,16,rotation.current);
   },[position]);
@@ -366,20 +387,27 @@ export default function MapView({style,setStyle,welcomePhase,focusRevision,place
       <button className={`icon-button ${locating?'locating':''}`} onClick={active?resume:onLocate} disabled={locating} title={t('location')} aria-label={t('location')}><Icon name="locate" size={18}/></button>
       {rotated&&<button className="icon-button map-north" onClick={()=>rotation.current?.reset()} title={t('mapNorth')} aria-label={t('mapNorth')}><span>N</span><Icon name="down" size={12}/></button>}
     </div>
-    <div className="map-bottom-tools"><button className="map-tool mobile-layers-toggle" aria-label={t('mapStyle')} aria-expanded={layersOpen} aria-controls="map-layers-panel" onClick={()=>setLayersOpen(open=>!open)}><Icon name={layersOpen?'x':'layers'} size={21}/></button><div id="map-layers-panel" className={`map-style-control ${layersOpen?'is-open':''} ${style==='dark'?'is-unselected':''}`} role="group" aria-label={t('mapStyle')} style={{'--mode-count':MAP_MODES.length,'--mode-index':Math.max(0,MAP_MODES.findIndex(([value])=>value===style))}}>{MAP_MODES.map(([value,label])=><button key={value} className={style===value?'active':''} aria-pressed={style===value} onClick={()=>{setStyle(value);setLayersOpen(false);}}>{t(label)}</button>)}</div><button className="sos-button" aria-label={`SOS ${t('emergency')}`} onClick={onSos}><span/><Icon className="sos-phone-icon" name="phone" size={17}/><span className="sos-text">SOS</span><span className="sos-label">{t('emergency')}</span><Icon className="mobile-sos-icon" name="phone" size={22}/></button></div>
+    <div className="map-bottom-tools">
+      <button className="map-tool mobile-layers-toggle" aria-label={t('mapStyle')} aria-expanded={layersOpen} aria-controls="map-layers-panel" onClick={()=>setLayersOpen(open=>!open)}><Icon name={layersOpen?'x':'layers'} size={21}/></button>
+      <div id="map-layers-panel" className={`map-style-control ${layersOpen?'is-open':''}`} role="group" aria-label={t('mapStyle')} style={{'--mode-count':MAP_MODES.length,'--mode-index':MAP_MODES.findIndex(([value])=>value===mapFamily)}}>
+        {MAP_MODES.map(([value,label])=><button key={value} className={mapFamily===value?'active':''} aria-pressed={mapFamily===value} onClick={()=>{
+          if(value!==mapFamily)setStyle(value);
+          setLayersOpen(false);
+        }}>{t(label)}</button>)}
+      </div>
+      <button className="sos-button" aria-label={`SOS ${t('emergency')}`} onClick={onSos}><span/><Icon className="sos-phone-icon" name="phone" size={17}/><span className="sos-text">SOS</span><span className="sos-label">{t('emergency')}</span><Icon className="mobile-sos-icon" name="phone" size={22}/></button>
+    </div>
     <div className="map-legend"><span style={{color:'#3582bc'}}><Icon name="shield" size={13}/>{t('safe')}</span><span style={{color:'#22936a'}}><Icon name="recycle" size={13}/>{t('green')}</span><span style={{color:'#855f35'}}><Icon name="leaf" size={13}/>{t('partner')}</span></div>
   </section>;
 }
-export function CoordinatePicker({lat,lng,onChange,t,readOnly=false}) {
-  const el=useRef(null),mapRef=useRef(null),markerRef=useRef(null),change=useRef(onChange);change.current=onChange;
+export function CoordinatePicker({lat,lng,onChange,t,lang,readOnly=false}) {
+  const el=useRef(null),mapRef=useRef(null),markerRef=useRef(null),creditsRef=useRef(null),change=useRef(onChange);change.current=onChange;
   useEffect(()=>{
     const initial=[Number.isFinite(lat)?lat:CENTER[0],Number.isFinite(lng)?lng:CENTER[1]];
     const map=L.map(el.current,{...vietnamMapOptions,zoomControl:false,attributionControl:false,scrollWheelZoom:false}).setView(initial,15);mapRef.current=map;
-    const credits=addCollapsibleAttribution(map,t('mapCredits'),creditsIcon);
+    const credits=creditsRef.current=addCollapsibleAttribution(map,t('mapCredits'),creditsIcon);
     L.control.zoom(zoomIcons).addTo(map);
-    const stop=addBasemap(map);
     const stopZoomLimit=limitVietnamZoom(map,el.current);
-    const removeIslands=addArchipelagoLayer(map);
     const marker=L.marker(initial,{draggable:!readOnly,icon:pinIcon({kind:'green',icon:'pin',color:'#16845d'},true)}).addTo(map);markerRef.current=marker;
     const update=ll=>change.current({lat:Number(ll.lat.toFixed(6)),lng:Number(ll.lng.toFixed(6))});
     if(!readOnly){
@@ -387,8 +415,10 @@ export function CoordinatePicker({lat,lng,onChange,t,readOnly=false}) {
       marker.on('dragend',()=>update(marker.getLatLng()));
     }
     const resize=new ResizeObserver(()=>map.invalidateSize());resize.observe(el.current);
-    return()=>{resize.disconnect();stopZoomLimit();removeIslands();stop();credits.destroy();map.remove();};
+    return()=>{resize.disconnect();stopZoomLimit();credits.destroy();map.remove();mapRef.current=null;};
   },[]);
+  useMapLabels(mapRef,lang,t);
+  useEffect(()=>{creditsRef.current?.setLabel(t('mapCredits'));},[lang]);
   useEffect(()=>{
     if(!Number.isFinite(Number(lat))||!Number.isFinite(Number(lng))||Math.abs(lat)>90||Math.abs(lng)>180)return;
     markerRef.current?.setLatLng([lat,lng]);
@@ -400,6 +430,7 @@ export function CoordinatePicker({lat,lng,onChange,t,readOnly=false}) {
 export function AdminPlacesMap({places,categories,selected,hovered,onSelect,t,lang}) {
   const element=useRef(null);
   const mapRef=useRef(null);
+  const creditsRef=useRef(null);
   const pins=useRef(new Map());
   const select=useRef(onSelect);
   select.current=onSelect;
@@ -407,18 +438,16 @@ export function AdminPlacesMap({places,categories,selected,hovered,onSelect,t,la
   useEffect(()=>{
     const map=L.map(element.current,{...vietnamMapOptions,zoomControl:false,attributionControl:false}).setView(CENTER,15);
     mapRef.current=map;
-    const credits=addCollapsibleAttribution(map,t('mapCredits'),creditsIcon);
-    const stopBase=addBasemap(map);
+    const credits=creditsRef.current=addCollapsibleAttribution(map,t('mapCredits'),creditsIcon);
     const stopZoom=limitVietnamZoom(map,element.current);
     L.control.zoom({...zoomIcons,position:'topleft'}).addTo(map);
     const observer=new ResizeObserver(()=>map.invalidateSize({debounceMoveend:true}));
     observer.observe(element.current);
-    return ()=>{observer.disconnect();stopZoom();stopBase();credits.destroy();map.remove();mapRef.current=null;};
+    return ()=>{observer.disconnect();stopZoom();credits.destroy();map.remove();mapRef.current=null;};
   },[]);
 
-  useEffect(()=>{
-    if(mapRef.current)return addArchipelagoLayer(mapRef.current,lang);
-  },[lang]);
+  useMapLabels(mapRef,lang,t);
+  useEffect(()=>{creditsRef.current?.setLabel(t('mapCredits'));},[lang]);
 
   useEffect(()=>{
     const map=mapRef.current;
@@ -454,6 +483,17 @@ export function AdminPlacesMap({places,categories,selected,hovered,onSelect,t,la
       map.fitBounds(bounds,{padding:[32,40],maxZoom:16,animate:false});
     }
   },[selected,places,categories]);
+
+  useEffect(()=>{
+    for(const place of places){
+      const marker=pins.current.get(place.id)?.marker;
+      if(!marker)continue;
+      const name=placeText(place,'name',lang);
+      marker.options.title=name;
+      marker.getElement()?.setAttribute('aria-label',name);
+      marker.getElement()?.setAttribute('title',name);
+    }
+  },[places,categories,lang]);
 
   useEffect(()=>{
     const map=mapRef.current;

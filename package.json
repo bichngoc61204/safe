@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --test src/lib/domain.test.js",
+    "test": "node --test src/lib/domain.test.js src/game/*.test.js",
     "test:ui": "node scripts/ui-check.mjs",
     "seed:firebase": "node --env-file-if-exists=.env.local --env-file-if-exists=.seed.local scripts/seed-firebase.js"
   },

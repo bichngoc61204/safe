@@ -3,6 +3,7 @@ import { doc, getFirestore, onSnapshot, runTransaction, serverTimestamp } from '
 import { safeImage, validData } from './domain.js';
 import { organizeCatalog } from './catalogGroups.js';
 import { isClockTime } from './placeHours.js';
+import { translatedPlaceFields } from './locale.js';
 
 // Older Firestore records may still refer to retired bundled illustrations.
 const validStoredImage = url => Boolean(safeImage(url)) ||
@@ -20,6 +21,10 @@ export function validateCatalog(data) {
   try {
     if (!validData(data) || data.places.some(place =>
       optionalPlaceText.some(key => place[key] != null && typeof place[key] !== 'string') ||
+      Object.entries(translatedPlaceFields).some(([key,max]) => {
+        const value=place[`${key}En`];
+        return value!=null&&(typeof value!=='string'||value.length>max);
+      }) ||
       ((place.opensAt || place.closesAt) && (!isClockTime(place.opensAt) || !isClockTime(place.closesAt) || place.opensAt===place.closesAt)) ||
       (place.image != null && place.image !== '' && !validStoredImage(place.image)) ||
       (place.images != null && (!Array.isArray(place.images) ||

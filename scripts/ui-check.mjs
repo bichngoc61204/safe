@@ -112,7 +112,14 @@ try{
  check(document.querySelectorAll('.marker-pin>svg').length===11,'Every map marker uses an icon instead of a number');
  check(document.querySelectorAll('.archipelago-label').length===2,'Both archipelagos retain ordinary map text');
  check(!document.querySelector('.map-region-button'),'No island-navigation action remains');
- check([...document.querySelectorAll('.map-style-control button')].map(b=>b.textContent).join(',')==='Bản đồ,Tiêu chuẩn,Vệ tinh','The map picker contains three basemaps');
+ const mapPicker=document.querySelector('.map-style-control');
+ check([...mapPicker.querySelectorAll('button')].map(b=>b.textContent).join(',')==='Tiêu chuẩn,Vệ tinh','The map picker contains only Standard and Satellite');
+ await click(button('Vệ tinh',mapPicker));
+ check(button('Vệ tinh',mapPicker).getAttribute('aria-pressed')==='true','The satellite option becomes active');
+ await click(button('Tiêu chuẩn',mapPicker));
+ await click(document.querySelector('.map-theme-toggle'));
+ check(button('Tiêu chuẩn',mapPicker).getAttribute('aria-pressed')==='true'&&document.querySelector('.map-stage').dataset.mapStyle==='dark','Dark uses the Standard basemap');
+ await click(document.querySelector('.map-theme-toggle'));
  check(!!document.querySelector('.map-credits-button svg'),'Source info icon uses an aligned SVG');
  const gestureViewport=document.querySelector('.map-rotation-viewport');
  const gesture=(points)=>act(async()=>{
@@ -201,12 +208,19 @@ try{
      distance:220,duration:60,
      geometry:{type:'LineString',coordinates:Array.from({length:241},(_,index)=>
        origin.map((value,axis)=>value+(destination[axis]-value)*index/240))},
-     legs:[{steps:[{distance:75,maneuver:{type:'depart'}},{distance:145,maneuver:{type:'turn',modifier:'left'}},{distance:0,maneuver:{type:'arrive'}}]}],
+     legs:[{steps:[{name:'Đường An Thượng 1',distance:75,maneuver:{type:'depart'}},{distance:145,maneuver:{type:'turn',modifier:'left'}},{distance:0,maneuver:{type:'arrive'}}]}],
    }]}));
  };
  await click(button('Chỉ đường trên bản đồ'));
  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,25));});
  check(routeRequests.length===1&&routeRequests[0].mode==='motor_scooter'&&!gpsWatch,'One click finds a motorbike route without starting continuous GPS');
+ const beforeLanguageChange=document.querySelector('.leaflet-map');
+ const islandLabel=document.querySelector('.archipelago-name');
+ await click(document.querySelector('.language-switch button[lang="en"]'));
+ check(document.documentElement.lang==='en'&&document.querySelector('.route-step-text').textContent.includes('An Thượng 1 Street'),'English localizes the road in the open route');
+ check(document.querySelector('.leaflet-map')===beforeLanguageChange&&routeRequests.length===1,'Changing language keeps the map and route in place');
+ check(islandLabel.textContent==='Hoang Sa Archipelago'&&document.querySelector('.leaflet-control-zoom-in').title==='Zoom in','Map overlays and controls switch in place');
+ await click(document.querySelector('.language-switch button[lang="vi"]'));
  await click(button('Bắt đầu dẫn đường'));
  check(typeof gpsWatch==='function','Starting navigation subscribes to GPS');
  await click(document.querySelector('.map-fabs button'));
@@ -335,6 +349,8 @@ try{
  const field=name=>form.elements.namedItem(name);
  await input(field('name'),'Điểm test React');
  await input(field('address'),'An Thượng test');
+ await input(field('nameEn'),'React Test Location');
+ await input(field('addressEn'),'An Thượng test address');
  await input(field('opensAt'),'20:00');
  await submit(form);
  check(!!form.querySelector('[role=alert]'),'An opening time requires a closing time');
@@ -354,6 +370,7 @@ try{
  await submit(form);
  check(cloudData.places.find(p=>p.name==='Điểm test React')?.images.join(',')===photos.join(','),'Gallery saves the remaining URLs in the order shown');
  check(cloudData.places.some(p=>p.name==='Điểm test React'&&p.opensAt==='20:00'&&p.closesAt==='02:00'),'Creating a place persists separate opening and closing times');
+ check(cloudData.places.some(p=>p.nameEn==='React Test Location'&&p.addressEn==='An Thượng test address'),'Optional English place details persist with the original fields');
  check(!document.querySelector('dialog'),'Successful save closes the form');
  await input(document.querySelector('.table-toolbar input'),'Điểm test React');
  check(document.querySelectorAll('tbody tr').length===1,'Admin live search finds created record');
@@ -373,7 +390,7 @@ try{
  check(document.querySelectorAll('.category-group-panel').length===3,'Categories are grouped under the three primary groups');
  await click(document.querySelector('.category-card .danger-text'));
  check(document.querySelector('.toast').textContent.includes('đang có địa điểm'),'In-use category deletion is blocked');
- await select(document.querySelector('.language-control'),'en');
+ await click(document.querySelector('.language-switch button[lang="en"]'));
  check(document.documentElement.lang==='en'&&document.querySelector('.admin-heading h1').textContent==='Manage categories','English updates the dashboard');
  await click(document.querySelector('.header-logout'));
  check(window.location.pathname==='/admin'&&!!document.querySelector('.login-form'),'Sign-out stays on the admin route');
@@ -384,6 +401,7 @@ try{
  gpsPermission.state='granted';
  root=createRoot(document.getElementById('root'));
  await render();
+ check(document.documentElement.lang==='en','Language selection survives a reload');
  check(!!document.querySelector('.map-welcome[open]'),'Reloading reopens the introduction');
  check(gpsRequests===3&&document.querySelector('.card-distance').textContent==='0m','Reload restores location when permission is already granted');
  const reloadedWelcome=document.querySelector('.map-welcome');
@@ -391,6 +409,7 @@ try{
  check(reloadedWelcome.classList.contains('is-leaving'),'Scrolling down starts the transition on desktop');
 
  await goAdmin();
+ await click(document.querySelector('.language-switch button[lang="vi"]'));
  await input(document.querySelector('input[type=email]'),'editor@example.invalid');
  await input(document.querySelector('input[type=password]'),'fixture');
  await submit(document.querySelector('.login-form'));

@@ -14,7 +14,7 @@ SafeMap An Thượng là bản đồ số cộng đồng cho khu vực An Thư�
 3. Chọn một ghim hoặc thẻ kết quả để xem ảnh, địa chỉ, trạng thái và thông tin liên hệ. Nếu điểm có ảnh, chạm ảnh để xem lớn hoặc vuốt để chuyển ảnh. GreenPoint có thể hiển thị thêm loại rác tiếp nhận và đơn vị phụ trách.
 4. Bấm **Vị trí của tôi** và cấp quyền định vị để xem vị trí trên bản đồ và khoảng cách đến địa điểm. Khi chưa bật GPS, khoảng cách trong gợi ý tìm kiếm được tính từ trung tâm An Thượng.
 
-Nền **Tiêu chuẩn** được chọn mặc định. Thu nhỏ đến mức thấp nhất để xem Việt Nam, Biển Đông, Hoàng Sa và Trường Sa. Bạn có thể đổi sang **Bản đồ**, **Nền tối** hoặc **Vệ tinh** trong nút chọn nền. Trên điện thoại, dùng hai ngón để xoay bản đồ và chạm **N** để trở về hướng Bắc. Nút **VI/EN** đổi ngôn ngữ giao diện. Nút **SOS** mở danh sách gọi khẩn cấp.
+Nền **Tiêu chuẩn** được chọn mặc định và ưu tiên đường, tên đường. Bộ chọn nền có hai mục **Tiêu chuẩn** và **Vệ tinh**. Nút mặt trời/mặt trăng đổi màu sáng tối cho nền Tiêu chuẩn. Thu nhỏ đến mức thấp nhất để xem Việt Nam, Biển Đông, Hoàng Sa và Trường Sa. Trên điện thoại, dùng hai ngón để xoay bản đồ và chạm **N** để trở về hướng Bắc. Nút **VI/EN** đổi ngôn ngữ giao diện. Nút **SOS** mở danh sách gọi khẩn cấp.
 
 ### Chỉ đường
 

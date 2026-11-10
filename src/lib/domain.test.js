@@ -64,21 +64,23 @@ test('Vietnam display filters keep land labels and reject boundaries, ferries an
  assert.deepEqual(regionalLabelStyle(source,{labelsOnly:true}).layers.map(l=>l.id),['place_city','road_name']);
 });
 
-test('Standard uses mapped building heights for depth and can recolor layers in place',()=>{
- const building={id:'building',type:'fill',source:'world','source-layer':'building'};
+test('Standard keeps roads legible and shows muted building footprints only when zoomed in',()=>{
+ const building={id:'building',type:'fill',source:'world','source-layer':'building',minzoom:13,paint:{'fill-outline-color':'gray'}};
+ const volume={...building,id:'volume',type:'fill-extrusion'};
+ const road={id:'road',type:'line',source:'world','source-layer':'transportation',minzoom:12};
  const label={id:'street-name',type:'symbol',source:'world','source-layer':'transportation_name'};
- const source={version:8,sources:{},layers:[building,label]};
- const style=regionalLabelStyle(source,{standard:true,buildingDepth:true});
- const lowShadow=style.layers.find(layer=>layer.id==='safemap-building-shadow-0-far');
- const highShadow=style.layers.find(layer=>layer.id==='safemap-building-shadow-55-far');
- const volume=style.layers.find(layer=>layer.type==='fill-extrusion');
- assert.equal(volume.source,building.source);
- assert.equal(style.layers.at(-2),volume);
- assert.ok(style.layers.indexOf(highShadow)<style.layers.findIndex(layer=>layer.id===building.id));
- assert.ok(highShadow.paint['fill-translate'].at(-1)[1][0]>lowShadow.paint['fill-translate'].at(-1)[1][0]);
- assert.notEqual(standardPaint(volume,true)['fill-extrusion-color'],volume.paint['fill-extrusion-color']);
- assert.equal(standardPaint(volume,true)['fill-extrusion-height'],volume.paint['fill-extrusion-height']);
- assert.ok(!regionalLabelStyle(source,{standard:true}).layers.some(layer=>layer.type==='fill-extrusion'));
+ const number={...label,id:'house-number','source-layer':'housenumber'};
+ const source={version:8,sources:{},layers:[building,volume,road,label,number]};
+ const {layers}=regionalLabelStyle(source,{standard:true});
+ assert.deepEqual(layers.map(layer=>layer.id),['building','road','street-name']);
+ const [footprint,street]=layers;
+ assert.equal(footprint.minzoom,16.5);
+ assert.equal(street.minzoom,road.minzoom);
+ assert.ok(!('fill-outline-color' in footprint.paint));
+ const nightPaint=standardPaint(footprint,true);
+ assert.notEqual(nightPaint['fill-color'],footprint.paint['fill-color']);
+ assert.equal(nightPaint['fill-opacity'],footprint.paint['fill-opacity']);
+ assert.deepEqual(regionalLabelStyle(source,{labelsOnly:true}).layers.map(layer=>layer.id),['street-name','house-number']);
 });
 
 test('opening hours retain legacy notes and recognize a pair that closes the following day',()=>{
