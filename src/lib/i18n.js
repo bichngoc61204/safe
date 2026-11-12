@@ -267,9 +267,18 @@ Object.assign(messages.vi,{
   language:'Ngôn ngữ', brandTagline:'AN TOÀN · TIỆN ÍCH · MÔI TRƯỜNG', headerLocation:'Đà Nẵng, Việt Nam',
   zoomIn:'Phóng to', zoomOut:'Thu nhỏ', showPassword:'Hiện mật khẩu', hidePassword:'Ẩn mật khẩu',
   englishPlaceDetails:'Thông tin địa điểm bằng tiếng Anh', englishOptional:'Các bản dịch đều tùy chọn. Ô trống sẽ dùng thông tin gốc.',
+  routeFollowRoad:'Tiếp tục theo tuyến đường', routeTripSummary:'Tóm tắt hành trình',
+  routeExpectedArrival:'Dự kiến đến', routeJourneyActive:'Đang dẫn đường', routePreview:'Xem trước tuyến',
+  routeUpdatingGuidance:'Đợi cập nhật chỉ dẫn',
 });
 Object.assign(messages.en,{
   language:'Language', brandTagline:'SAFETY · LOCAL SERVICES · ENVIRONMENT', headerLocation:'Đà Nẵng, Vietnam',
   zoomIn:'Zoom in', zoomOut:'Zoom out', showPassword:'Show password', hidePassword:'Hide password',
   englishPlaceDetails:'Place details in English', englishOptional:'Translations are optional. Empty fields use the original information.',
+  routeFollowRoad:'Continue along the route', routeTripSummary:'Trip summary',
+  routeExpectedArrival:'Estimated arrival', routeJourneyActive:'Navigating', routePreview:'Route preview',
+  routeUpdatingGuidance:'Waiting for updated guidance',
 });
+
+messages.vi.straightDistance='Khoảng cách đường thẳng từ vị trí của bạn';
+messages.en.straightDistance='Straight-line distance from your location';

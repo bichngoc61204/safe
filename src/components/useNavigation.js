@@ -12,6 +12,7 @@ export default function useNavigation(preview, destination, mode) {
   const [remaining, setRemaining] = useState(null);
   const [step, setStep] = useState(0);
   const [status, setStatus] = useState(null);
+  const [gpsAttempt,setGpsAttempt] = useState(0);
   const pause = useCallback(() => setFollowing(false), []);
 
   useEffect(() => {
@@ -22,9 +23,9 @@ export default function useNavigation(preview, destination, mode) {
       return;
     }
 
-    let currentRoute = preview;
-    let currentStep = 0;
-    let acceptedProgress = 0;
+    let currentRoute = route || preview;
+    let currentStep = step;
+    let acceptedProgress = remaining?.progress || 0;
     let offRouteSamples = 0;
     let lastReroute = 0;
     let lastFixTime = 0;
@@ -117,7 +118,7 @@ export default function useNavigation(preview, destination, mode) {
       gps.clearWatch(watch);
       request?.abort();
     };
-  }, [enabled, preview, destination, mode]);
+  }, [enabled, preview, destination, mode,gpsAttempt]);
 
   function stop() {
     setStarted(null);
@@ -142,6 +143,12 @@ export default function useNavigation(preview, destination, mode) {
     },
     stop,
     pause,
-    resume: () => setFollowing(true),
+    resume: () => {
+      setFollowing(true);
+      if(status==='navigationGpsError'){
+        setStatus('navigationWaiting');
+        setGpsAttempt(attempt=>attempt+1);
+      }
+    },
   };
 }

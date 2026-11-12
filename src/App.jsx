@@ -86,21 +86,24 @@ export default function App(){
    return pending;
  }
  useEffect(()=>{
+   if(mode!=='public')return;
    let disposed=false;
    let permission;
+   // Request on entry even when the browser has not asked for permission yet.
+   // This also works on browsers without the Permissions API.
+   locate(false);
    const sync=()=>{
      if(disposed)return;
      if(permission.state==='granted')locate(false);
      else setPosition(null);
    };
-   navigator.permissions?.query({name:'geolocation'}).then(status=>{
+   navigator.permissions?.query?.({name:'geolocation'})?.then(status=>{
      if(disposed)return;
      permission=status;
      permission.addEventListener?.('change',sync);
-     sync();
    }).catch(()=>{});
    return ()=>{disposed=true;permission?.removeEventListener?.('change',sync);};
- },[]);
+ },[mode]);
  return <><header className={`site-header ${mode==='public'?'map-mode-header':'admin-mode-header'}`}>
    <Brand onClick={openMap} t={t}/>
    <span className="header-location">{t('headerLocation')}<span className="header-location-dot"/></span>

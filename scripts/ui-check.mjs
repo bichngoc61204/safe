@@ -11,6 +11,7 @@ const gpsPermission=new dom.window.EventTarget();
 gpsPermission.state='prompt';
 let gpsRequests=0;
 let gpsWatch;
+let gpsWatchError;
 let gpsDenied=false;
 Object.defineProperties(navigator,{
  permissions:{value:{query:async()=>gpsPermission}},
@@ -18,8 +19,9 @@ Object.defineProperties(navigator,{
    gpsRequests++;
    if(gpsDenied){error({code:1});return;}
    success({coords:{latitude:16.0512,longitude:108.241}});
- },watchPosition(success){
+ },watchPosition(success,error){
    gpsWatch=success;
+   gpsWatchError=error;
    return 1;
  },clearWatch(){
    gpsWatch=null;
@@ -106,7 +108,7 @@ try{
  // JSDOM does not run CSS animations, so dismissal uses its timeout fallback.
  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,750));});
  check(!document.querySelector('.map-welcome'),'The introduction opens the already rendered map');
- check(gpsRequests===0,'Opening SafeMap does not prompt for location automatically');
+ check(gpsRequests===1&&document.querySelector('.card-distance').textContent==='0m'&&!gpsWatch,'Opening SafeMap automatically requests location once without continuous tracking');
  check(document.querySelectorAll('.place-card').length===11,'Community shows 11 sample places');
  check(document.querySelectorAll('.place-category-icon svg').length===11,'Every list item uses a category icon');
  check(document.querySelectorAll('.marker-pin>svg').length===11,'Every map marker uses an icon instead of a number');
@@ -149,7 +151,7 @@ try{
  await click(button('SafePoint',document.querySelector('.public-tabs')));
  check(document.querySelectorAll('.public-intro h1').length===1&&document.querySelector('.public-intro h1').textContent==='Điểm hỗ trợ cộng đồng','Changing groups replaces the hero heading');
  check(document.querySelectorAll('.place-card').length===6,'SafePoint screen groups all support categories');
- check(document.querySelectorAll('.mobile-search-preview li').length===6,'Filtered places are all reachable in the search panel');
+ check(document.querySelectorAll('.mobile-search-preview li').length===4&&document.querySelector('.mobile-search-caption').textContent.includes('6'),'Filtered search previews four places and reports the full result count');
  await input(document.querySelector('.public-toolbar input'),'phuoc thien');
  await click(button('GreenPoint',document.querySelector('.public-tabs')));
  check(document.querySelector('.public-toolbar input').value==='phuoc thien'&&document.querySelectorAll('.place-card').length===0,'Switching groups keeps the search text and filters the new group');
@@ -186,6 +188,11 @@ try{
  await click(document.querySelector('.photo-viewer button.next'));
  check(photo()===thumbnails[1].src,'The enlarged viewer advances to the next photo');
  await click(document.querySelector('.photo-modal .modal-header button'));
+ await act(async()=>thumbnails[0].dispatchEvent(new dom.window.Event('error')));
+ check(thumbnails[0].hidden&&thumbnails[0].parentElement.dataset.failed==='true'&&thumbnails[0].parentElement.textContent.includes('Không tải được ảnh'),'A failed gallery photo explains the error instead of leaving an empty tile');
+ await act(async()=>thumbnails[0].dispatchEvent(new dom.window.Event('load')));
+ check(!thumbnails[0].hidden&&!thumbnails[0].parentElement.dataset.failed,'A recovered gallery photo removes the fallback');
+
  check(!photo(),'Closing the viewer returns to the same place details');
  const originalFetch=globalThis.fetch;
  const routeRequests=[];
@@ -218,16 +225,20 @@ try{
  const islandLabel=document.querySelector('.archipelago-name');
  await click(document.querySelector('.language-switch button[lang="en"]'));
  check(document.documentElement.lang==='en'&&document.querySelector('.route-step-text').textContent.includes('An Thượng 1 Street'),'English localizes the road in the open route');
+ check(![...document.querySelectorAll('.marker-pin .sr-only')].some(label=>label.textContent==='Công an'),'Map marker categories also switch to English');
  check(document.querySelector('.leaflet-map')===beforeLanguageChange&&routeRequests.length===1,'Changing language keeps the map and route in place');
  check(islandLabel.textContent==='Hoang Sa Archipelago'&&document.querySelector('.leaflet-control-zoom-in').title==='Zoom in','Map overlays and controls switch in place');
  await click(document.querySelector('.language-switch button[lang="vi"]'));
  await click(button('Bắt đầu dẫn đường'));
  check(typeof gpsWatch==='function','Starting navigation subscribes to GPS');
+ check(!button('Tổng quan',document.querySelector('.route-guide')),'Navigation has no overview action');
+ check(!document.querySelector('.route-trip-follow'),'The trip card has no duplicate follow button');
+ check(document.querySelector('.route-guide-icon svg').getAttribute('class')===document.querySelector('.detail-category-icon svg').getAttribute('class'),'The destination uses the place category icon');
  await click(document.querySelector('.map-fabs button'));
- const resumeButton=()=>document.querySelector('.route-guide-step button[aria-label="Bám lại vị trí"]');
- check(resumeButton()&&gpsWatch,'Panning away through the map controls pauses the camera while GPS stays active');
+ const resumeButton=()=>document.querySelector('.map-fabs button[aria-label="Vị trí của tôi"]');
+ check(resumeButton()?.getAttribute('aria-pressed')==='false'&&gpsWatch,'Panning away pauses the camera and the existing location button offers follow');
  await click(resumeButton());
- check(!resumeButton(),'The follow control resumes camera tracking');
+ check(resumeButton()?.getAttribute('aria-pressed')==='true','The existing location button resumes camera tracking');
  const mapSurface=document.querySelector('.leaflet-map');
  const touchMap=async(type,touches)=>act(async()=>{
    const event=new dom.window.Event(type,{bubbles:true,cancelable:true});
@@ -239,7 +250,7 @@ try{
  await touchMap('touchend',[]);
  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,40));});
  const compass=document.querySelector('.map-north');
- check(compass&&resumeButton()&&gpsWatch,'A two-finger rotation shows north and pauses camera follow without stopping GPS');
+ check(compass&&resumeButton()?.getAttribute('aria-pressed')==='false'&&gpsWatch,'A two-finger rotation shows north and pauses camera follow without stopping GPS');
  check(!document.querySelector('.map-rotation-viewport .leaflet-control-zoom'),'Zoom controls stay outside the rotating viewport');
  const rotatedViewport=document.querySelector('.map-rotation-viewport');
  check(Math.abs(parseFloat(rotatedViewport.style.getPropertyValue('--map-bearing'))+
@@ -263,13 +274,17 @@ try{
  await move(16.0512,108.2418);
  check(remaining()==='110m','A slightly backward GPS fix cannot restore traveled distance');
  check(document.querySelector('.route-step-text').textContent.includes('Rẽ trái'),'Movement along the route advances the instruction');
+ await act(async()=>gpsWatchError({code:1}));
+ check(!gpsWatch&&document.querySelector('.route-live-status').textContent.includes('quyền vị trí'),'Revoking location permission stops the watcher and explains the problem');
+ await click(resumeButton());
+ check(typeof gpsWatch==='function'&&remaining()==='110m','The existing location button restarts GPS without restoring traveled distance');
  await move(16.0522,108.242,90);
  await move(16.0522,108.242);
  check(routeRequests.length===1&&remaining()==='110m','Poor GPS and a single deviation preserve the remaining route');
  await move(16.0523,108.242);
  check(routeRequests.length===2&&routeRequests[1].origin[1]===16.0523,'A confirmed deviation requests a new route from the current GPS fix');
  await move(destination[1],destination[0]);
- check(!gpsWatch&&remaining()==='0m'&&document.querySelector('.route-navigation-actions').textContent.includes('Bạn đã đến nơi'),'Arrival stops continuous GPS and clears the remaining distance');
+ check(!gpsWatch&&remaining()==='0m'&&document.querySelector('.route-trip-bottom').textContent.includes('Bạn đã đến nơi'),'Arrival stops continuous GPS and clears the remaining distance');
  await click(button('Thoát chỉ đường'));
  check(!document.querySelector('.route-guide'),'Exiting navigation removes the route guide');
  await click(button('Chỉ đường trên bản đồ'));
@@ -399,11 +414,12 @@ try{
  check(!document.querySelector('.map-welcome'),'Switching views does not reopen the introduction');
  await act(async()=>root.unmount());
  gpsPermission.state='granted';
+ const requestsBeforeReload=gpsRequests;
  root=createRoot(document.getElementById('root'));
  await render();
  check(document.documentElement.lang==='en','Language selection survives a reload');
  check(!!document.querySelector('.map-welcome[open]'),'Reloading reopens the introduction');
- check(gpsRequests===3&&document.querySelector('.card-distance').textContent==='0m','Reload restores location when permission is already granted');
+ check(gpsRequests===requestsBeforeReload+1&&document.querySelector('.card-distance').textContent==='0m','Reload requests location once when permission is already granted');
  const reloadedWelcome=document.querySelector('.map-welcome');
  await act(async()=>reloadedWelcome.dispatchEvent(new dom.window.WheelEvent('wheel',{bubbles:true,deltaY:80})));
  check(reloadedWelcome.classList.contains('is-leaving'),'Scrolling down starts the transition on desktop');

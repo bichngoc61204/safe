@@ -39,9 +39,10 @@ export default function PlaceGallery({images, name, t}) {
         {images.map((src,i)=><button type="button" className="place-gallery-slide" key={src}
           aria-label={`${t('photoEnlarge')} ${i+1}`} onClick={()=>show(i)}>
           <Icon name="pin" size={24}/>
+          <span className="gallery-image-fallback"><Icon name="image" size={23}/>{t('removeImage')}</span>
           <img src={src} alt={name} loading={i===0?'eager':'lazy'} decoding="async"
-            onLoad={event=>{event.currentTarget.dataset.loaded='true';}}
-            onError={event=>{event.currentTarget.hidden=true;}}/>
+            onLoad={event=>{event.currentTarget.dataset.loaded='true';event.currentTarget.hidden=false;delete event.currentTarget.parentElement.dataset.failed;}}
+            onError={event=>{event.currentTarget.hidden=true;event.currentTarget.parentElement.dataset.failed='true';}}/>
         </button>)}
       </div>
       {images.length>1&&<>

@@ -27,7 +27,9 @@ export async function fetchRoute(origin, destination, mode, signal) {
   const shape=route?.geometry?.coordinates;
   if (!response.ok || result.code !== 'Ok' || route?.geometry?.type !== 'LineString' ||
       !Array.isArray(shape) || shape.length < 2 ||
-      !shape.every(point=>Array.isArray(point)&&Number.isFinite(point[0])&&Number.isFinite(point[1]) ) || !Number.isFinite(route.distance) || !Number.isFinite(route.duration)) {
+      !shape.every(point=>Array.isArray(point)&&Number.isFinite(point[0])&&Math.abs(point[0])<=180&&Number.isFinite(point[1])&&Math.abs(point[1])<=90) ||
+      !shape.some(point=>point[0]!==shape[0][0]||point[1]!==shape[0][1]) ||
+      !Number.isFinite(route.distance) || route.distance<0 || !Number.isFinite(route.duration) || route.duration<0) {
     throw new Error('Invalid routing response');
   }
   return route;

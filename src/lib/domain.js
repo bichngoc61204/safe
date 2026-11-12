@@ -12,13 +12,15 @@ export function formatDistance(m) { return m<1000 ? `${Math.round(m)}m` : `${(m/
 export function getCategory(categories,id) { return categories.find(c=>c.id===id); }
 const searchablePlaceFields=['name','address','owner','waste'];
 export function filterPlaces(places,categories,{query='',category='all',scope='map',status='all',position=null}={}) {
-  const term=normalize(query);
+  const terms=normalize(query).trim().split(/\s+/).filter(Boolean);
   const groupCategories=scope==='map'?null:new Set(categories.filter(item=>item.kind===scope).map(item=>item.id));
-  const matches=places.filter(p=>
-    (category==='all'||p.category===category) && (!groupCategories||groupCategories.has(p.category)) &&
-    (status==='all'||(status==='alerts'?isAlert(p):p.status===status)) &&
-    (!term||normalize(searchablePlaceFields.map(field=>p[field]).join(' ')).includes(term)||
-      normalize(searchablePlaceFields.map(field=>placeText(p,field,'en')).join(' ')).includes(term)));
+  const matches=places.filter(p=>{
+    if((category!=='all'&&p.category!==category)||(groupCategories&&!groupCategories.has(p.category))||
+      (status!=='all'&&!(status==='alerts'?isAlert(p):p.status===status)))return false;
+    if(!terms.length)return true;
+    const text=normalize(searchablePlaceFields.flatMap(field=>[p[field],placeText(p,field,'en')]).join(' '));
+    return terms.every(term=>text.includes(term));
+  });
   if(!position)return matches;
   return matches.map(place=>({place,distance:haversine(position,place)}))
     .sort((a,b)=>a.distance-b.distance).map(({place})=>place);

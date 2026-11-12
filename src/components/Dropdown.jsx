@@ -24,7 +24,7 @@ export default function Dropdown({ children, value, onChange, label, className='
       const below = window.innerHeight - rect.bottom - 12;
       const above = rect.top - 12;
       const upward = below < Math.min(panel.scrollHeight + 10, 245) && above > below;
-      const minimum = compact && window.innerWidth <= 700 ? 84 : 168;
+      const minimum = compact && window.innerWidth <= 700 ? 112 : 168;
       const width = Math.min(window.innerWidth - 20, Math.max(rect.width, minimum));
       Object.assign(panel.style, {
         width: `${width}px`,

@@ -89,7 +89,7 @@ function MobilePlaceCard({place,category,categoryName,groupLabel,t,lang,index,on
       </span>
       <span className="admin-mobile-place-copy">
         <strong>{placeText(place,'name',lang)}</strong>
-        <span className="admin-mobile-place-address"><Icon name="pin" size={13}/>{placeText(place,'address',lang)}</span>
+        <span className="admin-mobile-place-address"><Icon name="pin" size={13}/><span title={placeText(place,'address',lang)}>{placeText(place,'address',lang)}</span></span>
       </span>
       <Icon name="right" size={16}/>
     </button>

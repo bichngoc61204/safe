@@ -1,5 +1,7 @@
 import { regionalLabelStyle, standardPaint } from './cartography.js';
 import { placeHourRows } from './placeHours.js';
+import { fetchRoute } from './routing.js';
+import { upcomingManeuver } from './navigation.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeTestCatalog } from '../../scripts/catalog.fixture.mjs';
@@ -89,4 +91,45 @@ test('opening hours retain legacy notes and recognize a pair that closes the fol
  assert.deepEqual(placeHourRows({opensAt:'08:00',closesAt:'17:00',hours:'Thứ Hai'}),[
    ['opensAt','08:00'],['closesAt','17:00'],['hours','Thứ Hai'],
  ]);
+});
+
+test('navigation shows the next maneuver and the remaining distance to that turn',()=>{
+ const steps=[
+   {distance:100,maneuver:{type:'depart'}},
+   {distance:220,name:'An Thượng 1',maneuver:{type:'turn',modifier:'right'}},
+   {distance:0,maneuver:{type:'arrive'}},
+ ];
+ const route={legs:[{steps}]};
+ assert.deepEqual(upcomingManeuver(route,35,0),{step:steps[1],distance:65});
+ assert.deepEqual(upcomingManeuver(route,140,1),{step:steps[2],distance:180});
+ assert.deepEqual(upcomingManeuver(route,320,2),{step:steps[2],distance:0});
+ assert.deepEqual(upcomingManeuver({legs:[]},0,0),{step:null,distance:0});
+});
+
+test('search trims pasted spaces and matches words across translated fields',()=>{
+ const data=makeTestCatalog();
+ assert.equal(filterPlaces(data.places,data.categories,{query:'  phuoc   thien  '}).length,1);
+ assert.equal(filterPlaces(data.places,data.categories,{query:'   '}).length,data.places.length);
+ const point={...data.places[0],name:'Trạm Y tế',address:'Đường An Thượng 1',nameEn:'Community Clinic'};
+ assert.deepEqual(filterPlaces([point],data.categories,{query:'clinic an thuong'}),[point]);
+});
+
+
+test('routing rejects unusable geometry and negative estimates while retaining valid responses',async()=>{
+ const original=globalThis.fetch;
+ const base={distance:100,duration:60,geometry:{type:'LineString',coordinates:[[108.24,16.05],[108.25,16.06]]},legs:[]};
+ const origin={lat:16.05,lng:108.24},destination={lat:16.06,lng:108.25};
+ let route=base;
+ globalThis.fetch=async()=>Response.json({code:'Ok',routes:[route]});
+ try{
+   assert.deepEqual(await fetchRoute(origin,destination,'foot'),base);
+   for(const invalid of [
+     {...base,distance:-1},{...base,duration:-1},
+     {...base,geometry:{type:'LineString',coordinates:[[108.24,16.05],[181,16.06]]}},
+     {...base,geometry:{type:'LineString',coordinates:[[108.24,16.05],[108.24,16.05]]}},
+   ]){
+     route=invalid;
+     await assert.rejects(fetchRoute(origin,destination,'foot'),/Invalid routing response/);
+   }
+ }finally{globalThis.fetch=original;}
 });

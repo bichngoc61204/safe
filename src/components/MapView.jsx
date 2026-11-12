@@ -11,8 +11,8 @@ import { addArchipelagoLayer } from '../lib/archipelagos';
 import { blendPosition, routeShape, routeTarget, sampleRoute } from '../lib/mapMotion';
 import { addMapRotation, fitRotatedRoute } from '../lib/mapRotation';
 
-function pinIcon(category,selected=false,status='active') {
-  const label=category.name||'Location';
+function pinIcon(category,selected=false,status='active',lang='vi') {
+  const label=(lang==='en'?category.nameEn:category.name)||'Location';
   return L.divIcon({
     className:'custom-marker',
     html:renderToStaticMarkup(<div className="marker-upright"><div className={`marker-pin marker-${category.kind} ${selected?'selected':''} ${['warning','overloaded'].includes(status)?'marker-alert':''}`} style={{'--marker-color':markerColor(category)}}><Icon name={category.icon||'pin'} size={19}/><span className="sr-only">{label}</span></div></div>),
@@ -77,9 +77,15 @@ function focusCenter(map,target,zoom,rotation,extraLeftInset=0){
   const mobile=window.matchMedia?.('(max-width: 700px)').matches;
   const workspace=map.getContainer().closest('.map-workspace');
   const sheet=mobile&&workspace?.classList.contains('sheet-expanded')?workspace.querySelector('.places-sidebar'):null;
-  const bottomInset=sheet?.clientHeight?sheet.clientHeight+(parseFloat(getComputedStyle(sheet).bottom)||0):0;
+  const routeDock=mobile?workspace?.querySelector('.route-trip-footer'):null;
+  const routeBanner=mobile?workspace?.querySelector('.route-navigation .route-guide-step'):null;
+  const bottomInset=routeDock?.offsetHeight
+    ?routeDock.offsetHeight+(parseFloat(getComputedStyle(routeDock).bottom)||0)
+    :sheet?.clientHeight?sheet.clientHeight+(parseFloat(getComputedStyle(sheet).bottom)||0):0;
+  const topInset=routeBanner?.offsetHeight
+    ?routeBanner.offsetHeight+(parseFloat(getComputedStyle(routeBanner).top)||0):0;
   const leftInset=desktopMapInset(map)+extraLeftInset;
-  const offset=L.point(-leftInset/2,bottomInset/2);
+  const offset=L.point(-leftInset/2,(bottomInset-topInset)/2);
   return map.unproject(map.project(target,zoom).add(rotation?.screenToMap(offset)??offset),zoom);
 }
 
@@ -91,6 +97,19 @@ function focusMap(map,target,zoom,rotation,duration=.55,extraLeftInset=0){
   map.stop();
   if(map.getZoom()===zoom)map.panTo(center,options);
   else map.flyTo(center,zoom,options);
+}
+
+function fitRoute(map, rotation, frame, points) {
+  const mobile=window.matchMedia?.('(max-width: 700px)').matches;
+  const stage=frame.closest('.map-stage');
+  const banner=stage?.querySelector('.route-navigation .route-guide-step');
+  const dock=stage?.querySelector('.route-trip-footer');
+  const topLeft=[24+desktopMapInset(map),mobile?(banner?.offsetHeight||130)+28:235];
+  const bottomRight=[mobile?65:40,mobile?(dock?.offsetHeight||175)+30:70];
+  map.stop();
+  if(!rotation?.bearing()||!fitRotatedRoute(map,rotation,frame,points,topLeft,bottomRight)){
+    map.fitBounds(L.latLngBounds(points),{maxZoom:17,animate:false,paddingTopLeft:topLeft,paddingBottomRight:bottomRight});
+  }
 }
 
 export default function MapView({style,setStyle,welcomePhase,focusRevision,places,hoverPlaces,categories,selected,onSelect,previewed,onPreview,position,lang,t,onLocate,locating,onSos,route,routeGuide,routeMode,routeOrigin,pickingOrigin,onPickOrigin,onCancelOrigin,navigation}) {
@@ -166,7 +185,7 @@ export default function MapView({style,setStyle,welcomePhase,focusRevision,place
       if(!category)return;
       const name=placeText(p,'name',lang);
       const isSelected=p.id===selected;
-      const icon=pinIcon(category,isSelected,p.status);
+      const icon=pinIcon(category,isSelected,p.status,lang);
       const point=[p.lat,p.lng];
       const existing=markers.current.get(p.id);
       if(existing){
@@ -258,8 +277,10 @@ export default function MapView({style,setStyle,welcomePhase,focusRevision,place
     }
     if(!userRef.current)userRef.current=L.circleMarker(displayedPosition,{radius:7,color:'white',weight:3,fillColor:'#3678bc',fillOpacity:1}).addTo(map).bindTooltip(userLabel);
     else if(!livePosition)userRef.current.setLatLng(displayedPosition);
+    userRef.current.setRadius(navigation.active?10:7);
+    userRef.current.bringToFront();
     if(userRef.current.getTooltip().getContent()!==userLabel)userRef.current.setTooltipContent(userLabel);
-  },[displayedPosition,livePosition,userLabel]);
+  },[displayedPosition,livePosition,userLabel,navigation.active]);
   useEffect(()=>{
     if(position?.recenter)focusMap(mapRef.current,position,16,rotation.current);
   },[position]);
@@ -295,6 +316,7 @@ export default function MapView({style,setStyle,welcomePhase,focusRevision,place
     const tailOutline=L.polyline(rest,outlineOptions).addTo(map);
     const line=L.polyline(first,{...lineOptions,className:'navigation-line'}).addTo(map);
     const tail=L.polyline(rest,lineOptions).addTo(map);
+    userRef.current?.bringToFront();
     routeLayers.current=sample=>{
       const finished=sample.segmentEnd>=points.length;
       const end=finished?points.length:Math.min(Math.ceil(sample.segmentEnd/blockSize)*blockSize,points.length-1);
@@ -308,16 +330,7 @@ export default function MapView({style,setStyle,welcomePhase,focusRevision,place
       outline.setLatLngs(head);
       line.setLatLngs(head);
     };
-    const mobile=window.matchMedia?.('(max-width: 700px)').matches;
-    const leftInset=desktopMapInset(map);
-    if(!active){
-      const topLeft=[24+leftInset,mobile?246:195];
-      const bottomRight=[mobile?55:40,70];
-      map.stop();
-      if(!rotation.current?.bearing()||!fitRotatedRoute(map,rotation.current,frame.current,points,topLeft,bottomRight)){
-        map.fitBounds(L.latLngBounds(points),{maxZoom:17,animate:false,paddingTopLeft:topLeft,paddingBottomRight:bottomRight});
-      }
-    }
+    if(!active)fitRoute(map,rotation.current,frame.current,points);
     return ()=>{routeLayers.current=null;line.remove();outline.remove();tail.remove();tailOutline.remove();};
   },[shape]);
   useEffect(()=>{
@@ -375,7 +388,7 @@ export default function MapView({style,setStyle,welcomePhase,focusRevision,place
     }
     return ()=>cancelAnimationFrame(animation);
   },[active,following,livePosition,remaining,shape]);
-  return <section ref={stage} className={`map-stage ${pickingOrigin?'is-picking-origin':''} ${routeGuide?'has-route-guide':''}`} data-basemap-status={mapStatus} data-map-style={style} aria-label={t('community')}>
+  return <section ref={stage} className={`map-stage ${pickingOrigin?'is-picking-origin':''} ${routeGuide?'has-route-guide':''}`} data-basemap-status={mapStatus} data-map-style={style} data-navigation={active} aria-label={t('community')}>
     <div ref={frame} className="map-frame"><div ref={viewport} className="map-rotation-viewport"><div ref={container} className="leaflet-map"/></div></div>
     {mapStatus==='loading'&&<div className="map-loading" role="status">{t('loadingMap')}</div>}
     {routeGuide}
@@ -384,7 +397,7 @@ export default function MapView({style,setStyle,welcomePhase,focusRevision,place
     {(mapStatus==='fallback'||mapStatus==='error')&&<div className="tile-error" role="status">{t(mapStatus==='error'?'mapError':'vectorFallback')}</div>}
     <div className="map-fabs">
       <button className="icon-button" onClick={()=>{pause();focusMap(mapRef.current,CENTER,15,rotation.current);}} title={t('homeMap')} aria-label={t('homeMap')}><Icon name="map" size={19}/></button>
-      <button className={`icon-button ${locating?'locating':''}`} onClick={active?resume:onLocate} disabled={locating} title={t('location')} aria-label={t('location')}><Icon name="locate" size={18}/></button>
+      <button className={`icon-button ${locating?'locating':''}`} onClick={active?resume:onLocate} aria-pressed={active?following:undefined} disabled={locating} title={t('location')} aria-label={t('location')}><Icon name="locate" size={18}/></button>
       {rotated&&<button className="icon-button map-north" onClick={()=>rotation.current?.reset()} title={t('mapNorth')} aria-label={t('mapNorth')}><span>N</span><Icon name="down" size={12}/></button>}
     </div>
     <div className="map-bottom-tools">
@@ -470,7 +483,7 @@ export function AdminPlacesMap({places,categories,selected,hovered,onSelect,t,la
     if(!map)return;
     map.invalidateSize({pan:false});
     for(const [id,{marker,category,status}] of pins.current){
-      const icon=pinIcon(category,id===selected,status);
+      const icon=pinIcon(category,id===selected,status,lang);
       if(marker.options.icon.options.html!==icon.options.html)marker.setIcon(icon);
       marker.getElement()?.setAttribute('aria-label',marker.options.title);
     }
@@ -489,11 +502,14 @@ export function AdminPlacesMap({places,categories,selected,hovered,onSelect,t,la
       const marker=pins.current.get(place.id)?.marker;
       if(!marker)continue;
       const name=placeText(place,'name',lang);
+      const {category,status}=pins.current.get(place.id);
+      const icon=pinIcon(category,place.id===selected,status,lang);
+      if(marker.options.icon.options.html!==icon.options.html)marker.setIcon(icon);
       marker.options.title=name;
       marker.getElement()?.setAttribute('aria-label',name);
       marker.getElement()?.setAttribute('title',name);
     }
-  },[places,categories,lang]);
+  },[places,categories,lang,selected]);
 
   useEffect(()=>{
     const map=mapRef.current;

@@ -8,6 +8,7 @@ import {
   IconEye, IconEyeOff, IconPlant, IconBuilding, IconMail, IconLock, IconFlame,
   IconHelpCircle, IconCircleOff, IconCrosshair, IconInfoCircle, IconLayersIntersect, IconZoomIn,
   IconMotorbike, IconWalk, IconBike, IconCar, IconPhoto, IconSun, IconMoon, IconChartBar,
+  IconCornerUpLeft, IconCornerUpRight, IconArrowUp, IconArrowBackUp, IconRotateClockwise, IconFlagCheck,
 } from '@tabler/icons-react';
 
 // Keep these keys stable for categories saved by earlier versions.
@@ -25,6 +26,8 @@ const icons = {
   fire: IconFlame, help: IconHelpCircle, off: IconCircleOff, crosshair: IconCrosshair,
   info: IconInfoCircle, layers: IconLayersIntersect, zoom: IconZoomIn,
   motorbike: IconMotorbike, walk: IconWalk, bike: IconBike, car: IconCar, image: IconPhoto, sun: IconSun, moon: IconMoon,
+  turnLeft: IconCornerUpLeft, turnRight: IconCornerUpRight, straight: IconArrowUp,
+  uturn: IconArrowBackUp, roundabout: IconRotateClockwise, arrival: IconFlagCheck,
 };
 
 export default function Icon({name,size=18,...props}) {

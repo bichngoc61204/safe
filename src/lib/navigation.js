@@ -11,6 +11,18 @@ export function routeSteps(route) {
   return stepsByRoute.get(route);
 }
 
+export function upcomingManeuver(route, progress, currentIndex) {
+  const steps = routeSteps(route);
+  const index = Math.max(0, Math.min(currentIndex, steps.length - 1));
+  if (!steps.length) return { step:null, distance:0 };
+  const nextIndex = Math.min(index + 1, steps.length - 1);
+  const distanceToTurn = steps.slice(0, index + 1).reduce((total, step) => total + Math.max(0, step.distance || 0), 0);
+  return {
+    step:steps[nextIndex],
+    distance:nextIndex === index ? 0 : Math.max(0, distanceToTurn - progress),
+  };
+}
+
 export function routeProgress(route, position, {includeCoordinates=true}={}) {
   const scale = Math.cos(position.lat * Math.PI / 180);
   let nearest = Infinity;

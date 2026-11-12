@@ -1,4 +1,4 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import Icon from './Icon';
 import { placeHourRows } from '../lib/placeHours';
 import { placeText } from '../lib/locale';
@@ -13,6 +13,13 @@ import { filterPlaces, getCategory, directionsUrl, haversine, formatDistance, sa
 
 const scopes=[['map','explore','map'],['safe','safe','shield'],['green','green','recycle'],['partner','partner','leaf']];
 const areaCenter={lat:CENTER[0],lng:CENTER[1]};
+const mobileQuery='(max-width: 700px)';
+const isMobile=()=>window.matchMedia?.(mobileQuery).matches??false;
+function subscribeMobile(notify){
+  const media=window.matchMedia?.(mobileQuery);
+  media?.addEventListener?.('change',notify);
+  return ()=>media?.removeEventListener?.('change',notify);
+}
 const greenStatuses=['all','alerts','clean','warning','overloaded','inactive'];
 
 const PlaceCards=memo(function PlaceCards({places,categories,selected,previewed,position,t,lang,actions,listRef}) {
@@ -38,7 +45,7 @@ const PlaceCards=memo(function PlaceCards({places,categories,selected,previewed,
         <Icon name={c.icon} size={21}/>
         {image&&<img key={image} src={image} alt="" loading="lazy" decoding="async" onError={e=>{e.currentTarget.hidden=true;}}/>}
       </span>
-      <span className="card-distance">{position?formatDistance(haversine(position,p)):<Icon name="right" size={16}/>}</span>
+      <span className="card-distance" title={position?t('straightDistance'):undefined}>{position?formatDistance(haversine(position,p)):<Icon name="right" size={16}/>}</span>
     </button>;
   }):<div className="empty-state"><h3>{t('empty')}</h3><p>{t('emptyHint')}</p>
     <button className="text-button" onClick={()=>actions.current.clear()}>{t('clearFilters')}</button>
@@ -50,6 +57,8 @@ function PlaceDetails({place,categories,position,t,lang,onClose,routing}) {
   const images=placePhotoUrls(place);
   const phone=String(place.phone||'').replace(/[^+\d]/g,'');
   const demoPhone=isDemoPhone(place.phone);
+  const updatedAt=Date.parse(place.updatedAt);
+  const updatedLabel=Number.isFinite(updatedAt)?new Intl.DateTimeFormat(lang,{dateStyle:'medium',timeZone:'Asia/Ho_Chi_Minh'}).format(updatedAt):null;
   return <section className="place-details" aria-label={t('details')}>
     <div className="detail-panel-header">
       <span>{t('details')}</span>
@@ -60,7 +69,7 @@ function PlaceDetails({place,categories,position,t,lang,onClose,routing}) {
       <div className="detail-category"><span className="detail-category-icon" style={{color:markerColor(c),background:markerColor(c)+'13'}}><Icon name={c.icon} size={18}/></span>{lang==='en'?c.nameEn:c.name}</div>
       <h2>{placeText(place,'name',lang)}</h2>
       <p className="detail-address">{placeText(place,'address',lang)}</p>
-      <div className="detail-status"><Status value={place.status} t={t}/><span>{position?formatDistance(haversine(position,place)):t('gpsHint')}</span></div>
+      <div className="detail-status" title={position?t('straightDistance'):undefined}><Status value={place.status} t={t}/><span>{position?formatDistance(haversine(position,place)):t('gpsHint')}</span></div>
       <div className="detail-buttons route-entry">
         <button className="button primary" onClick={routing.start}><Icon name="navigation" size={16}/>{t('routeOnMap')}</button>
         <a className="button secondary" href={directionsUrl(place)} target="_blank" rel="noopener noreferrer">Google Maps<Icon name="arrow" size={15}/></a>
@@ -70,15 +79,17 @@ function PlaceDetails({place,categories,position,t,lang,onClose,routing}) {
           <span>{place.phone||t('noPhone')}{demoPhone&&<small>{t('demoPhone')}</small>}</span>
           {phone&&!demoPhone&&<a className="button secondary" href={phoneHref(phone)}><Icon name="phone" size={16}/>{t('call')}</a>}
         </dd></div>
-        {[...['owner','waste'].map(key=>[key,placeText(place,key,lang)]),...placeHourRows(place,lang),['description',placeText(place,'description',lang)]].filter(([,value])=>value).map(([key,value])=><div key={key}><dt>{t(key)}</dt><dd>{value}</dd></div>)}
+        {[...['owner','waste'].map(key=>[key,placeText(place,key,lang)]),...placeHourRows(place,lang),['description',placeText(place,'description',lang)]].filter(([,value])=>value).map(([key,value])=><div key={key} className={key==='opensAt'||key==='closesAt'?'detail-hour':undefined}><dt>{t(key)}</dt><dd>{value}</dd></div>)}
       </dl>
-      <details className="detail-metadata"><summary>{t('dataDetails')}<Icon name="down" size={14}/></summary><dl><div><dt>{t('coordinates')}</dt><dd>{place.lat.toFixed(6)}, {place.lng.toFixed(6)}</dd></div>{place.source&&<div><dt>{t('source')}</dt><dd>{placeText(place,'source',lang)}</dd></div>}</dl></details>
+      <details className="detail-metadata"><summary>{t('dataDetails')}<Icon name="down" size={14}/></summary><dl><div><dt>{t('coordinates')}</dt><dd>{place.lat.toFixed(6)}, {place.lng.toFixed(6)}</dd></div>{place.source&&<div><dt>{t('source')}</dt><dd>{placeText(place,'source',lang)}</dd></div>}{updatedLabel&&<div><dt>{t('updated')}</dt><dd><time dateTime={place.updatedAt}>{updatedLabel}</time></dd></div>}</dl></details>
       {place.source==='Dữ liệu minh họa'&&<p className="detail-demo">{t('demoNote')}</p>}
     </div>
   </section>;
 }
 
 export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,setScope,selected,setSelected,t,lang,position,onLocate,onRouteLocate,locating,onSos}) {
+  const mobile=useSyncExternalStore(subscribeMobile,isMobile);
+  const searchInput=useRef(null);
   const [query,setQuery]=useState('');
   const [category,setCategory]=useState('all');
   const [status,setStatus]=useState('all');
@@ -110,9 +121,9 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
     const cards=Array.from(placesList.current?.querySelectorAll('.place-card')??[]).slice(0,8);
     const elements=scopeChanged?[scopeCopy.current,...cards]:cards;
     const animations=elements.map((element,index)=>element?.animate?.([
-      {opacity:.48,transform:`translateX(${direction*13}px)`},
+      {opacity:0,transform:`translateX(${direction*13}px)`},
       {opacity:1,transform:'translateX(0)'},
-    ],{duration:365,delay:Math.min(index*45,235),easing:'cubic-bezier(.2,.7,.25,1)',fill:'backwards'}));
+    ],{duration:480,delay:Math.min(index*65,325),easing:'cubic-bezier(.2,.7,.25,1)',fill:'backwards'}));
     return ()=>animations.forEach(animation=>animation?.cancel());
   },[scope,expanded,selected]);
   const [origin,setOrigin]=useState(null);
@@ -225,6 +236,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
     if(searchOpen){closeSearch();return;}
     setSearchOpen(true);
     setExpanded(false);
+    requestAnimationFrame(()=>searchInput.current?.focus({preventScroll:true}));
   };
   const toggleSidebar=()=>{
     const focusTarget=sidebarCollapsed?collapseControl:expandControl;
@@ -268,7 +280,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
   };
   const hasFilters=Boolean(query.trim())||category!=='all'||status!=='all'||scope!=='map';
   const searchPreview=useMemo(()=>{
-    if(hasFilters)return visible;
+    if(hasFilters)return visible.slice(0,4);
     if(position)return visible.slice(0,4);
     return [...visible].sort((a,b)=>haversine(areaCenter,a)-haversine(areaCenter,b)).slice(0,4);
   },[hasFilters,position,visible]);
@@ -312,7 +324,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
         </div>)}
       </div>
       <div className="sidebar-drawer" id="desktop-map-sidebar">
-      <section className={`explore-panel ${searchOpen?'is-open':''}`} id="map-search-panel" aria-label={t('search')} onKeyDown={e=>{if(e.key==='Escape'&&searchOpen)closeSearch();}}>
+      <section inert={mobile?!searchOpen:sidebarCollapsed} aria-hidden={mobile?!searchOpen:sidebarCollapsed} className={`explore-panel ${searchOpen?'is-open':''}`} id="map-search-panel" aria-label={t('search')} onKeyDown={e=>{if(e.key==='Escape'&&searchOpen)closeSearch();}}>
         <div className="public-intro">
           <button ref={collapseControl} type="button" className="sidebar-collapse" aria-controls="desktop-map-sidebar"
             aria-label={t('collapseSidebar')} title={t('collapseSidebar')} onClick={toggleSidebar}><Icon name="left" size={17}/></button>
@@ -328,7 +340,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
         </div>
         <nav className="public-tabs" aria-label={t('modules')} style={{'--scope-index':scopeIndex}}>{scopes.map(([id,label,icon])=><button key={id} data-group={id} className={scope===id?'active':''} aria-pressed={scope===id} onClick={()=>changeScope(id)}><Icon name={icon} size={15}/><span>{t(label)}</span></button>)}</nav>
         <div className="public-toolbar">
-          <div className="search-field"><Icon name="search" size={18}/><input placeholder={t('search')} aria-label={t('search')} value={query} onKeyDown={e=>{if(e.key==='Enter'&&searchOpen&&visible.length)showResults();}} onChange={e=>{setQuery(e.target.value);clearSelection();}}/>{query&&<button type="button" onClick={()=>{setQuery('');clearSelection();}} aria-label={t('clearSearch')}><Icon name="x" size={15}/></button>}</div>
+          <div className="search-field"><Icon name="search" size={18}/><input ref={searchInput} placeholder={t('search')} aria-label={t('search')} value={query} onKeyDown={e=>{if(e.key==='Enter'&&searchOpen&&visible.length)showResults();}} onChange={e=>{setQuery(e.target.value);clearSelection();}}/>{query&&<button type="button" onClick={()=>{setQuery('');clearSelection();}} aria-label={t('clearSearch')}><Icon name="x" size={15}/></button>}</div>
           <div className="public-filters" id="public-filters">
             <div className="public-filter-section">
               <span>{t('category')}</span>
@@ -348,6 +360,10 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
             </div>}
           </div>
         </div>
+        {hasFilters&&<div className="desktop-filter-summary">
+          <span role="status">{visible.length} {t('results')}</span>
+          <button type="button" className="text-button" onClick={resetMobileSearch}><Icon name="x" size={14}/>{t('clearFilters')}</button>
+        </div>}
         <div className="mobile-search-footer">
           <div className="mobile-search-summary">
             <p className="mobile-search-caption" role="status">
@@ -356,6 +372,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
             </p>
             {hasFilters&&<button type="button" className="mobile-clear-filters" onClick={resetMobileSearch}><Icon name="x" size={14}/>{t('clearFilters')}</button>}
           </div>
+          {!searchPreview.length&&<p className="mobile-search-empty-hint">{t('emptyHint')}</p>}
           {searchPreview.length>0&&<ul className="mobile-search-preview" aria-label={t('nearby')}>
             {searchPreview.map((p,index)=>{
               const c=getCategory(data.categories,p.category);
@@ -371,7 +388,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
           <button className="button primary mobile-search-results" onClick={showResults} disabled={!visible.length}>{t('showAllPlaces')}<Icon name="right" size={16}/></button>
         </div>
       </section>
-      <aside className="places-sidebar" onKeyDown={event=>{
+      <aside className="places-sidebar" inert={mobile?!expanded:sidebarCollapsed} aria-hidden={mobile?!expanded:sidebarCollapsed} onKeyDown={event=>{
         if(expanded&&event.key==='Escape'&&!event.defaultPrevented&&!event.target.closest('dialog')&&listToggle.current?.offsetWidth)dismissPopup();
       }}>
         <div className="sheet-header">
@@ -398,7 +415,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
       </div>
       <MapView style={mapStyle} setStyle={setMapStyle} welcomePhase={welcomePhase} focusRevision={focusRevision} navigation={navigation}
         routeGuide={result?.route
-          ? <RouteGuide key={activeRequest.mode+':'+lastRouteRequest.current} route={navigation.route} navigation={navigation} mode={activeRequest.mode} destination={placeText(place,'name',lang)} onExit={exitRoute} onModeChange={mode=>requestRoute(activeRequest.origin,mode)} t={t} lang={lang}/>
+          ? <RouteGuide key={activeRequest.mode+':'+lastRouteRequest.current} route={navigation.route} navigation={navigation} mode={activeRequest.mode} destination={placeText(place,'name',lang)} destinationCategory={getCategory(data.categories,place.category)} onExit={exitRoute} onModeChange={mode=>requestRoute(activeRequest.origin,mode)} t={t} lang={lang}/>
           : routeState&&<section className="route-guide route-request-status">
               <div className="route-guide-heading"><span role="status">{t(routeState)}</span><button className="route-exit" onClick={exitRoute} aria-label={t('routeExit')}><Icon name="x" size={16}/></button></div>
               {result&&<div className="route-navigation-actions">

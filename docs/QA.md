@@ -1,71 +1,57 @@
-# Checklist duyệt FE SafeMap
+# Kiểm thử SafeMap
 
-Chạy `npm run dev`, mở URL trên trình duyệt. Dùng DevTools Responsive Mode ở 390×844, 768×1024 và 1440×900.
+Cập nhật 12/11/2026. Tài liệu này thay cho checklist của bản FE demo cũ; dữ liệu hiện lấy từ Firebase, quản trị tại `/admin`, xuất Excel và có chỉ đường trong bản đồ.
 
-## Người dân / khách du lịch
+## Chạy kiểm thử
 
-- [x] Desktop 1440×900: panel tìm kiếm/danh sách bên trái, bản đồ vector bên phải; không tràn ngang.
-- [x] Mobile 390×844 và 320×740: tìm kiếm phía trên, các nhóm địa điểm dạng tab chữ; danh mục dạng select; bản đồ full viewport; danh sách dạng bottom sheet.
-- [ ] Bản đồ mặc định đúng An Thượng, zoom 15, marker khác biểu tượng/màu theo danh mục.
-- [x] Nhấn card mở chi tiết đúng địa điểm; ghim được chọn nằm giữa tìm kiếm và bottom sheet trên mobile.
-- [x] Tìm `phuoc thien` trong trình duyệt; kiểm thử logic cho tìm không dấu, vật liệu và kết quả rỗng.
-- [ ] Kết hợp tìm kiếm/danh mục; xóa bộ lọc trở lại đầy đủ.
-- [ ] SafePoint chỉ có hỗ trợ an toàn, hành chính, y tế và giáo dục.
-- [x] GreenPoint có 10 điểm trong bộ dữ liệu mới; lọc cần xử lý thấy 2 điểm mẫu.
-- [ ] Đối tác xanh chỉ hiển thị các đối tác.
-- [ ] Chuyển VI/EN, kiểm tra menu, trạng thái, chi tiết, form và dashboard.
-- [ ] Cho phép GPS: hiển thị vị trí, tính khoảng cách và sắp xếp gần nhất.
-- [ ] Từ chối GPS: thông báo phù hợp, nút có thể thử lại.
-- [ ] Chỉ đường mở Google Maps đúng tọa độ trong tab mới.
-- [ ] SOS mở đúng 3 đầu số. Không thực hiện cuộc gọi thật khi test.
-- [ ] Thêm ảnh URL hợp lệ / ảnh lỗi: chi tiết có ảnh hoặc hình minh họa thay thế.
-- [ ] Tab bằng bàn phím, mở/đóng modal với Escape, focus hiển thị rõ.
+```sh
+npm test
+npm run test:ui
+npm run build
+```
 
-## Quản trị
+- `npm test`: unit test logic dữ liệu, tìm kiếm, định tuyến và các trò chơi.
+- `npm run test:ui`: kiểm thử tích hợp React trong JSDOM. Firebase, GPS, API báo cáo và định tuyến được mô phỏng. Không phải kiểm tra pixel hay kiểm thử thiết bị thật.
+- `npm run build`: đóng gói production. Cảnh báo chunk lớn của Firebase/MapLibre không đồng nghĩa build thất bại; cần đánh giá tải thực tế riêng.
 
-- [ ] Chưa đăng nhập: hiển thị form. Sai email/mật khẩu: báo lỗi.
-- [ ] Dùng tài khoản Firebase được cấp để đăng nhập và đăng xuất được trên mobile lẫn desktop.
-- [ ] Tổng quan mặc định: tổng 19; hỗ trợ 6; thu gom 10; cần xử lý 2.
-- [ ] Nhấn stat/card hoặc danh mục phân bổ: chuyển đúng bảng và bộ lọc.
-- [ ] Tìm kiếm, lọc danh mục/trạng thái, phân trang; trường hợp không có kết quả.
-- [ ] Tạo GreenPoint: điền tên/địa chỉ/đơn vị/vật liệu, chọn tọa độ bằng map và kéo ghim.
-- [ ] Sửa trạng thái thành quá tải: thống kê và cảnh báo cập nhật ngay.
-- [ ] Về bản đồ cộng đồng: thông tin và marker đồng bộ.
-- [ ] Tải lại trang: dữ liệu thêm/sửa vẫn còn; phiên Firebase còn hiệu lực.
-- [ ] Xóa có xác nhận; hủy xóa giữ nguyên dữ liệu; xóa thật cập nhật tổng số.
-- [ ] Tạo/sửa đối tác và kiểm tra màn hình Đối tác xanh.
-- [ ] Tạo danh mục, sửa tên/màu/icon, gán địa điểm, kiểm tra filter/marker.
-- [ ] Xóa danh mục đang có địa điểm bị ngăn; danh mục trống xóa được.
-- [ ] Xuất JSON có cả địa điểm và danh mục.
-- [ ] Khi trình duyệt chặn localStorage: báo không lưu được, không hiển thị thành công giả.
+## Kết quả lần rà soát này
 
-## Giới hạn chưa triển khai
+- 26 unit test đạt.
+- 117 kiểm tra tích hợp DOM đạt.
+- Build production đạt.
+- Trình duyệt đã kiểm tra giao diện người dùng ở 320×640, 390×844, 768×1024 và 1440×900; admin ở mobile và PC.
+- Đã đăng nhập Firebase thật, xem chi tiết/sửa rồi hủy và đăng xuất. Không lưu/xóa dữ liệu thật.
+- Dịch vụ định tuyến xe máy đã trả được tuyến thật khi chọn điểm xuất phát công khai trên bản đồ.
+- Xuất Excel báo thành công ở giao diện. Chưa kiểm tra nội dung bằng ứng dụng Microsoft Excel.
 
-Không có backend, bảo mật đăng nhập thật, phân quyền nhiều cán bộ, chia sẻ dữ liệu giữa các máy, tiếng Hàn, định tuyến trong bản đồ hay GIS chuyên sâu. Đây là bản duyệt FE, không phải dữ liệu địa phương đã xác minh.
+## Ma trận kiểm thử
 
-## Bản tân trang giao diện
+| Phân hệ | Kiểm tra trong trình duyệt | Kiểm tra tự động |
+| --- | --- | --- |
+| Giới thiệu | Chuyển slide, chiều cao cố định, cuộn vào map | Thao tác vuốt/cuộn, trạng thái rời màn hình, mở lại sau reload |
+| Tìm kiếm | Mở/đóng, kết quả rỗng, xóa bộ lọc, VI/EN | Từ không dấu, khoảng trắng thừa, từ ở nhiều trường, giữ bộ lọc khi xem tất cả |
+| Ba nhóm | SafePoint, GreenPoint, đối tác; nhóm/danh mục/chip | Phân nhóm danh mục, lọc trạng thái rác, tổng số |
+| Danh sách/chi tiết | Chọn ghim/card, trở về, bố cục mobile và PC | Giữ danh sách khi mở chi tiết, không tạo popup trùng |
+| Ảnh | Slider, phóng to, đóng modal, nested modal trong admin | Điều hướng ảnh, ảnh tải lỗi và phục hồi, link ảnh phụ trùng |
+| Ngôn ngữ | UI, nhãn ghim, tên đường theo khả năng dữ liệu | Lưu lựa chọn, đổi nhãn/road/controls trong cùng bản đồ |
+| Bản đồ | Tiêu chuẩn, vệ tinh, nền tối, thu gọn sidebar | Pin có nhãn, danh mục, giới hạn/lớp bản đồ theo bộ lọc nguồn |
+| GPS | Fallback chọn điểm khi không có vị trí | Tự yêu cầu khi mở/reload, watcher khi bắt đầu, GPS lỗi, phục hồi quyền |
+| Chỉ đường | Tính tuyến xe máy thật, đổi menu phương tiện, thoát | Lựa chọn phương tiện, phản hồi lỗi, tuyến thu dần, lệch tuyến, đến nơi |
+| Liên hệ | Đường dẫn tel và SOS hiển thị; không gọi thật | Số demo được phân biệt, liên kết Google Maps có tọa độ |
+| Admin | Đăng nhập thật, xem/sửa tại chỗ/hủy, tab, xuất Excel | Đăng nhập sai, không có role editor, phân trang, thêm/sửa/xóa, xác nhận và lỗi lưu |
+| Giờ/ảnh URL | Form chỉnh sửa và dropdown | Cặp mở/đóng, giờ qua đêm, URL ảnh, tối đa ảnh phụ và bản dịch tùy chọn |
+| Báo cáo | Không xác minh GA4 thật trong đợt này | Endpoint thiếu, thiếu cấu hình, retry, phản hồi số liệu mô phỏng |
+| Bàn phím | Focus vào rail, dropdown Escape, đóng modal | Dropdown, modal, bảng, nút và một phần luồng focus |
 
-- Mặc định bản đồ Bright có nhãn; chỉ lọc nhãn nền quanh Hoàng Sa–Trường Sa. Vệ tinh có lớp nhãn áp dụng cùng bộ lọc. Giữ các overlay SafeMap và nguồn dữ liệu.
-- Marker và danh sách dùng icon danh mục Lucide cùng nét. Giao diện trắng–xanh lá; marker an toàn xanh dương, y tế đỏ hồng, hành chính/giáo dục navy, môi trường xanh lá. Cảnh báo marker có chấm vàng nhỏ.
-- Chỉ đường Google Maps và OpenStreetMap đều là liên kết ngoài. Chưa triển khai tuyến đường nội bộ.
-- WebGL không khả dụng: fallback nền OSM; thử trên thiết bị thật để đánh giá hiệu năng GPU và GPS.
+## Cần nghiệm thu trên thiết bị thật
 
-- Đã kiểm tra PC: khi chọn địa điểm, phần giới thiệu/tab thu gọn, không có popup lặp; ghim chọn nổi bật và metadata đóng mặc định.
-- Đã kiểm tra mobile 390px và 320px sau thay đổi nền màu, không tràn ngang; ghim chọn nằm giữa thanh tìm kiếm và bottom sheet.
-- Chuyển động ngắn cho nội dung, ghim và camera; hỗ trợ `prefers-reduced-motion`.
+1. iPhone Safari và Android Chrome: nhập liệu không tự zoom viewport, bàn phím không che nút chính.
+2. Bóp zoom/twist trên màn cảm ứng; resize, thay đổi thanh địa chỉ và xoay màn hình.
+3. Di chuyển thật: tuyến ngắn dần, đi sai tuyến, chờ GPS xấu, khôi phục sau từ chối quyền.
+4. Khóa màn hình/đổi ứng dụng rồi quay lại. Web chưa có định vị nền.
+5. Mạng di động yếu/mất mạng, ảnh lỗi, WebGL/context recovery, thời lượng pin khi dẫn đường lâu.
+6. Kiểm tra cấu hình Firebase/GA4, quyền thực tế và route `/admin` trên bản deploy HTTPS.
+7. Nghiệm thu dữ liệu phường: tên, danh mục, tọa độ, số điện thoại, lịch, ảnh và đơn vị phụ trách.
+8. Kiểm thử tải đồng thời và theo dõi hạn mức dịch vụ trước khi cam kết mức phục vụ.
 
-## Biển đảo và nút nguồn
-
-- Nút nguồn dùng SVG nét 10px, viền hiển thị 16px; vùng chạm trong suốt 24px.
-- Có lớp GeoJSON đất nổi từ Natural Earth 1:10m và nhãn Hoàng Sa–Trường Sa độc lập với nền vector.
-- Không có nút biển đảo; nhãn quần đảo là chữ thường trên bản đồ, không nền thẻ và không chấm. POI địa phương ẩn khi thu nhỏ dưới zoom 10 để tránh chồng ghim.
-- Nút về An Thượng khôi phục khung nhìn địa phương và các marker.
-
-## Nhãn nền / ảnh vệ tinh
-
-- Địa danh và tên đường ngoài hai vùng Hoàng Sa–Trường Sa được giữ.
-- Nhãn trong vùng biển đảo bị loại theo vị trí, không theo ngôn ngữ hay chuỗi tên.
-- Lớp Hoàng Sa–Trường Sa và POI của SafeMap không bị bộ lọc nền tác động.
-- Kiểm tra cả bản đồ màu và vệ tinh có lớp nhãn.
-
-- Bộ đổi nền có đủ Bản đồ / Tiêu chuẩn / Nền tối / Vệ tinh; đã kiểm tra ở chiều rộng mobile 320px.
+Chi tiết nhận xét theo khách du lịch/tester/designer/khách hàng: [DANH_GIA_SAN_PHAM.md](./DANH_GIA_SAN_PHAM.md).

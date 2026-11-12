@@ -12,7 +12,7 @@ SafeMap An Thượng là bản đồ số cộng đồng cho khu vực An Thư�
 1. Mở trang chủ. Cuộn xuống trên máy tính hoặc vuốt lên trên điện thoại để vào bản đồ. Có thể vuốt ngang hoặc chọn các chấm để xem các slide giới thiệu.
 2. Mở **Tìm địa điểm** và nhập tên hoặc địa chỉ, có thể gõ không dấu. Chọn **SafePoint**, **GreenPoint** hoặc **Đối tác xanh** để thu hẹp kết quả. **Hiển thị tất cả** mở toàn bộ kết quả của bộ lọc đang dùng. **Xóa bộ lọc** đưa bạn về danh sách chung.
 3. Chọn một ghim hoặc thẻ kết quả để xem ảnh, địa chỉ, trạng thái và thông tin liên hệ. Nếu điểm có ảnh, chạm ảnh để xem lớn hoặc vuốt để chuyển ảnh. GreenPoint có thể hiển thị thêm loại rác tiếp nhận và đơn vị phụ trách.
-4. Bấm **Vị trí của tôi** và cấp quyền định vị để xem vị trí trên bản đồ và khoảng cách đến địa điểm. Khi chưa bật GPS, khoảng cách trong gợi ý tìm kiếm được tính từ trung tâm An Thượng.
+4. Web tự yêu cầu vị trí GPS mỗi lần mở hoặc tải lại bản đồ. Lần đầu cần cho phép trong trình duyệt; khi đã cấp quyền, vị trí và khoảng cách được lấy tự động. Nút **Vị trí của tôi** dùng để thử lại hoặc đưa bản đồ về vị trí của bạn. Khi chưa có GPS, khoảng cách trong gợi ý tìm kiếm được tính từ trung tâm An Thượng.
 
 Nền **Tiêu chuẩn** được chọn mặc định và ưu tiên đường, tên đường. Bộ chọn nền có hai mục **Tiêu chuẩn** và **Vệ tinh**. Nút mặt trời/mặt trăng đổi màu sáng tối cho nền Tiêu chuẩn. Thu nhỏ đến mức thấp nhất để xem Việt Nam, Biển Đông, Hoàng Sa và Trường Sa. Trên điện thoại, dùng hai ngón để xoay bản đồ và chạm **N** để trở về hướng Bắc. Nút **VI/EN** đổi ngôn ngữ giao diện. Nút **SOS** mở danh sách gọi khẩn cấp.
 
@@ -20,8 +20,8 @@ Nền **Tiêu chuẩn** được chọn mặc định và ưu tiên đường, t
 
 1. Mở chi tiết địa điểm và bấm **Chỉ đường trên bản đồ**. Hệ thống tính tuyến **xe máy** mặc định từ vị trí GPS. Nếu GPS không khả dụng, chạm một điểm trên bản đồ để đặt nơi xuất phát.
 2. Xem trước các bước rẽ hoặc đổi sang **Đi bộ**, **Xe đạp** hay **Ô tô** trong menu phương tiện. Chọn **Bắt đầu dẫn đường** khi muốn camera theo dõi vị trí.
-3. Khi di chuyển, đường tuyến thu dần theo phần đã đi. Ứng dụng tính lại tuyến khi xác nhận bạn đi lệch đường. Kéo hoặc xoay bản đồ sẽ tạm ngừng bám camera. Bấm **Bám lại vị trí** để tiếp tục.
-4. Bấm **Thoát chỉ đường** để dừng. **Google Maps** là phương án dự phòng khi muốn mở tuyến bên ngoài SafeMap hoặc khi tính tuyến trong web gặp lỗi.
+3. Khi di chuyển, đường tuyến thu dần theo phần đã đi. Ứng dụng tính lại tuyến khi xác nhận bạn đi lệch đường. Kéo hoặc xoay bản đồ sẽ tạm ngừng bám camera. Bấm nút biểu tượng **Vị trí của tôi** trên bản đồ để tiếp tục bám vị trí. Nút này cũng thử lại GPS nếu quyền vị trí vừa được cấp lại.
+4. Bấm nút **X / Thoát chỉ đường** ở góc trên bên phải card hành trình để dừng. Khi đang ở giao diện chỉ đường, nút thu phóng và SOS được ẩn để giữ bản đồ gọn. **Google Maps** là phương án dự phòng khi muốn mở tuyến bên ngoài SafeMap hoặc khi tính tuyến trong web gặp lỗi.
 
 ## Dành cho cán bộ quản trị
 
@@ -32,7 +32,7 @@ Mở đường dẫn **`/admin`** trên cùng tên miền và đăng nhập bằ
 | **Tổng quan → Phân bố** | Xem tổng số điểm, số điểm theo nhóm và biểu đồ trạng thái. Chọn nhóm hoặc trạng thái trên biểu đồ để mở danh sách tương ứng. |
 | **Tổng quan → Cập nhật** | Xem địa điểm vừa cập nhật và các GreenPoint cần vệ sinh hoặc quá tải. |
 | **Tổng quan → Lượt truy cập** | Xem lượt xem bản đồ, số người dùng và biểu đồ theo ngày trong 7 ngày đã kết thúc gần nhất. Cần cấu hình Google Analytics theo mục [Báo cáo lượt truy cập](README.md#báo-cáo-lượt-truy-cập). |
-| **Địa điểm** | Xem toàn bộ danh sách, tìm kiếm và lọc theo nhóm, danh mục hoặc trạng thái. Bấm tên một điểm để xem vị trí và thông tin. |
+| **Địa điểm** | Xem toàn bộ danh sách, tìm kiếm và lọc theo nhóm, danh mục. Có thể chọn trạng thái từ biểu đồ Tổng quan để xem các điểm tương ứng. Bấm tên một điểm để xem vị trí và thông tin. |
 | **SafePoint / GreenPoint / Đối tác xanh** | Mở riêng danh sách của từng nhóm. |
 | **Danh mục** | Quản lý danh mục theo nhóm, sửa tên Việt/Anh, màu và biểu tượng. Muốn xóa danh mục đang có địa điểm, chuyển các địa điểm sang danh mục khác trước. |
 | **Xuất Excel** | Tải tệp `.xlsx` chứa toàn bộ dữ liệu với hai sheet **Địa điểm** và **Danh mục**. |
