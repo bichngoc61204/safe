@@ -5,10 +5,14 @@ import Dropdown from './Dropdown';
 import { catalogGroups } from '../lib/catalogGroups';
 import PlaceForm, { usePlaceEditor } from './PlaceForm';
 import PlaceGallery from './PlaceGallery';
+import AdminOperations from './AdminOperations';
+import ImportPlaces from './ImportPlaces';
+import { ScheduleDisplay } from './PlaceExtras';
 import TrafficDashboard from './TrafficDashboard';
 import { AdminPlacesMap } from './MapView';
 import { placeHourRows } from '../lib/placeHours';
 import { placeText } from '../lib/locale';
+import { qualityIssues } from '../lib/editorial';
 import { directionsUrl, filterPlaces, getCategory, isAlert, isDemoPhone, phoneHref, placePhotoUrls } from '../lib/domain';
 export function Status({value,t}) {return <span className={`status status-${value}`}><i/>{t(value)}</span>;}
 export function CategoryIcon({category,size=19}){return <span className="category-icon" style={{'--category-color':category.color,background:category.color+'13',color:category.color}}><Icon name={category.icon} size={size}/></span>;}
@@ -96,12 +100,13 @@ function MobilePlaceCard({place,category,categoryName,groupLabel,t,lang,index,on
     <div className="admin-mobile-place-meta">
       <span className="admin-category-tag">{categoryName}</span>
       <Status value={place.status} t={t}/>
+      {place.visibility==='hidden'&&<span className="admin-publication-badge"><Icon name="eyeoff" size={11}/>{t('hidden')}</span>}
       <small>{groupLabel}</small>
     </div>
   </li>;
 }
 
-function PlacePreview({place,categories,groupLabel,t,lang,editing,busy,saveError,onEdit,onSave,onCancel,onDelete,onClose,inDialog=false}) {
+function PlacePreview({place,categories,groupLabel,t,lang,editing,busy,saveError,onEdit,onSave,onCancel,onDelete,onClose,onVisibility,inDialog=false}) {
   const editor=usePlaceEditor({place,categories,onSave,t,lang,busy,saveError,active:editing});
   const [metadataOpen,setMetadataOpen]=useState(false);
   const category=getCategory(categories,place.category);
@@ -162,18 +167,21 @@ function PlacePreview({place,categories,groupLabel,t,lang,editing,busy,saveError
           </>}
         </div>
         </div>
+        {editing&&editor.extendedFields}
+        {!editing&&<div className="preview-publication"><span className={`publication-${place.visibility||'published'}`}>{t(place.visibility==='hidden'?'hidden':'published')}</span><span>{t(place.review?.status==='verified'?'reviewVerified':'reviewPending')}</span><button type="button" className="text-button" onClick={onVisibility} disabled={busy}>{t(place.visibility==='hidden'?'publishPlace':'hidePlace')}</button></div>}
       </section>
       <section className="admin-preview-section">
       <h4><Icon name="list" size={15}/>{t('details')}</h4>
       <dl className="admin-preview-facts">
         {facts.filter(([key,,value])=>editing?(key!=='waste'||editor.acceptsWaste):value).map(([key,icon,value,wide])=>
-          <div key={key} className={wide?'admin-preview-wide-fact':undefined}>
+          <div key={key} hidden={editing&&editor.scheduleEnabled&&['opensAt','closesAt'].includes(key)} className={wide?'admin-preview-wide-fact':undefined}>
             {editing?<><dt className="sr-only">{t(key)}</dt><dd>{factField(key,icon)}</dd></>:<>
               <dt>{icon&&<Icon name={icon} size={13}/>} {t(key)}</dt><dd>{value}</dd>
             </>}
           </div>)}
         {editing&&editor.hoursHint&&<div className="admin-preview-wide-fact"><dt className="sr-only">{t('hours')}</dt><dd>{editor.hoursHint}</dd></div>}
       </dl>
+      {!editing&&<ScheduleDisplay place={place} t={t}/>}
       </section>
       <section className="admin-preview-section admin-preview-photos">
         <h4><Icon name="image" size={15}/>{t('placeImages')}{images.length>0&&<span>{images.length}</span>}</h4>
@@ -199,7 +207,7 @@ function PlacePreview({place,categories,groupLabel,t,lang,editing,busy,saveError
       {editing&&editor.englishFields}
     </div>
     <div className="admin-preview-footer">
-      {editing&&editor.errorMessage}
+      {editor.errorMessage}
       <div className="admin-preview-actions">
         {editing?<>
           <button className="button secondary" type="button" onClick={onCancel} disabled={busy}>{t('cancel')}</button>
@@ -213,9 +221,11 @@ function PlacePreview({place,categories,groupLabel,t,lang,editing,busy,saveError
   </form>{editor.imagePreview}</>;
 }
 
-export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdToken}) {
+export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdToken,backend,managementStatus}) {
  const mobile=useSyncExternalStore(subscribeMobileAdmin,isMobileAdmin);
  const [tab,setTab]=useState('overview');
+ const [toolTab,setToolTab]=useState('quality');
+ const [importOpen,setImportOpen]=useState(false);
  const [overview,setOverview]=useState('summary');
  const [query,setQuery]=useState('');
  const [groupFilter,setGroupFilter]=useState('all');
@@ -232,7 +242,8 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
  const [exporting,setExporting]=useState(false);
  const [saveError,setSaveError]=useState('');
  const saving=useRef(false);
- const {places,categories}=data;
+ const {categories}=data;
+ const places=useMemo(()=>data.places.filter(place=>!place.deletedAt),[data.places]);
  const group=catalogGroups.find(item=>item.id===tab);
  const scope=group?.id ?? (groupFilter==='all'?'map':groupFilter);
  const categoryName=item=>lang==='en'?item.nameEn:item.name;
@@ -260,7 +271,9 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
  },[filtered,preview]);
  const mapHoverId=!inlineEdit&&visible.some(place=>place.id===hoveredPlaceId)?hoveredPlaceId:null;
  const recent=[...places].sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))).slice(0,5);
- const title=tab==='overview'?'overview':tab==='categories'?'manageCategories':group?.label??'managePlaces';
+ const qualityCount=useMemo(()=>places.filter(place=>qualityIssues(place,data).length).length,[places,data]);
+ const trashCount=data.places.filter(place=>place.deletedAt).length;
+ const title=tab==='overview'?'overview':tab==='categories'?'manageCategories':tab==='operations'?'adminTools':group?.label??'managePlaces';
 
  function clearFilters(){
    setQuery('');setGroupFilter('all');setCategory('all');setStatus('all');setPage(1);
@@ -308,9 +321,9 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
    finally {saving.current=false;setBusy(false);}
  }
  function savePlace(place){
-   const existing=places.find(item=>item.id===place.id);
+   const existing=data.places.find(item=>item.id===place.id);
    if(recordChanged(edit.place,existing))return;
-   const next=existing?places.map(item=>item.id===place.id?place:item):[place,...places];
+   const next=existing?data.places.map(item=>item.id===place.id?place:item):[place,...data.places];
    return apply({...data,places:next},()=>{setEdit(null);notify('saved');});
  }
  function saveCategory(item){
@@ -323,13 +336,18 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
    const collection=deleting.type==='category'?'categories':'places';
    const records=data[collection];
    if(recordChanged(deleting.record,records.find(item=>item.id===deleting.record.id)))return;
-   if(collection==='categories'&&places.some(place=>place.category===deleting.record.id)){
+   if(collection==='categories'&&data.places.some(place=>place.category===deleting.record.id)){
      setSaveError('categoryInUse');return;
    }
-   return apply({...data,[collection]:records.filter(item=>item.id!==deleting.record.id)},()=>{
+   return apply({...data,[collection]:collection==='places'?records.map(item=>item.id===deleting.record.id?{...item,deletedAt:new Date().toISOString(),visibility:'hidden'}:item):records.filter(item=>item.id!==deleting.record.id)},()=>{
      if(collection==='places'&&previewId===deleting.record.id)setPreviewId(null);
      setDeleting(null);notify(collection==='categories'?'categoryDeleted':'deleted');
    });
+ }
+ async function commitTools(next){
+   if(saving.current)throw Error('catalogUnavailable');
+   saving.current=true;setBusy(true);
+   try{await commit(next);notify('saved');}finally{saving.current=false;setBusy(false);}
  }
  function add(){
    if(group&&!groupHasCategories(group.id)){notify('noCategory');return;}
@@ -339,6 +357,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
    groupLabel={groupName(getCategory(categories,preview.category)?.kind??'safe')} t={t} lang={lang} inDialog={mobile}
    editing={inlineEdit} busy={busy} saveError={saveError} onClose={closePreview}
    onEdit={()=>setEdit({place:preview})} onSave={savePlace} onCancel={()=>closeDialog(setEdit)}
+   onVisibility={()=>apply({...data,places:data.places.map(item=>item.id===preview.id?{...item,visibility:item.visibility==='hidden'?'published':'hidden',updatedAt:new Date().toISOString()}:item)},()=>notify('saved'))}
    onDelete={()=>setDeleting({type:'place',record:preview})}/>;
  function groupHasCategories(id){return categories.some(category=>category.kind===id);}
  async function exportData(){
@@ -351,16 +370,17 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
    } catch {notify('excelError');}
    finally {setExporting(false);}
  }
- const nav=[{id:'overview',label:'overview',icon:'dashboard'},{id:'places',label:'places',icon:'pin'},...catalogGroups,{id:'categories',label:'categories',icon:'tags'}];
+ const nav=[{id:'overview',label:'overview',icon:'dashboard'},{id:'places',label:'places',icon:'pin'},...catalogGroups,{id:'categories',label:'categories',icon:'tags'},{id:'operations',label:'adminTools',icon:'settings'}];
+ const dockLabel=item=>item.id==='operations'?(lang==='en'?'Tools':'Công cụ'):item.id==='categories'?(lang==='en'?'Categories':'Danh mục'):t(item.label);
  const states=['active','clean','warning','overloaded','inactive'];
  const stateCounts=states.map(id=>({id,count:places.filter(place=>place.status===id).length}));
 
  return <div className="admin-layout">
    <aside className="admin-sidebar">
      <div className="admin-sidebar-label">{t('workspace')}</div>
-     <nav aria-label={t('workspace')} style={{'--dock-index':nav.findIndex(item=>item.id===tab)}}>{nav.map(item=><button key={item.id} data-section={item.id}
+     <nav aria-label={t('workspace')} style={{'--dock-index':nav.findIndex(item=>item.id===tab),'--dock-count':nav.length}}>{nav.map(item=><button key={item.id} data-section={item.id}
        className={tab===item.id?'active':''} aria-label={t(item.label)} title={t(item.label)} aria-current={tab===item.id?'page':undefined} onClick={()=>navigate(item.id)}>
-       <Icon name={item.icon}/><span>{t(item.label)}</span>{item.id==='green'&&alerts.length>0&&<b>{alerts.length}</b>}
+       <Icon name={item.icon}/><span>{t(item.label)}</span>{mobile&&tab===item.id&&<small className="admin-dock-active-label" aria-hidden="true">{dockLabel(item)}</small>}{item.id==='green'&&alerts.length>0&&<b>{alerts.length}</b>}
      </button>)}</nav>
      <div className="admin-sidebar-bottom">
        <div className="admin-profile"><span>AD</span><div><strong>SafeMap Admin</strong><small>{email}</small></div></div>
@@ -371,12 +391,23 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
      <div className="admin-heading">
        <div><div className="eyebrow">{t('dataLabel')}</div><h1>{t(title)}</h1>{tab==='overview'&&<p>{t('adminSubtitle')}</p>}</div>
        <div className="admin-heading-actions">
+         <button className="button secondary" onClick={()=>setImportOpen(true)} disabled={inlineEdit}><Icon name="upload" size={16}/>{t('importExcel')}</button>
          <button className="button secondary" onClick={exportData} disabled={exporting}><Icon name="download" size={16}/>{t(exporting?'exportingExcel':'exportExcel')}</button>
          {tab!=='categories'&&<button className="button primary" onClick={add} disabled={inlineEdit}><Icon name="plus" size={16}/>{t('add')}</button>}
        </div>
      </div>
+     {managementStatus==='rules'&&<p className="admin-rules-notice" role="status"><Icon name="info"/>{t('rulesNeeded')}</p>}
      <div className="admin-content" key={tab}>
        {tab==='overview'?<>
+         <section className="admin-tool-launcher" aria-label={t('adminTools')}>
+           <div className="admin-tool-launcher-heading"><h2>{t('adminTools')}</h2><Icon name="settings" size={15}/></div>
+           <div className="admin-tool-shortcuts">
+             {[['quality','check',qualityCount],['reports','alert',null],['history','history',null],['trash','restore',trashCount]].map(([id,icon,count],index)=><button type="button" key={id} style={{'--tool-order':index}} onClick={()=>{setToolTab(id);navigate('operations');}}>
+               <span className={`admin-tool-shortcut-icon tool-${id}`}><Icon name={icon} size={18}/></span>
+               <strong>{t(id)}</strong>{count!==null&&<b>{count}</b>}<Icon name="right" size={14}/>
+             </button>)}
+           </div>
+         </section>
          <OverviewTabs value={overview} onChange={setOverview} t={t}/>
          <div className="overview-view" key={overview} id="overview-panel" role="tabpanel" aria-labelledby={`overview-tab-${overview}`} tabIndex={0}>
            {overview==='summary'?<>
@@ -431,7 +462,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
            </div>:<TrafficDashboard t={t} lang={lang} getIdToken={getIdToken}/>}
 
          </div>
-       </>:tab==='categories'?<div className="admin-category-groups">
+       </>:tab==='operations'?<AdminOperations data={data} backend={backend} t={t} lang={lang} busy={busy} initialTab={toolTab} onTabChange={setToolTab} onOpen={id=>{navigate('places');selectPreview(id);}} onApply={commitTools}/>:tab==='categories'?<div className="admin-category-groups">
          {groups.map(item=><section className="panel category-group-panel" key={item.id} style={{'--group-color':item.color}}>
            <div className="panel-heading"><div><span className="section-kicker">{t('kind')}</span><h2>{t(item.label)} <span className="count-pill">{item.children.length}</span></h2></div>
              <button className="button secondary" onClick={()=>setEditCategory({initialKind:item.id})}><Icon name="plus" size={16}/>{t('addCategory')}</button>
@@ -443,7 +474,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
                <button className="text-button category-place-count" onClick={()=>{navigate(item.id);setCategory(child.id);}}>{count} {t('results')}</button>
                <div><button className="text-button" onClick={()=>setEditCategory({category:child})}><Icon name="edit" size={14}/>{t('edit')}</button>
                  <button className="text-button danger-text" aria-label={`${t('delete')} ${child.name}`} onClick={()=>{
-                   if(count){notify('categoryInUse');return;}setDeleting({type:'category',record:child});
+                   if(data.places.some(place=>place.category===child.id)){notify('categoryInUse');return;}setDeleting({type:'category',record:child});
                  }}><Icon name="delete" size={14}/></button></div>
              </article>;
            })}</div>:<div className="empty-state">{t('noCategory')}</div>}
@@ -500,7 +531,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
                  <small>{placeText(place,'address',lang)}</small>{group?.id==='green'&&placeText(place,'waste',lang)&&<small>{placeText(place,'waste',lang)}</small>}
                </div></div></td>
                <td><span className="admin-category-tag" style={{'--category-color':item.color}}>{categoryName(item)}</span>{!group&&<small className="table-group-label">{groupName(item.kind)}</small>}</td>
-               <td><Status value={place.status} t={t}/></td>
+               <td><Status value={place.status} t={t}/>{place.visibility==='hidden'&&<span className="admin-publication-badge"><Icon name="eyeoff" size={11}/>{t('hidden')}</span>}</td>
              </tr>;
            })}</tbody></table>
            {!visible.length&&<div className="empty-state"><Icon name="search" size={30}/><h3>{t('noResults')}</h3></div>}
@@ -528,12 +559,13 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
    {mobile&&preview&&<Modal title={t('details')} className="admin-place-dialog" onClose={closePreview} t={t} dismissible={!busy}>
      {placeCard}
    </Modal>}
+   {importOpen&&<ImportPlaces data={data} t={t} lang={lang} busy={busy} onClose={()=>setImportOpen(false)} onSave={commitTools}/>}
    {edit&&!inlineEdit&&<PlaceForm initialKind={edit.initialKind} categories={categories} onSave={savePlace}
      onClose={()=>closeDialog(setEdit)} t={t} lang={lang} busy={busy} saveError={saveError}/>}
    {editCategory&&<CategoryForm category={editCategory.category} initialKind={editCategory.initialKind} onSave={saveCategory}
      onClose={()=>closeDialog(setEditCategory)} t={t} busy={busy} saveError={saveError}/>}
-   {deleting&&<Modal title={t(deleting.type==='category'?'confirmCategory':'confirmDelete')} onClose={()=>closeDialog(setDeleting)} t={t} dismissible={!busy}>
-     <div className="delete-content"><span className="delete-icon"><Icon name="delete" size={25}/></span><strong>{placeText(deleting.record,'name',lang)}</strong><p>{t('deleteHint')}</p></div>
+   {deleting&&<Modal title={t(deleting.type==='category'?'confirmCategory':'confirmTrash')} onClose={()=>closeDialog(setDeleting)} t={t} dismissible={!busy}>
+     <div className="delete-content"><span className="delete-icon"><Icon name="delete" size={25}/></span><strong>{placeText(deleting.record,'name',lang)}</strong><p>{t(deleting.type==='category'?'deleteHint':'trashDeleteHint')}</p></div>
      {saveError&&<p className="form-error place-form-error" role="alert">{t(saveError)}</p>}
      <div className="modal-footer"><button className="button secondary" type="button" data-dialog-dismiss disabled={busy}>{t('cancel')}</button>
        <button className="button danger" onClick={remove} disabled={busy}>{t(busy?'saving':'delete')}</button></div>

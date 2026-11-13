@@ -4,6 +4,7 @@ import { safeImage, validData } from './domain.js';
 import { organizeCatalog } from './catalogGroups.js';
 import { isClockTime } from './placeHours.js';
 import { translatedPlaceFields } from './locale.js';
+import { validSchedule, publicCatalog, catalogChanges, wasteTypes } from './editorial.js';
 
 // Older Firestore records may still refer to retired bundled illustrations.
 const validStoredImage = url => Boolean(safeImage(url)) ||
@@ -14,12 +15,17 @@ const optionalPlaceText = ['phone', 'owner', 'waste', 'hours', 'description', 's
 export function catalogRefs(config) {
   const app = initializeApp(config);
   const db = getFirestore(app);
-  return { app, catalog: doc(db, 'catalogs', 'an-thuong'), editor: uid => doc(db, 'editors', uid) };
+  return { app, db, catalog: doc(db, 'catalogs', 'an-thuong'), management:doc(db,'management','an-thuong'), editor: uid => doc(db, 'editors', uid) };
 }
 
 export function validateCatalog(data) {
   try {
     if (!validData(data) || data.places.some(place =>
+      (place.visibility!=null&&!['published','hidden'].includes(place.visibility))||
+      (place.deletedAt!=null&&typeof place.deletedAt!=='string')||
+      (place.schedule!=null&&!validSchedule(place.schedule))||
+      (place.wasteTypes!=null&&(!Array.isArray(place.wasteTypes)||place.wasteTypes.some(type=>!wasteTypes.includes(type))))||
+      (place.review!=null&&(!['pending','verified'].includes(place.review.status)||typeof(place.review.reviewedAt||'')!=='string'))||
       optionalPlaceText.some(key => place[key] != null && typeof place[key] !== 'string') ||
       Object.entries(translatedPlaceFields).some(([key,max]) => {
         const value=place[`${key}En`];
@@ -75,4 +81,35 @@ export async function writeCatalog(ref, data, expectedRevision) {
       updatedAt: serverTimestamp(),
     });
   });
+}
+
+
+export function observeManagement(ref,receive,fail){
+ return onSnapshot(ref,{includeMetadataChanges:true},snapshot=>{
+  if(snapshot.metadata.hasPendingWrites)return;
+  if(!snapshot.exists()){if(!snapshot.metadata.fromCache)receive(null);return;}
+  try{
+   const {categories,places,revision,schemaVersion}=snapshot.data();
+   const data={categories,places};validateCatalog(data);
+   if(schemaVersion!==2||!Number.isSafeInteger(revision)||revision<1)throw Error();
+   receive({data,revision,cached:snapshot.metadata.fromCache});
+  }catch{fail(Error('catalogInvalid'));}
+ },fail);
+}
+
+export async function writeManagedCatalog(refs,data,expectedRevision,actor){
+ validateCatalog(data);data=organizeCatalog(data);
+ return runTransaction(refs.db,async transaction=>{
+  const [privateDoc,publicDoc]=await Promise.all([transaction.get(refs.management),transaction.get(refs.catalog)]);
+  const previous=privateDoc.exists()?privateDoc:publicDoc;
+  if(previous.data()?.revision!==expectedRevision)throw Error('catalogConflict');
+  const before={categories:previous.data().categories,places:previous.data().places};
+  data={...data,places:data.places.map(place=>place.review?.status==='verified'&&!place.review.reviewedAt?{...place,review:{...place.review,reviewedAt:new Date().toISOString(),reviewedBy:actor.uid}}:place)};
+  const changes=catalogChanges(before,data);
+  if(!changes.length)return;
+  const revision=expectedRevision+1;
+  transaction.set(refs.management,{...data,schemaVersion:2,revision,updatedAt:serverTimestamp()});
+  transaction.set(refs.catalog,{...publicCatalog(data),schemaVersion:1,revision,updatedAt:serverTimestamp()});
+  transaction.set(doc(refs.db,'catalogHistory',String(revision)),{revision,actor:actor.uid,actorEmail:actor.email||'',createdAt:serverTimestamp(),changes,snapshot:before});
+ });
 }

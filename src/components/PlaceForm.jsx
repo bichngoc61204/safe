@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import Modal from './Modal';
+import ScheduleEditor from './ScheduleEditor';
+import { WasteChoices } from './PlaceExtras';
+import { defaultSchedule,validSchedule,placeWasteTypes } from '../lib/editorial';
 import Icon from './Icon';
 import Dropdown from './Dropdown';
 import { isClockTime, readPlaceHours } from '../lib/placeHours';
@@ -15,7 +18,7 @@ function placeValues(place,categories,initialKind) {
     name:'', category:categories.find(c=>!initialKind||c.kind===initialKind)?.id||categories[0]?.id,
     address:'', phone:'', owner:'', lat:CENTER[0], lng:CENTER[1], waste:'',
     status:initialKind==='green'?'clean':'active', description:'', source:'',
-    ...place, image:safeImage(place?.image), ...readPlaceHours(place),
+    ...place, image:safeImage(place?.image), ...readPlaceHours(place),visibility:place?.visibility||'published',review:place?.review||{status:'pending'},schedule:defaultSchedule(place),wasteTypes:placeWasteTypes(place||{}),
   };
 }
 
@@ -47,7 +50,7 @@ export function usePlaceEditor({place,categories,initialKind,onSave,t,lang,busy,
   }
   const set=(key,value)=>{
     setError('');
-    setValues(v=>({...v,[key]:value}));
+    setValues(v=>({...v,[key]:value,...(['name','nameEn','category','address','addressEn','phone','owner','ownerEn','lat','lng','schedule','wasteTypes','waste','wasteEn','opensAt','closesAt','hours','hoursEn','description','descriptionEn','status'].includes(key)?{review:{status:'pending'}}:{})}));
   };
   function addImage(){
     if(gallery.length>=maxExtraImages)return;
@@ -76,8 +79,8 @@ export function usePlaceEditor({place,categories,initialKind,onSave,t,lang,busy,
     const form=e.currentTarget;
     const name=values.name.trim();
     const address=values.address.trim();
-    const opensAt=form.elements.namedItem('opensAt').value;
-    const closesAt=form.elements.namedItem('closesAt').value;
+    const opensAt=values.schedule.enabled?'':form.elements.namedItem('opensAt').value;
+    const closesAt=values.schedule.enabled?'':form.elements.namedItem('closesAt').value;
     const image=safeImage(mainUrl);
     const images=imageUrls.filter(Boolean);
     function showError(message,control){
@@ -87,6 +90,7 @@ export function usePlaceEditor({place,categories,initialKind,onSave,t,lang,busy,
       if(details)details.open=true;
       control.focus();
     }
+    if(!validSchedule(values.schedule)){showError('scheduleInvalid');return;}
     if(!name||!address){showError('required',form.elements.namedItem(!name?'name':'address'));return;}
     if(mainUrl&&!image){showError('invalidImageUrl',form.elements.namedItem('image'));return;}
     if((opensAt||closesAt)&&(!isClockTime(opensAt)||!isClockTime(closesAt)||opensAt===closesAt)){
@@ -110,12 +114,12 @@ export function usePlaceEditor({place,categories,initialKind,onSave,t,lang,busy,
   }
   const groupField=<div className="form-dropdown"><span>{t('kind')}</span><Dropdown label={t('kind')} value={kind} onChange={group=>{
       const next=categories.find(category=>category.kind===group);
-      if(next){setError('');setValues(v=>({...v,category:next.id,status:v.status==='inactive'?v.status:group==='green'?'clean':'active'}));}
+      if(next){setError('');setValues(v=>({...v,category:next.id,status:v.status==='inactive'?v.status:group==='green'?'clean':'active',review:{status:'pending'}}));}
     }}>{catalogGroups.map(group=><option key={group.id} value={group.id} disabled={!categories.some(category=>category.kind===group.id)}>{t(group.label)}</option>)}</Dropdown></div>;
   const categoryField=<div className="form-dropdown"><span>{t('category')} <em>*</em></span><Dropdown label={t('category')} value={values.category} onChange={value=>set('category',value)}>
       {categories.filter(category=>category.kind===kind).map(category=><option key={category.id} value={category.id}>{lang==='en'?category.nameEn:category.name}</option>)}
     </Dropdown></div>;
-  const timeField=(key,icon)=><label key={key}><span>{icon&&<Icon name={icon} size={13}/>}<span>{t(key)}</span></span>
+  const timeField=(key,icon)=><label key={key} hidden={values.schedule.enabled}><span>{icon&&<Icon name={icon} size={13}/>}<span>{t(key)}</span></span>
         <input type="time" name={key} value={values[key]} aria-invalid={error==='hoursInvalid'} onInput={event=>set(key,event.currentTarget.value)} onChange={event=>set(key,event.currentTarget.value)}/>
       </label>;
   const hoursHint=values.opensAt&&values.closesAt&&values.closesAt<values.opensAt&&
@@ -123,12 +127,18 @@ export function usePlaceEditor({place,categories,initialKind,onSave,t,lang,busy,
   const statusField=<div className="form-dropdown"><span>{t('status')}</span><Dropdown label={t('status')} value={values.status} onChange={value=>set('status',value)}>
       {statuses.filter(s=>kind==='green'||['active','inactive'].includes(s)).map(s=><option key={s} value={s}>{t(s)}</option>)}
     </Dropdown></div>;
+  const extendedFields=<div className="span-2 extended-place-fields">
+    <div className="form-dropdown"><span>{t('publication')}</span><Dropdown label={t('publication')} value={values.visibility} onChange={value=>set('visibility',value)}><option value="published">{t('published')}</option><option value="hidden">{t('hidden')}</option></Dropdown></div>
+    {kind==='green'&&<fieldset><legend>{t('materials')}</legend><WasteChoices values={values.wasteTypes} onChange={value=>set('wasteTypes',value)} t={t}/></fieldset>}
+    <ScheduleEditor value={values.schedule} onChange={value=>set('schedule',value)} t={t}/>
+    <fieldset className="verification-editor"><legend>{t('verification')}</legend><label className="schedule-check"><input type="checkbox" checked={values.review.status==='verified'} onChange={event=>set('review',{status:event.target.checked?'verified':'pending'})}/>{t('confirmVerified')}</label><p className="field-hint">{t('reviewHint')}</p></fieldset>
+  </div>;
   const coordinateFields=[['lat','latitude',90],['lng','longitude',180]].map(([key,label,max])=>
     <label key={key}><span>{t(label)} <em>*</em></span>
       <input type="number" step="any" min={-max} max={max} required value={values[key]} onChange={e=>set(key,e.target.value)}/>
     </label>);
   const coordinatePicker=<CoordinatePicker lat={Number(values.lat)} lng={Number(values.lng)}
-    onChange={coords=>{setError('');setValues(v=>({...v,...coords}));}} t={t} lang={lang}/>;
+    onChange={coords=>{setError('');setValues(v=>({...v,...coords,review:{status:'pending'}}));}} t={t} lang={lang}/>;
   const englishFields=<details className="span-2 admin-preview-section admin-preview-metadata">
     <summary><Icon name="globe" size={15}/>{t('englishPlaceDetails')}<Icon name="down" size={14}/></summary>
     <p className="field-hint">{t('englishOptional')}</p>
@@ -181,8 +191,8 @@ export function usePlaceEditor({place,categories,initialKind,onSave,t,lang,busy,
       </div>
     </fieldset>;
   return {
-    field, phoneField, timeField, hoursHint, groupField, categoryField, statusField, coordinateFields, coordinatePicker, imageFields, englishFields,
-    acceptsWaste:['green','partner'].includes(kind), reset, submit,
+    extendedFields,field, phoneField, timeField, hoursHint, groupField, categoryField, statusField, coordinateFields, coordinatePicker, imageFields, englishFields,
+    acceptsWaste:['green','partner'].includes(kind), scheduleEnabled:values.schedule.enabled, reset, submit,
     errorMessage:(error||saveError)&&<p className="form-error place-form-error" role="alert">{t(error||saveError)}</p>,
     imagePreview:preview&&<Modal title={t('previewImages')} onClose={()=>setPreview(null)} t={t} className="image-link-modal">
       <PreviewImage key={preview} url={preview} t={t}/>
@@ -195,7 +205,7 @@ export default function PlaceForm({categories,initialKind,onSave,onClose,t,lang,
   const {field,timeField}=editor;
   return <>
     <Modal title={t('addTitle')} onClose={onClose} t={t} wide dismissible={!busy}>
-      <form onSubmit={editor.submit} aria-busy={busy}>
+      <form onSubmit={editor.submit} aria-busy={busy} onInvalid={event=>{const details=event.target.closest('details');if(details)details.open=true;}}>
         <div className="form-scroll">
           <div className="form-section-heading"><Icon name="list" size={16}/>{t('basicInfo')}</div>
           <div className="form-grid">
@@ -211,6 +221,7 @@ export default function PlaceForm({categories,initialKind,onSave,onClose,t,lang,
               {field('hours',{maxLength:100,placeholder:t('hoursExample'),label:'hoursNotes'})}
             </fieldset>
             {editor.statusField}
+            {editor.extendedFields}
             {editor.acceptsWaste&&field('waste',{full:true,maxLength:250})}
           </div>
           <div className="form-section-heading"><Icon name="pin" size={16}/>{t('locationSection')}</div>

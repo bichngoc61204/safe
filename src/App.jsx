@@ -6,6 +6,7 @@ import PublicApp from './components/PublicApp';
 import Admin, { Login } from './components/Admin';
 import { useFirebaseBackend } from './components/useFirebaseBackend';
 import { messages } from './lib/i18n';
+const linkedPlace=()=>new URLSearchParams(window.location.search).get('place');
 const isAdminPath = () => /^\/admin\/?$/.test(window.location.pathname);
 const emptyCatalog = { places: [], categories: [] };
 const catalogMessages = {
@@ -18,17 +19,17 @@ function savedLanguage() {
 }
 function Brand({onClick,t}) {return <button className="brand" onClick={onClick}><span className="brand-mark"><Icon name="leaf" size={23}/></span><span><strong>SafeMap<span className="brand-separator">/</span><b>An Thượng</b></strong><small>{t('brandTagline')}</small></span></button>;}
 export default function App(){
- const [welcomePhase,setWelcomePhase]=useState('open');
+ const [welcomePhase,setWelcomePhase]=useState(()=>linkedPlace()?'closed':'open');
  const [mapStyle,setMapStyle]=useState('light');
  const firebase = useFirebaseBackend();
- const [lang,setLang]=useState(savedLanguage),[mode,setMode]=useState(()=>isAdminPath()?'admin':'public'),[scope,setScope]=useState('map'),[selected,setSelected]=useState(null),[position,setPosition]=useState(null),[locating,setLocating]=useState(false),[sos,setSos]=useState(false),[toast,setToast]=useState('');
+ const [lang,setLang]=useState(savedLanguage),[mode,setMode]=useState(()=>isAdminPath()?'admin':'public'),[scope,setScope]=useState('map'),[selected,setSelected]=useState(linkedPlace),[position,setPosition]=useState(null),[locating,setLocating]=useState(false),[sos,setSos]=useState(false),[toast,setToast]=useState('');
  function openMap(){
    if(isAdminPath())window.history.pushState(null,'','/');
    setWelcomePhase('closed');
    setMode('public');
  }
  useEffect(()=>{
-   const sync=()=>setMode(isAdminPath()?'admin':'public');
+   const sync=()=>{setMode(isAdminPath()?'admin':'public');setSelected(linkedPlace());};
    window.addEventListener('popstate',sync);
    return ()=>window.removeEventListener('popstate',sync);
  },[]);
@@ -39,6 +40,8 @@ export default function App(){
  }, [firebase.backend, mode]);
  const data = firebase.catalog?.data ?? emptyCatalog;
  const session = firebase.editor.status === 'editor';
+ const adminCatalog=firebase.management||firebase.catalog;
+ const adminData=adminCatalog?.data||emptyCatalog;
  const catalogNotice = catalogMessages[firebase.catalogStatus] || (firebase.catalog?.cached ? 'catalogCached' : '');
  const timer=useRef(null),mounted=useRef(true),gpsPending=useRef(null);const t=key=>messages[lang][key]||key;
  function notify(message){setToast(message);clearTimeout(timer.current);timer.current=setTimeout(()=>setToast(''),5500);}
@@ -48,15 +51,21 @@ export default function App(){
    try { localStorage.setItem(languageKey,lang); } catch { /* Private browsing may block storage. */ }
  },[lang]);
  async function commit(next) {
-   if (!session || firebase.catalogStatus !== 'ready' || firebase.catalog.cached) throw new Error('catalogUnavailable');
+   if(firebase.backend?.observeManagement&&!['ready','legacy'].includes(firebase.managementStatus))throw new Error(firebase.managementStatus==='rules'?'rulesNeeded':'catalogUnavailable');
+   if (!session || firebase.catalogStatus !== 'ready' || adminCatalog?.cached) throw new Error('catalogUnavailable');
    try {
-     await firebase.backend.save(next, firebase.catalog.revision);
+     await firebase.backend.save(next, adminCatalog.revision);
    } catch (error) {
      const message = ['catalogConflict', 'catalogInvalid', 'catalogLimit'].includes(error.message)
-       ? error.message : 'catalogSaveError';
+       ? error.message : error.code==='permission-denied'?'rulesNeeded':'catalogSaveError';
      throw new Error(message);
    }
  }
+ useEffect(()=>{
+   if(mode==='public'&&selected&&firebase.catalogStatus==='ready'&&!data.places.some(place=>place.id===selected)){
+     setSelected(null);notify('placeUnavailable');
+   }
+ },[selected,data,mode,firebase.catalogStatus]);
  async function logout() {
    try { await firebase.backend.logout(); }
    catch { notify('logoutError'); }
@@ -123,7 +132,7 @@ export default function App(){
        <Icon key={mapStyle==='dark'?'dark':'light'} name={mapStyle==='dark'?'moon':'sun'} size={17}/>
      </button>}
    </div>
- </header>{mode==='public'?<PublicApp mapStyle={mapStyle} setMapStyle={setMapStyle} welcomePhase={welcomePhase} data={data} scope={scope} setScope={setScope} selected={selected} setSelected={setSelected} t={t} lang={lang} position={position} onLocate={()=>locate()} onRouteLocate={()=>locate(false)} locating={locating} onSos={()=>setSos(true)}/>:session && firebase.catalog ? <Admin data={data} commit={commit} t={t} lang={lang} notify={notify} onLogout={logout} email={firebase.editor.email} getIdToken={firebase.backend?.getIdToken}/>
+ </header>{mode==='public'?<PublicApp mapStyle={mapStyle} setMapStyle={setMapStyle} welcomePhase={welcomePhase} data={data} scope={scope} setScope={setScope} selected={selected} setSelected={setSelected} t={t} lang={lang} position={position} onLocate={()=>locate()} onRouteLocate={()=>locate(false)} locating={locating} onSos={()=>setSos(true)} backend={firebase.backend}/>:session && firebase.catalog && (!firebase.backend?.observeManagement||['ready','legacy','rules'].includes(firebase.managementStatus)) ? <Admin data={adminData} backend={firebase.backend} managementStatus={firebase.managementStatus} commit={commit} t={t} lang={lang} notify={notify} onLogout={logout} email={firebase.editor.email} getIdToken={firebase.backend?.getIdToken}/>
  : session || firebase.editor.status==='checking' ? <main className="admin-main"><p role="status">{t(session?catalogNotice:'editorChecking')}</p></main>
  : <Login onLogin={firebase.backend?.login} onBack={openMap} t={t} available={Boolean(firebase.backend)} editorStatus={firebase.editor.status}/>} {mode==='public'&&welcomePhase!=='closed'&&<MapWelcome t={t} onReveal={()=>setWelcomePhase('revealing')} onEnter={()=>setWelcomePhase('closed')}/>} {sos&&<Modal title={t('emergency')} onClose={()=>setSos(false)} t={t}><div className="sos-content"><div className="sos-intro"><span><Icon name="phone" size={25}/></span><p>{t('sosNote')}</p></div>{[['shield','police','113'],['heart','medical','115'],['fire','fire','114']].map(([icon,key,num])=><a className="emergency-row" href={`tel:${num}`} key={num}><span className="emergency-icon"><Icon name={icon} size={23}/></span><span><strong>{t(key)}</strong><small>{num}</small></span><span className="call-emergency"><Icon name="phone" size={17}/>{t('call')}</span></a>)}</div></Modal>}{catalogNotice && !toast && <div className="toast" role="status"><Icon name="info" size={18}/><span>{t(catalogNotice)}</span>{firebase.catalogStatus==='error'&&<button type="button" onClick={firebase.retry} aria-label={t('routeRetry')}>{t('routeRetry')}</button>}</div>}{toast&&<div className="toast" role="status"><Icon name="help" size={18}/><span>{t(toast)}</span><button onClick={()=>setToast('')} aria-label={t('close')}><Icon name="x" size={15}/></button></div>}</>;
 }

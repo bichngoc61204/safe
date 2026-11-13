@@ -5,16 +5,31 @@ export default function Dropdown({ children, value, onChange, label, className='
     ? Children.toArray(child.props.children).map(option => ({ ...option.props, group: child.props.label }))
     : [child.props]);
   const [open, setOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [active, setActive] = useState(-1);
+  const closeTimer = useRef(null);
+  const lastOptions = useRef(options);
   const root = useRef(null);
   const trigger = useRef(null);
   const menu = useRef(null);
   const id = useId();
   const selected = options.findIndex(option => option.value === value);
   const firstEnabled = options.findIndex(option => !option.disabled);
+  const visible=open||closing;
+  useEffect(()=>()=>clearTimeout(closeTimer.current),[]);
+
+  function closeMenu() {
+    if(!open)return;
+    setOpen(false);
+    if(menu.current?.animate&&!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){
+      lastOptions.current=options;
+      setClosing(true);
+      closeTimer.current=setTimeout(()=>setClosing(false),220);
+    }
+  }
 
   useLayoutEffect(() => {
-    if (!open || !menu.current?.showPopover) return;
+    if (!visible || !menu.current?.showPopover) return;
     const panel = menu.current;
     panel.showPopover();
     let frame;
@@ -47,11 +62,11 @@ export default function Dropdown({ children, value, onChange, label, className='
       window.removeEventListener('resize', schedulePlace);
       window.removeEventListener('scroll', schedulePlace, true);
     };
-  }, [open,compact]);
+  }, [visible,compact]);
 
   useEffect(() => {
     if (!open) return;
-    const outside = event => { if (!root.current?.contains(event.target)) setOpen(false); };
+    const outside = event => { if (!root.current?.contains(event.target)) closeMenu(); };
     document.addEventListener('pointerdown', outside);
     return () => document.removeEventListener('pointerdown', outside);
   }, [open]);
@@ -67,6 +82,8 @@ export default function Dropdown({ children, value, onChange, label, className='
   }, [active, open]);
 
   function openMenu(fallback=firstEnabled) {
+    clearTimeout(closeTimer.current);
+    setClosing(false);
     setActive(selected>=0&&!options[selected].disabled?selected:fallback);
     setOpen(true);
   }
@@ -74,19 +91,19 @@ export default function Dropdown({ children, value, onChange, label, className='
   function choose(index) {
     const option = options[index];
     if (!option || option.disabled) return;
-    setOpen(false);
+    closeMenu();
     if (option.value !== value) onChange(option.value);
   }
 
   function keyDown(event) {
     const { key } = event;
-    if (key === 'Escape' && open) {
+    if (key === 'Escape' && visible) {
       event.preventDefault();
       event.stopPropagation();
-      setOpen(false);
+      closeMenu();
       return;
     }
-    if (key === 'Tab') { setOpen(false); return; }
+    if (key === 'Tab') { closeMenu(); return; }
     if (key === 'Enter' || key === ' ') {
       event.preventDefault();
       if (open) choose(active);
@@ -109,13 +126,13 @@ export default function Dropdown({ children, value, onChange, label, className='
     <button type="button" ref={trigger} className={`dropdown-trigger ${triggerClass}`} role="combobox"
       aria-label={label} aria-expanded={open} aria-controls={open?id:undefined}
       aria-activedescendant={open&&active>=0?`${id}-${active}`:undefined}
-      disabled={disabled||firstEnabled<0} onKeyDown={keyDown} onBlur={()=>setOpen(false)}
-      onClick={()=>open?setOpen(false):openMenu()}>
+      disabled={disabled||firstEnabled<0} onKeyDown={keyDown} onBlur={closeMenu}
+      onClick={()=>open?closeMenu():openMenu()}>
       <span>{options[selected]?.children??label}</span>
     </button>
-    {open&&<div id={id} className={`dropdown-menu ${menuClass}`} popover={typeof HTMLElement.prototype.showPopover==='function'?'manual':undefined}
-      role="listbox" aria-label={label} ref={menu}>
-      {options.map((option,index)=><div className="dropdown-entry" role="presentation" key={option.value}>
+    {visible&&<div id={id} className={`dropdown-menu ${menuClass}`} popover={typeof HTMLElement.prototype.showPopover==='function'?'manual':undefined}
+      data-state={closing?'closing':'open'} aria-hidden={closing||undefined} inert={closing} role="listbox" aria-label={label} ref={menu}>
+      {(closing?lastOptions.current:options).map((option,index)=><div className="dropdown-entry" role="presentation" key={option.value}>
         {option.group&&option.group!==options[index-1]?.group&&<div className="dropdown-group" aria-hidden="true">{option.group}</div>}
         <button type="button" role="option" tabIndex={-1} id={`${id}-${index}`} data-value={option.value}
           aria-selected={index===selected} data-active={index===active} disabled={option.disabled}

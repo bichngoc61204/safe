@@ -282,3 +282,9 @@ Object.assign(messages.en,{
 
 messages.vi.straightDistance='Khoảng cách đường thẳng từ vị trí của bạn';
 messages.en.straightDistance='Straight-line distance from your location';
+
+import { communityMessages } from './communityMessages.js';
+Object.assign(messages.vi,communityMessages.vi);
+Object.assign(messages.en,communityMessages.en);
+Object.assign(messages.vi,{placeId:'Mã địa điểm',categoryId:'Mã danh mục',addressEn:'Địa chỉ tiếng Anh',ownerEn:'Đơn vị phụ trách tiếng Anh',wasteEn:'Loại rác tiếng Anh',hoursEn:'Ghi chú giờ tiếng Anh',descriptionEn:'Mô tả tiếng Anh'});
+Object.assign(messages.en,{placeId:'Place ID',categoryId:'Category ID',addressEn:'English address',ownerEn:'English operator',wasteEn:'English materials',hoursEn:'English hours notes',descriptionEn:'English description'});

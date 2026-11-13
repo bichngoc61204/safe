@@ -20,6 +20,13 @@ export default function TrafficDashboard({ t, lang, getIdToken }) {
         if (!response.headers.get('Content-Type')?.includes('application/json')) throw new Error('report');
         const report = await response.json();
         if (!response.ok) throw new Error(report.error);
+        const validCount=value=>Number.isSafeInteger(value)&&value>=0;
+        if(!validCount(report?.views)||!validCount(report?.users)||!Array.isArray(report.days)||report.days.length>31||report.days.some(day=>{
+          if(!/^\d{8}$/.test(day?.date)||!validCount(day.views))return true;
+          const stamp=`${day.date.slice(0,4)}-${day.date.slice(4,6)}-${day.date.slice(6)}T00:00:00Z`;
+          const parsed=Date.parse(stamp);
+          return !Number.isFinite(parsed)||new Date(parsed).toISOString().slice(0,10).replaceAll('-','')!==day.date;
+        }))throw new Error('report');
         if (!controller.signal.aborted) setResult({ state: 'ready', report });
       } catch (error) {
         if (!controller.signal.aborted) {

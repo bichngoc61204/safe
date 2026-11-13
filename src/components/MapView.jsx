@@ -11,13 +11,26 @@ import { addArchipelagoLayer } from '../lib/archipelagos';
 import { blendPosition, routeShape, routeTarget, sampleRoute } from '../lib/mapMotion';
 import { addMapRotation, fitRotatedRoute } from '../lib/mapRotation';
 
+const pinIcons=new Map();
+const maxPinIcons=256;
 function pinIcon(category,selected=false,status='active',lang='vi') {
   const label=(lang==='en'?category.nameEn:category.name)||'Location';
-  return L.divIcon({
+  const color=markerColor(category),iconName=category.icon||'pin';
+  const alert=['warning','overloaded'].includes(status);
+  // Many places share one visual. Reuse the icon definition, while Leaflet still
+  // creates a separate DOM element for each marker. Include editable fields so
+  // category and language updates never reuse an outdated appearance or label.
+  const key=JSON.stringify([String(category.kind),color,iconName,label,Boolean(selected),alert]);
+  const cached=pinIcons.get(key);
+  if(cached){pinIcons.delete(key);pinIcons.set(key,cached);return cached;}
+  const icon=L.divIcon({
     className:'custom-marker',
-    html:renderToStaticMarkup(<div className="marker-upright"><div className={`marker-pin marker-${category.kind} ${selected?'selected':''} ${['warning','overloaded'].includes(status)?'marker-alert':''}`} style={{'--marker-color':markerColor(category)}}><Icon name={category.icon||'pin'} size={19}/><span className="sr-only">{label}</span></div></div>),
+    html:renderToStaticMarkup(<div className="marker-upright"><div className={`marker-pin marker-${category.kind} ${selected?'selected':''} ${alert?'marker-alert':''}`} style={{'--marker-color':color}}><Icon name={iconName} size={19}/><span className="sr-only">{label}</span></div></div>),
     iconSize:[42,46],iconAnchor:[21,40],popupAnchor:[0,-34],
   });
+  pinIcons.set(key,icon);
+  if(pinIcons.size>maxPinIcons)pinIcons.delete(pinIcons.keys().next().value);
+  return icon;
 }
 function setGroupMarkerState(element,id,hoverIds) {
   if(!element)return;
@@ -240,13 +253,14 @@ export default function MapView({style,setStyle,welcomePhase,focusRevision,place
   useEffect(()=>{
     for(const [id,marker] of markers.current)setGroupMarkerState(marker.getElement(),id,hoverIds);
   },[hoverIds]);
+  const selectedPoint=places.find(place=>place.id===selected);
   useEffect(()=>{
     const map=mapRef.current;
     if(!map)return;
     const marker=markers.current.get(selected);
     if(!marker)return;
     focusMap(map,marker.getLatLng(),Math.max(map.getZoom(),16),rotation.current);
-  },[selected,focusRevision]);
+  },[selected,focusRevision,selectedPoint?.lat,selectedPoint?.lng]);
   useEffect(()=>{
     const map=mapRef.current;
     if(!map)return;

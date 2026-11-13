@@ -4,6 +4,8 @@ import { placeHourRows } from '../lib/placeHours';
 import { placeText } from '../lib/locale';
 import MapView from './MapView';
 import PlaceGallery from './PlaceGallery';
+import { PlaceActions,ReportPlace,ScheduleDisplay,OpenBadge,useSavedPlaces } from './PlaceExtras';
+import { openingState,placeWasteTypes,wasteTypes } from '../lib/editorial';
 import { CENTER } from '../lib/mapCenter';
 import RouteGuide from './RouteGuide';
 import useNavigation from './useNavigation';
@@ -22,7 +24,7 @@ function subscribeMobile(notify){
 }
 const greenStatuses=['all','alerts','clean','warning','overloaded','inactive'];
 
-const PlaceCards=memo(function PlaceCards({places,categories,selected,previewed,position,t,lang,actions,listRef}) {
+const PlaceCards=memo(function PlaceCards({places,categories,selected,previewed,position,t,lang,actions,listRef,emptyTitle}) {
   return <div className="places-list" ref={listRef}>{places.length?places.map(p=>{
     const c=getCategory(categories,p.category);
     const color=markerColor(c);
@@ -47,12 +49,13 @@ const PlaceCards=memo(function PlaceCards({places,categories,selected,previewed,
       </span>
       <span className="card-distance" title={position?t('straightDistance'):undefined}>{position?formatDistance(haversine(position,p)):<Icon name="right" size={16}/>}</span>
     </button>;
-  }):<div className="empty-state"><h3>{t('empty')}</h3><p>{t('emptyHint')}</p>
+  }):<div className="empty-state"><h3>{emptyTitle||t('empty')}</h3><p>{t('emptyHint')}</p>
     <button className="text-button" onClick={()=>actions.current.clear()}>{t('clearFilters')}</button>
   </div>}</div>;
 });
 
-function PlaceDetails({place,categories,position,t,lang,onClose,routing}) {
+function PlaceDetails({place,categories,position,t,lang,onClose,routing,saved,onSave,backend,now}) {
+  const [report,setReport]=useState(false);
   const c=getCategory(categories,place.category);
   const images=placePhotoUrls(place);
   const phone=String(place.phone||'').replace(/[^+\d]/g,'');
@@ -64,16 +67,19 @@ function PlaceDetails({place,categories,position,t,lang,onClose,routing}) {
       <span>{t('details')}</span>
       <button className="icon-button detail-panel-close" onClick={onClose} aria-label={t('close')}><Icon name="x" size={19}/></button>
     </div>
+    <PlaceActions place={place} saved={saved} onSave={onSave} t={t}/>
     <PlaceGallery images={images} name={placeText(place,'name',lang)} t={t}/>
     <div className="detail-content">
       <div className="detail-category"><span className="detail-category-icon" style={{color:markerColor(c),background:markerColor(c)+'13'}}><Icon name={c.icon} size={18}/></span>{lang==='en'?c.nameEn:c.name}</div>
       <h2>{placeText(place,'name',lang)}</h2>
+      <div className="place-trust-row"><OpenBadge place={place} t={t} now={now}/>{place.verifiedAt&&<span className="verified-badge" title={`${t('verifiedOn')} ${place.verifiedAt.slice(0,10)}`}><Icon name="check" size={13}/>{t('reviewVerified')}</span>}{place.source==='Dữ liệu minh họa'&&<span className="demo-badge">{t('demoRecord')}</span>}</div>
       <p className="detail-address">{placeText(place,'address',lang)}</p>
       <div className="detail-status" title={position?t('straightDistance'):undefined}><Status value={place.status} t={t}/><span>{position?formatDistance(haversine(position,place)):t('gpsHint')}</span></div>
       <div className="detail-buttons route-entry">
         <button className="button primary" onClick={routing.start}><Icon name="navigation" size={16}/>{t('routeOnMap')}</button>
         <a className="button secondary" href={directionsUrl(place)} target="_blank" rel="noopener noreferrer">Google Maps<Icon name="arrow" size={15}/></a>
       </div>
+      <ScheduleDisplay place={place} t={t}/>
       <dl className="detail-info">
         <div><dt>{t('phone')}</dt><dd className="detail-phone">
           <span>{place.phone||t('noPhone')}{demoPhone&&<small>{t('demoPhone')}</small>}</span>
@@ -82,12 +88,20 @@ function PlaceDetails({place,categories,position,t,lang,onClose,routing}) {
         {[...['owner','waste'].map(key=>[key,placeText(place,key,lang)]),...placeHourRows(place,lang),['description',placeText(place,'description',lang)]].filter(([,value])=>value).map(([key,value])=><div key={key} className={key==='opensAt'||key==='closesAt'?'detail-hour':undefined}><dt>{t(key)}</dt><dd>{value}</dd></div>)}
       </dl>
       <details className="detail-metadata"><summary>{t('dataDetails')}<Icon name="down" size={14}/></summary><dl><div><dt>{t('coordinates')}</dt><dd>{place.lat.toFixed(6)}, {place.lng.toFixed(6)}</dd></div>{place.source&&<div><dt>{t('source')}</dt><dd>{placeText(place,'source',lang)}</dd></div>}{updatedLabel&&<div><dt>{t('updated')}</dt><dd><time dateTime={place.updatedAt}>{updatedLabel}</time></dd></div>}</dl></details>
+      <button type="button" className="place-report-link" onClick={()=>setReport(true)}><Icon name="alert" size={15}/>{t('reportPlace')}<Icon name="right" size={14}/></button>
       {place.source==='Dữ liệu minh họa'&&<p className="detail-demo">{t('demoNote')}</p>}
     </div>
+    {report&&<ReportPlace place={place} backend={backend} t={t} onClose={()=>setReport(false)}/>}
   </section>;
 }
 
-export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,setScope,selected,setSelected,t,lang,position,onLocate,onRouteLocate,locating,onSos}) {
+export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,setScope,selected,setSelected,t,lang,position,onLocate,onRouteLocate,locating,onSos,backend}) {
+  const bookmarks=useSavedPlaces();
+  const [savedOnly,setSavedOnly]=useState(false);
+  const [openOnly,setOpenOnly]=useState(false);
+  const [wasteType,setWasteType]=useState('all');
+  const [now,setNow]=useState(()=>new Date());
+  useEffect(()=>{const timer=setInterval(()=>setNow(new Date()),60000);return()=>clearInterval(timer);},[]);
   const mobile=useSyncExternalStore(subscribeMobile,isMobile);
   const searchInput=useRef(null);
   const [query,setQuery]=useState('');
@@ -95,6 +109,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
   const [status,setStatus]=useState('all');
   const [expanded,setExpanded]=useState(Boolean(selected));
   const [searchOpen,setSearchOpen]=useState(false);
+  const [greenFiltersOpen,setGreenFiltersOpen]=useState(false);
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
   const [hoverScope,setHoverScope]=useState(null);
   const [previewScope,setPreviewScope]=useState(null);
@@ -108,6 +123,19 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
   const previousListView=useRef({scope,expanded});
   const searchToggle=useRef(null);
   const listToggle=useRef(null);
+  const searchEntryExpanded=useRef(false);
+  const detailFromSearch=useRef(false);
+  useEffect(()=>{
+    const viewport=window.visualViewport;
+    if(!mobile||!searchOpen||!viewport)return;
+    const panel=searchInput.current?.closest('.explore-panel');
+    let frame;
+    const resize=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{
+      if(panel)panel.style.setProperty('--search-max-height',`${Math.max(180,viewport.height+viewport.offsetTop-panel.getBoundingClientRect().top-12)}px`);
+    });};
+    resize();viewport.addEventListener('resize',resize);viewport.addEventListener('scroll',resize);
+    return()=>{cancelAnimationFrame(frame);viewport.removeEventListener('resize',resize);viewport.removeEventListener('scroll',resize);panel?.style.removeProperty('--search-max-height');};
+  },[mobile,searchOpen]);
   useLayoutEffect(()=>{
     if(placesList.current)placesList.current.scrollTop=0;
   },[scope,query,category,status]);
@@ -135,14 +163,14 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
   useEffect(()=>()=>{gpsIntent.current=null;},[]);
   const [routeResult,setRouteResult]=useState(null);
   const lastRouteRequest=useRef(0);
-  const visible=useMemo(()=>filterPlaces(data.places,data.categories,{query,category,scope,status,position}),[data,query,category,scope,status,position]);
+  const visible=useMemo(()=>filterPlaces(data.places,data.categories,{query,category,scope,status,position}).filter(point=>(!savedOnly||bookmarks.saved.includes(point.id))&&(!openOnly||openingState(point,now)==='open')&&(wasteType==='all'||placeWasteTypes(point).includes(wasteType))),[data,query,category,scope,status,position,savedOnly,bookmarks.saved,openOnly,wasteType,now]);
   const groupPreviews=useMemo(()=>scopes.map(([id,label,icon])=>({
     id,label,icon,
     places:filterPlaces(data.places,data.categories,{scope:id}),
     categories:data.categories.filter(category=>category.kind===id),
   })),[data]);
   const hoverPlaces=groupPreviews.find(group=>group.id===hoverScope)?.places??null;
-  const place=visible.find(p=>p.id===selected);
+  const place=data.places.find(p=>p.id===selected);
   destinationRef.current=place?.id;
   const activeRequest=request&&place?.id===request.destination.id?request:null;
   const result=activeRequest&&routeResult?.request===activeRequest?routeResult:null;
@@ -221,22 +249,27 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
   const routeState=place&&pendingGps?.id===place.id?'loadingGps':activeRequest&&!result?.route?'route_'+(result?.state||'loading'):null;
   const scopeCats=data.categories.filter(c=>scope==='map'||c.kind===scope);
   const clearSelection=()=>{cancelRoute();setSelected(null);};
-  const clear=()=>{setQuery('');setCategory('all');setStatus('all');clearSelection();};
-  const resetMobileSearch=()=>{clear();setScope('map');};
+  const clear=()=>{setQuery('');setCategory('all');setStatus('all');setOpenOnly(false);setWasteType('all');setSavedOnly(false);setGreenFiltersOpen(false);clearSelection();};
+  const clearFilters=()=>{setCategory('all');setStatus('all');setOpenOnly(false);setWasteType('all');setSavedOnly(false);setGreenFiltersOpen(false);setScope('map');clearSelection();};
   const changeScope=next=>{
     if(next===scope)return;
     setCategory('all');
     setStatus('all');
+    setWasteType('all');
     clearSelection();
     setScope(next);
   };
-  const showResults=()=>{setSearchOpen(false);setExpanded(true);listToggle.current?.focus({preventScroll:true});};
-  const closeSearch=()=>{setSearchOpen(false);searchToggle.current?.focus({preventScroll:true});};
-  const toggleSearch=()=>{
-    if(searchOpen){closeSearch();return;}
+  const showResults=()=>{searchInput.current?.blur();setSearchOpen(false);setExpanded(true);listToggle.current?.focus({preventScroll:true});};
+  const closeSearch=()=>{searchInput.current?.blur();setSearchOpen(false);setExpanded(searchEntryExpanded.current);(searchEntryExpanded.current?listToggle:searchToggle).current?.focus({preventScroll:true});};
+  const openSearch=(focusInput=true)=>{
+    searchEntryExpanded.current=expanded;
     setSearchOpen(true);
     setExpanded(false);
-    requestAnimationFrame(()=>searchInput.current?.focus({preventScroll:true}));
+    if(focusInput)requestAnimationFrame(()=>searchInput.current?.focus({preventScroll:true}));
+  };
+  const toggleSearch=()=>{
+    if(searchOpen){closeSearch();return;}
+    openSearch();
   };
   const toggleSidebar=()=>{
     const focusTarget=sidebarCollapsed?collapseControl:expandControl;
@@ -245,6 +278,8 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
     requestAnimationFrame(()=>focusTarget.current?.focus({preventScroll:true}));
   };
   const selectPlace=id=>{
+    detailFromSearch.current=searchOpen;
+    searchInput.current?.blur();
     if(!visible.some(point=>point.id===id)){
       const point=data.places.find(point=>point.id===id);
       if(!point)return;
@@ -263,7 +298,15 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
     setFocusRevision(revision=>revision+1);
     setExpanded(true);
   };
-  const closeDetails=clearSelection;
+  const closeDetails=()=>{
+    clearSelection();
+    if(detailFromSearch.current){
+      detailFromSearch.current=false;
+      setExpanded(false);
+      setSearchOpen(true);
+      searchToggle.current?.focus({preventScroll:true});
+    }
+  };
   placeCardActions.current={
     select:selectPlace, preview:setPreviewed, leave:id=>setPreviewed(previous=>previous===id?null:previous), clear,
   };
@@ -278,9 +321,9 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
     clearSelection();
     setExpanded(true);
   };
-  const hasFilters=Boolean(query.trim())||category!=='all'||status!=='all'||scope!=='map';
+  const hasFilterOptions=category!=='all'||status!=='all'||scope!=='map'||savedOnly||openOnly||wasteType!=='all';
+  const hasFilters=Boolean(query.trim())||hasFilterOptions;
   const searchPreview=useMemo(()=>{
-    if(hasFilters)return visible.slice(0,4);
     if(position)return visible.slice(0,4);
     return [...visible].sort((a,b)=>haversine(areaCenter,a)-haversine(areaCenter,b)).slice(0,4);
   },[hasFilters,position,visible]);
@@ -290,9 +333,17 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
     setPreviewScope(id);
     setHoverScope(id);
   };
+  const openMobileGroup=next=>{clear();setScope(next);setSearchOpen(false);setExpanded(true);};
+  const openSaved=()=>{clear();setScope('map');setSavedOnly(true);setSearchOpen(false);setExpanded(true);};
+  const savedCount=data.places.filter(point=>bookmarks.saved.includes(point.id)).length;
+  const discoveryVisible=mobile&&!expanded&&!searchOpen&&!activeRequest&&!pickingOrigin&&!pendingGps;
   return <main className="public-app" data-welcome={welcomePhase}>
     <div className={`map-workspace ${expanded?'sheet-expanded':''} ${place?'has-detail':''}`}
       data-scope={scope} data-sidebar={sidebarCollapsed?'collapsed':'open'} data-search-open={searchOpen}>
+      <nav className="mobile-discovery-dock" data-visible={discoveryVisible} aria-label={t('quickExplore')} aria-hidden={!discoveryVisible} inert={!discoveryVisible}>
+        {scopes.slice(1).map(([id,label,icon])=><button type="button" key={id} onClick={()=>openMobileGroup(id)} aria-label={t(label)} style={{'--dock-accent':({safe:'#39678b',green:'#237452',partner:'#855f35'})[id]}}><Icon name={icon} size={20}/><span>{t(id==='partner'?'partnerShort':label)}</span></button>)}
+        <button type="button" className="dock-saved" onClick={openSaved} aria-label={t('savedPlaces')}><Icon name="bookmark" size={20}/><span>{t('savedPlaces')}{savedCount>0&&<b>{savedCount}</b>}</span></button>
+      </nav>
       <div className="mobile-map-actions">
         <button ref={searchToggle} className={`map-tool ${hasFilters?'has-filters':''}`} aria-label={t('search')} aria-expanded={searchOpen} aria-controls="map-search-panel" onClick={toggleSearch}><Icon name={searchOpen?'x':'search'} size={21}/></button>
         <button ref={listToggle} className="map-tool" aria-label={t('nearby')} aria-expanded={expanded} aria-controls="public-sheet-content" onClick={toggleList}><Icon name="list" size={21}/></button>
@@ -340,7 +391,9 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
         </div>
         <nav className="public-tabs" aria-label={t('modules')} style={{'--scope-index':scopeIndex}}>{scopes.map(([id,label,icon])=><button key={id} data-group={id} className={scope===id?'active':''} aria-pressed={scope===id} onClick={()=>changeScope(id)}><Icon name={icon} size={15}/><span>{t(label)}</span></button>)}</nav>
         <div className="public-toolbar">
-          <div className="search-field"><Icon name="search" size={18}/><input ref={searchInput} placeholder={t('search')} aria-label={t('search')} value={query} onKeyDown={e=>{if(e.key==='Enter'&&searchOpen&&visible.length)showResults();}} onChange={e=>{setQuery(e.target.value);clearSelection();}}/>{query&&<button type="button" onClick={()=>{setQuery('');clearSelection();}} aria-label={t('clearSearch')}><Icon name="x" size={15}/></button>}</div>
+          <div className="quick-place-filters"><button type="button" aria-pressed={openOnly} onClick={()=>{setOpenOnly(!openOnly);clearSelection();}}><Icon name="clock" size={14}/>{t('onlyOpen')}</button><button type="button" aria-pressed={savedOnly} onClick={()=>{setSavedOnly(!savedOnly);clearSelection();}}><Icon name="bookmark" size={14}/>{t('savedPlaces')} <span>{bookmarks.saved.length}</span></button></div>
+          {savedOnly&&<small className="saved-place-note">{t('savedOnDevice')}</small>}{bookmarks.error&&<small role="status">{t('saveLocalError')}</small>}
+          <div className="search-field"><Icon name="search" size={18}/><input ref={searchInput} placeholder={t('search')} aria-label={t('search')} autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" value={query} onKeyDown={e=>{if(e.key==='Enter'&&searchOpen&&visible.length){e.preventDefault();showResults();}}} onChange={e=>{setQuery(e.target.value);clearSelection();}}/>{query&&<button type="button" onClick={()=>{setQuery('');clearSelection();searchInput.current?.focus({preventScroll:true});}} aria-label={t('clearSearch')}><Icon name="x" size={15}/></button>}</div>
           <div className="public-filters" id="public-filters">
             <div className="public-filter-section">
               <span>{t('category')}</span>
@@ -351,26 +404,27 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
                 </button>)}
               </div>
             </div>
-            {scope==='green'&&<div className="public-filter-section">
+            {scope==='green'&&<details className="green-advanced-filters" open={greenFiltersOpen} onToggle={event=>setGreenFiltersOpen(event.currentTarget.open)}><summary><Icon name="filter" size={14}/>{t('greenFilters')}{(wasteType!=='all'||status!=='all')&&<b>{Number(wasteType!=='all')+Number(status!=='all')}</b>}<Icon name="down" size={14}/></summary><div className="public-filter-section"><span>{t('wasteFilter')}</span><div className="category-chips" role="group" aria-label={t('wasteFilter')}><button type="button" aria-pressed={wasteType==='all'} onClick={()=>{setWasteType('all');clearSelection();}}>{t('all')}</button>{wasteTypes.map(type=><button key={type} type="button" aria-pressed={wasteType===type} onClick={()=>{setWasteType(type);clearSelection();}}>{t(`waste_${type}`)}</button>)}</div></div>
+            <div className="public-filter-section">
               <span>{t('status')}</span>
               <div className="category-chips status-chips" role="group" aria-label={t('status')}>
                 {greenStatuses.map(value=><button type="button" key={value} data-status={value} aria-pressed={status===value}
                   onClick={()=>{setStatus(value);clearSelection();}}>{t(value==='all'?'allStatus':value==='alerts'?'alertStatus':value)}</button>)}
               </div>
-            </div>}
+            </div></details>}
           </div>
         </div>
-        {hasFilters&&<div className="desktop-filter-summary">
+        {hasFilterOptions&&<div className="desktop-filter-summary">
           <span role="status">{visible.length} {t('results')}</span>
-          <button type="button" className="text-button" onClick={resetMobileSearch}><Icon name="x" size={14}/>{t('clearFilters')}</button>
+          <button type="button" className="text-button" onClick={clearFilters}><Icon name="x" size={14}/>{t('clearFilters')}</button>
         </div>}
         <div className="mobile-search-footer">
           <div className="mobile-search-summary">
             <p className="mobile-search-caption" role="status">
-              {!searchPreview.length?t('empty'):hasFilters?`${visible.length} ${t('results')}`:t(position?'nearby':'nearAreaCenter')}
+              {!searchPreview.length?t(savedOnly&&!bookmarks.saved.length?'noSavedPlaces':'empty'):hasFilters?`${visible.length} ${t('results')}`:t(position?'nearby':'nearAreaCenter')}
               {searchPreview.length>0&&hasFilters&&!position&&<span> · {t('fromAreaCenter')}</span>}
             </p>
-            {hasFilters&&<button type="button" className="mobile-clear-filters" onClick={resetMobileSearch}><Icon name="x" size={14}/>{t('clearFilters')}</button>}
+            {hasFilterOptions&&<button type="button" className="mobile-clear-filters" onClick={clearFilters}><Icon name="x" size={14}/>{t('clearFilters')}</button>}
           </div>
           {!searchPreview.length&&<p className="mobile-search-empty-hint">{t('emptyHint')}</p>}
           {searchPreview.length>0&&<ul className="mobile-search-preview" aria-label={t('nearby')}>
@@ -385,7 +439,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
               </li>;
             })}
           </ul>}
-          <button className="button primary mobile-search-results" onClick={showResults} disabled={!visible.length}>{t('showAllPlaces')}<Icon name="right" size={16}/></button>
+          <button className="button primary mobile-search-results" onClick={showResults} disabled={!visible.length}>{visible.length?`${t('viewSearchResults')} ${visible.length} ${t(visible.length===1?'searchResultSingular':'searchResultUnit')}`:t('noSearchResults')}<Icon name="right" size={16}/></button>
         </div>
       </section>
       <aside className="places-sidebar" inert={mobile?!expanded:sidebarCollapsed} aria-hidden={mobile?!expanded:sidebarCollapsed} onKeyDown={event=>{
@@ -395,20 +449,21 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
           {place?<div className="sheet-detail-header">
             <span className="sheet-grip" aria-hidden="true"/>
             <div className="sheet-detail-bar">
-              <button type="button" aria-label={t('nearby')} onClick={closeDetails}><Icon name="back" size={18}/></button>
+              <button type="button" aria-label={t(detailFromSearch.current?'backToSearch':'nearby')} onClick={closeDetails}><Icon name="back" size={18}/></button>
               <h2>{placeText(place,'name',lang)}</h2>
               <button type="button" aria-label={t('close')} aria-expanded={expanded} aria-controls="public-sheet-content" onClick={dismissPopup}><Icon name="x" size={18}/></button>
             </div>
           </div>:<button className="sheet-handle" aria-label={t('close')} aria-expanded={expanded} aria-controls="public-sheet-content" onClick={dismissPopup}>
             <span className="sheet-grip" aria-hidden="true"/>
-            <span className="sheet-summary"><Icon name="list" size={18}/><strong>{t('nearby')}</strong><span className="sheet-count">{visible.length}</span><Icon className="sheet-chevron" name="x" size={18}/></span>
+            <span className="sheet-summary"><Icon name={savedOnly?'bookmark':'list'} size={18}/><strong>{t(savedOnly?'savedPlaces':scope==='map'?'nearby':scopeLabel)}</strong><span className="sheet-count">{visible.length}</span><Icon className="sheet-chevron" name="x" size={18}/></span>
           </button>}
-          <div className="list-heading"><h2>{t('nearby')}<span>{visible.length}</span></h2>{position&&<span>{t('nearest')}</span>}</div>
+          <div className="list-heading"><h2>{t('nearby')}<span>{visible.length}</span></h2>{hasFilterOptions?<button type="button" className="list-clear-filters" onClick={clearFilters}><Icon name="x" size={12}/>{t('clearFilters')}</button>:position&&<span>{t('nearest')}</span>}</div>
+          {!place&&<div className="mobile-list-context"><div className="category-chips" role="group" aria-label={t('modules')}><button type="button" aria-pressed={scope==='map'&&!savedOnly} onClick={()=>openMobileGroup('map')}>{t('all')}</button>{scopes.slice(1).map(([id,label,icon])=><button type="button" key={id} aria-pressed={scope===id&&!savedOnly} onClick={()=>openMobileGroup(id)}><Icon name={icon} size={13}/>{t(id==='partner'?'partnerShort':label)}</button>)}</div><button type="button" className="sheet-filter-button" aria-label={t('filterPlaces')} onClick={()=>openSearch(false)}><Icon name="filter" size={17}/>{hasFilters&&<i/>}</button></div>}
         </div>
         <div className="public-sheet-content" id="public-sheet-content">
-          {place&&<PlaceDetails key={place.id} place={place} categories={data.categories} position={position} t={t} lang={lang} routing={routing} onClose={closeDetails}/>}
+          {place&&<PlaceDetails key={place.id} place={place} categories={data.categories} position={position} t={t} lang={lang} routing={routing} onClose={closeDetails} saved={bookmarks.saved.includes(place.id)} onSave={bookmarks.toggle} backend={backend} now={now}/>}
           <PlaceCards places={visible} categories={data.categories} selected={selected} previewed={previewed}
-            position={position} t={t} lang={lang} actions={placeCardActions} listRef={placesList}/>
+            position={position} t={t} lang={lang} emptyTitle={savedOnly&&!bookmarks.saved.length?t('noSavedPlaces'):undefined} actions={placeCardActions} listRef={placesList}/>
         </div><div className="list-footer"><span className="live-dot"/>{t('community')}<span>{t('area')}</span></div>
       </aside>
       </div>

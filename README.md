@@ -1,8 +1,10 @@
-# SAFEMAP AN THƯỢNG · React frontend
+# SAFEMAP AN THƯỢNG · React + Firebase
 
 Bản đồ số an toàn – tiện ích cộng đồng – môi trường xanh.
 
 Dự án **React + Vite + Leaflet + MapLibre** dùng Firebase Auth và Firestore. Chạy dự án qua Vite với cấu hình Firebase trong `.env.local`.
+
+Bản nâng cấp có lưu/chia sẻ địa điểm và QR, lịch theo ngày, bộ lọc đang mở/loại rác, phản ánh, ẩn/công khai, thùng rác, lịch sử khôi phục và nhập Excel. **Cần xuất bản `firestore.rules` mới để dùng đầy đủ phần quản trị mở rộng.** Xem [hướng dẫn kích hoạt và kiểm tra](docs/KICH_HOAT_TINH_NANG_MOI.md); chủ dự án tự xuất bản Rules từ Firebase Console.
 
 ## Chạy dự án
 
@@ -28,12 +30,14 @@ npm run preview
 
 - **Khám phá bản đồ:** bản đồ An Thượng tại `[16.0505, 108.2435]`, zoom 15; tìm kiếm không dấu theo tên, địa chỉ, đơn vị, vật liệu; lọc danh mục; danh sách và chi tiết địa điểm; hình ảnh tùy chọn; liên hệ; GPS; khoảng cách Haversine; chỉ đường Google Maps; SOS.
 - **SafePoint:** nhóm an toàn, hành chính, y tế và giáo dục.
-- **GreenPoint:** 2 điểm thu gom mẫu, vật liệu tiếp nhận, đơn vị phụ trách, trạng thái sạch/cần vệ sinh/quá tải/tạm ngưng và bộ lọc cảnh báo.
+- **GreenPoint:** vật liệu tiếp nhận, đơn vị phụ trách, trạng thái sạch/cần vệ sinh/quá tải/tạm ngưng; lọc theo vật liệu và trạng thái.
 - **Đối tác xanh:** các cửa hàng/đơn vị hợp tác, thông tin liên hệ và vật liệu tiếp nhận.
 - **Quản trị tại `/admin`:** đăng nhập bằng tài khoản Firebase được cấp.
-- **Tổng quan quản trị:** biểu đồ nhóm, trạng thái, điểm cần xử lý và địa điểm mới cập nhật. Tab lượt truy cập mở Firebase Console để xem nguồn thống kê khi đã cấu hình.
-- **Tất cả địa điểm và từng nhóm SafePoint, GreenPoint, Đối tác xanh:** tìm kiếm, lọc, phân trang, thêm/sửa/xóa có xác nhận, chọn tọa độ bằng click bản đồ hoặc kéo ghim.
+- **Tổng quan quản trị:** biểu đồ nhóm, trạng thái, điểm cần xử lý và địa điểm mới cập nhật. Tab lượt truy cập đọc báo cáo GA4 khi đã cấu hình API phía server.
+- **Tất cả địa điểm và từng nhóm SafePoint, GreenPoint, Đối tác xanh:** tìm kiếm, lọc, phân trang, thêm/sửa, công khai/ẩn, chuyển vào thùng rác có xác nhận, chọn tọa độ bằng click bản đồ hoặc kéo ghim.
 - **Quản lý danh mục:** thêm, đổi tên Việt/Anh, biểu tượng, màu; ngăn xóa danh mục đang chứa địa điểm. Nhóm chức năng không đổi sau khi tạo để tránh thay đổi ý nghĩa dữ liệu hiện có.
+- **Công cụ dữ liệu:** cảnh báo chất lượng, xác minh thủ công, lịch sử thay đổi/khôi phục, thùng rác và xử lý phản ánh. Nhập Excel có xem trước, kiểm tra trùng và lỗi trước khi xác nhận.
+- **Tiện ích cộng đồng:** lưu điểm trên trình duyệt, liên kết chia sẻ mở thẳng điểm và QR, lịch tuần/ngày đặc biệt, lọc đang mở và gửi thông tin chưa đúng.
 - Chuyển Việt/Anh, bố cục responsive, danh sách dạng bottom sheet trên mobile, trạng thái rỗng, lỗi định vị/lưu dữ liệu/ảnh, xuất danh sách địa điểm và danh mục ra Excel.
 
 ## Kết nối Firebase
@@ -41,9 +45,10 @@ npm run preview
 1. Tạo dự án Firebase và đăng ký một **Web App**. Sao chép `.env.example` thành `.env.local` rồi điền bốn trường Web config. Khi deploy lên Vercel, thêm bốn biến tương ứng ở phần Environment Variables và build lại.
 2. Bật **Authentication → Sign-in method → Email/Password** và tạo Cloud Firestore ở **Production mode**. Triển khai tệp `firestore.rules` từ Firebase Console hoặc dùng `firebase deploy --only firestore:rules --project PROJECT_ID` với Firebase CLI đã đăng nhập.
 3. Tạo tài khoản cán bộ trong **Authentication → Users**. Sao chép UID và tạo document `editors/{UID}` trong Firestore với trường **`active` kiểu boolean = `true`**. Đặt trường này thành `false` để thu hồi quyền. Mỗi cán bộ dùng một tài khoản riêng.
-4. Với dự án mới, có thể nạp bản sao danh mục bằng script bên dưới. Danh mục và địa điểm dùng chung nằm trong document `catalogs/an-thuong`. Ai cũng đọc được document công khai này. Chỉ tài khoản được cấp quyền mới được cập nhật. Ảnh chính lưu trường `image`, ảnh phụ lưu trong `images`. Trang quản trị nhận link ảnh, và bản đồ hiển thị các link qua slider hiện có.
+4. Với dự án mới, có thể nạp bản sao danh mục bằng script bên dưới. Bản công khai nằm trong `catalogs/an-thuong`. Lần lưu có thay đổi đầu tiên sau nâng cấp tự tạo bản riêng `management/an-thuong` và `catalogHistory/{revision}` bằng một giao dịch. Bản riêng giữ điểm ẩn/thùng rác; khách chỉ nhận điểm công khai. Không cần nạp lại dữ liệu cũ. Ảnh chính lưu trường `image`, ảnh phụ lưu trong `images`; quản trị nhận URL ảnh và bản đồ hiển thị qua slider.
+5. Bật **Authentication → Sign-in method → Anonymous** nếu muốn khách gửi phản ánh. Dữ liệu nằm trong `placeReports`; khách không đọc được phản ánh của người khác. Các bước kích hoạt, kiểm tra và giới hạn nằm trong [tài liệu nâng cấp](docs/KICH_HOAT_TINH_NANG_MOI.md).
 
-Danh mục và địa điểm được lưu cùng một document để đồng bộ trong một lần đọc và cập nhật nhất quán. Phiên bản hiện tại giới hạn 200 địa điểm, 40 danh mục và khoảng 800 KB dữ liệu JSON. Số phiên bản được kiểm tra khi lưu để phát hiện thay đổi từ máy khác. Dữ liệu công khai chỉ nên chứa thông tin địa điểm được phép công bố.
+Danh mục và địa điểm được lưu cùng một document cho mỗi bản công khai/quản trị. Phiên bản hiện tại giới hạn 200 địa điểm (kể cả điểm ẩn/thùng rác), 40 danh mục và khoảng 800 KB dữ liệu JSON. Số phiên bản được kiểm tra khi lưu để phát hiện thay đổi từ máy khác. Mỗi thay đổi tạo lịch sử có bản trước sửa; cần theo dõi dung lượng Firestore khi sử dụng lâu dài. Dữ liệu công khai chỉ nên chứa thông tin địa điểm được phép công bố.
 
 ### Ô Ăn Quan trên hai điện thoại
 
@@ -115,7 +120,7 @@ Bản đồ giữ ghi nguồn OpenStreetMap / OpenFreeMap / OpenMapTiles. Không
 
 ## Nhận diện giao diện
 
-Giao diện trắng và xanh lá là màu chủ đạo; marker an toàn màu xanh dương, y tế đỏ hồng, hành chính/giáo dục navy, môi trường xanh lá và dịch vụ màu ấm. Icon Lucide cùng hệ nét được dùng xuyên suốt tab, card, marker và dashboard; không dùng số làm ký hiệu địa điểm. Điểm cần vệ sinh/quá tải có chấm cảnh báo nhỏ trên marker. Bố cục mobile vẫn giữ tìm kiếm phía trên và bottom sheet phía dưới.
+Giao diện trắng và xanh lá là màu chủ đạo; marker an toàn màu xanh dương, y tế đỏ hồng, hành chính/giáo dục navy, môi trường xanh lá và dịch vụ màu ấm. Icon Tabler cùng hệ nét được dùng xuyên suốt tab, card, marker và dashboard; không dùng số làm ký hiệu địa điểm. Điểm cần vệ sinh/quá tải có chấm cảnh báo nhỏ trên marker. Bố cục mobile vẫn giữ tìm kiếm phía trên và bottom sheet phía dưới.
 
 Trên PC, khi mở địa điểm, phần giới thiệu thu gọn; thông tin kỹ thuật nằm trong mục mở rộng. Không hiển thị đồng thời popup và panel chi tiết. Chuyển động ngắn cho lọc, panel, ghim chọn và bản đồ; tự tắt khi bật Reduce Motion.
 
@@ -135,3 +140,5 @@ Dòng ghi nguồn bản đồ hiển thị khi tải rồi thu gọn sau 5 giây
 - SafeMap chỉ cho phép các lớp nền đã chọn. Lớp ranh giới hành chính, ranh giới tranh chấp, ranh giới biển và tuyến phà từ nhà cung cấp bị loại khỏi kiểu hiển thị. Chế độ Vệ tinh dùng World Imagery cùng lớp nhãn đã lọc, và khi không có WebGL thì giữ ảnh vệ tinh với nhãn riêng của SafeMap.
 - Các nhãn nền phải nằm trong vùng đất Việt Nam. Vùng lọc lấy từ dữ liệu khái quát Natural Earth 1:10m, dùng riêng cho việc lọc chữ. SafeMap hiển thị nhãn Việt Nam, Biển Đông, Hoàng Sa và Trường Sa trên lớp độc lập. Nhãn gần đường biên hoặc bờ biển có thể bị lược bớt do độ khái quát của nguồn.
 - Nguồn dữ liệu cho vùng lọc nhãn là [Natural Earth Admin 0 – Countries](https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/). [OpenMapTiles](https://openmaptiles.org/docs/schema/) mô tả các lớp dữ liệu được lọc trước khi hiển thị.
+
+Kết quả kiểm tra sau khi Rules đã được xuất bản và vị trí các chức năng mới: [QA 13/11/2026](docs/QA_2026-11-13.md).

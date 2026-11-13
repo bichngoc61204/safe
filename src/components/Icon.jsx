@@ -8,11 +8,13 @@ import {
   IconEye, IconEyeOff, IconPlant, IconBuilding, IconMail, IconLock, IconFlame,
   IconHelpCircle, IconCircleOff, IconCrosshair, IconInfoCircle, IconLayersIntersect, IconZoomIn,
   IconMotorbike, IconWalk, IconBike, IconCar, IconPhoto, IconSun, IconMoon, IconChartBar,
+  IconShare, IconBookmark, IconSettings, IconHistory, IconUpload, IconRestore,
   IconCornerUpLeft, IconCornerUpRight, IconArrowUp, IconArrowBackUp, IconRotateClockwise, IconFlagCheck,
 } from '@tabler/icons-react';
 
 // Keep these keys stable for categories saved by earlier versions.
 const icons = {
+  share:IconShare, bookmark:IconBookmark, settings:IconSettings, history:IconHistory, upload:IconUpload, restore:IconRestore,
   map: IconMap2, shield: IconShieldCheck, landmark: IconBuildingBank, heart: IconHeartbeat,
   school: IconSchool, store: IconBuildingStore, recycle: IconRecycle, leaf: IconLeaf,
   search: IconSearch, pin: IconMapPin, navigation: IconNavigation, locate: IconCurrentLocation,

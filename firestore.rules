@@ -6,22 +6,80 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/editors/$(request.auth.uid)).data.active == true;
     }
 
-    function validCatalog() {
+    function validCatalog(version) {
       let data = request.resource.data;
       return data.keys().hasAll(['categories', 'places', 'schemaVersion', 'revision', 'updatedAt'])
         && data.keys().hasOnly(['categories', 'places', 'schemaVersion', 'revision', 'updatedAt'])
-        && data.schemaVersion == 1
+        && data.schemaVersion == version
         && data.revision is int
         && data.categories is list && data.categories.size() > 0 && data.categories.size() <= 40
         && data.places is list && data.places.size() <= 200
         && data.updatedAt == request.time;
     }
 
+    function pairedWrite() {
+      let next = getAfter(/databases/$(database)/documents/management/an-thuong).data;
+      let history = getAfter(/databases/$(database)/documents/catalogHistory/$(string(next.revision))).data;
+      return next.updatedAt == request.time
+        && history.createdAt == request.time && history.actor == request.auth.uid
+        && history.revision == next.revision
+        && getAfter(/databases/$(database)/documents/catalogs/an-thuong).data.revision == next.revision
+        && getAfter(/databases/$(database)/documents/catalogs/an-thuong).data.updatedAt == request.time;
+    }
+
     match /catalogs/an-thuong {
       allow get: if true;
-      allow create: if isEditor() && validCatalog() && request.resource.data.revision == 1;
-      allow update: if isEditor() && validCatalog()
+      allow create: if isEditor() && validCatalog(1) && request.resource.data.revision == 1;
+      allow update: if isEditor() && validCatalog(1)
+        && request.resource.data.revision == resource.data.revision + 1
+        && pairedWrite()
+        && request.resource.data.revision == getAfter(/databases/$(database)/documents/management/an-thuong).data.revision;
+    }
+    match /management/an-thuong {
+      allow get: if isEditor();
+      allow create: if isEditor() && validCatalog(2) && pairedWrite()
+        && request.resource.data.revision == get(/databases/$(database)/documents/catalogs/an-thuong).data.revision + 1;
+      allow update: if isEditor() && validCatalog(2) && pairedWrite()
         && request.resource.data.revision == resource.data.revision + 1;
+    }
+    match /catalogHistory/{revision} {
+      allow get, list: if isEditor();
+      allow create: if isEditor()
+        && request.resource.data.keys().hasOnly(['revision','actor','actorEmail','createdAt','changes','snapshot'])
+        && revision == string(request.resource.data.revision)
+        && request.resource.data.actor == request.auth.uid
+        && request.resource.data.actorEmail == request.auth.token.email
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.changes is list && request.resource.data.changes.size() <= 201
+        && request.resource.data.snapshot is map
+        && request.resource.data.snapshot.keys().hasOnly(['categories','places'])
+        && getAfter(/databases/$(database)/documents/management/an-thuong).data.revision == request.resource.data.revision
+        && getAfter(/databases/$(database)/documents/management/an-thuong).data.updatedAt == request.time
+        && request.resource.data.snapshot.categories == (exists(/databases/$(database)/documents/management/an-thuong)
+          ? get(/databases/$(database)/documents/management/an-thuong).data.categories
+          : get(/databases/$(database)/documents/catalogs/an-thuong).data.categories)
+        && request.resource.data.snapshot.places == (exists(/databases/$(database)/documents/management/an-thuong)
+          ? get(/databases/$(database)/documents/management/an-thuong).data.places
+          : get(/databases/$(database)/documents/catalogs/an-thuong).data.places);
+    }
+    match /placeReports/{id} {
+      allow get: if isEditor() || (request.auth != null && id.matches('^' + request.auth.uid + '_.*$'));
+      allow list: if isEditor();
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['placeId','placeName','reason','note','uid','day','status','createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.day == string(request.time.year()) + '-' + string(request.time.month()) + '-' + string(request.time.day())
+        && id == request.auth.uid + '_' + request.resource.data.day + '_' + request.resource.data.placeId
+        && request.resource.data.placeId is string && request.resource.data.placeId.size() <= 100
+        && request.resource.data.placeName is string && request.resource.data.placeName.size() <= 150
+        && request.resource.data.reason in ['wrongPhone','wrongLocation','closedPlace','wrongHours','wrongWaste','otherReport']
+        && request.resource.data.note is string && request.resource.data.note.size() <= 500
+        && request.resource.data.status == 'new' && request.resource.data.createdAt == request.time;
+      allow update: if isEditor()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','resolution','resolvedBy','resolvedAt'])
+        && request.resource.data.status in ['new','resolved','dismissed']
+        && request.resource.data.resolution is string && request.resource.data.resolution.size() <= 500
+        && request.resource.data.resolvedBy == request.auth.uid && request.resource.data.resolvedAt == request.time;
     }
 
     match /editors/{uid} {

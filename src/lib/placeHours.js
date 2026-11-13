@@ -16,5 +16,6 @@ export function readPlaceHours(place = {}) {
 
 export function placeHourRows(place,lang) {
   const { opensAt, closesAt, hours } = readPlaceHours(place);
+  if(place.schedule?.enabled)return hours?[['hours',placeText(place,'hours',lang,hours)]]:[];
   return [['opensAt',opensAt],['closesAt',closesAt],['hours',placeText(place,'hours',lang,hours)]].filter(([,value])=>value);
 }
