@@ -745,7 +745,7 @@
 }
 .welcome-map-scene[data-active="true"] { opacity: 1; }
 .scene-search { background: #e4eee8; }
-.scene-route { background: #edf0e4; }
+.scene-support { background: #edf0e4; }
 .welcome-water { fill: #b9d9de; }
 .welcome-park { fill: #cbdcc4; }
 .welcome-streets { fill: none; stroke: #fcfcf3; stroke-width: 5; }
@@ -1067,7 +1067,7 @@
 .welcome-art-note strong { font-size: 12px; }
 .welcome-art-note small { margin-top: 3px; color: #526d5d; font-size: 10px; }
 .map-welcome[data-slide="search"] .welcome-title-place { color: #3d6580; }
-.scene-route .welcome-route { stroke-dasharray: none; }
+.scene-support .welcome-route { stroke: #7d9b8d; stroke-width: 3; stroke-dasharray: 3 8; }
 @media (max-width: 600px) {
   .welcome-art-note { top: 10px; right: 10px; padding: 7px 10px; }
   .welcome-gesture { padding-top: 12px; }
@@ -1389,7 +1389,7 @@
 }
 .public-sheet-content .place-card h3,
 .public-sheet-content .place-card p > span,
-.public-sheet-content .place-card .place-type > span {
+.public-sheet-content .place-card .place-type-category > span {
   display:block; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
 }
 @media(max-width:700px){
@@ -1409,3 +1409,5 @@
 .map-workspace .public-tabs > button:is(:hover,:focus-visible,.active) { color:var(--tab-ink); }
 .map-workspace .public-tabs > button:is(:hover,:focus-visible) { background:var(--tab-wash); }
 @media(prefers-reduced-motion:reduce) { .map-workspace .public-tabs > button { transition:none; } }
+
+@media(max-width:360px){ .map-welcome[data-slide="support"] .welcome-art-note { display:none; } }

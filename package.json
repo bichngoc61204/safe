@@ -9,6 +9,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --test src/lib/*.test.js src/game/*.test.js",
     "test:ui": "node scripts/ui-check.mjs",
+    "test:sync": "node scripts/save-sync-check.mjs",
     "test:rules": "node scripts/rules-check.mjs",
     "seed:firebase": "node --env-file-if-exists=.env.local --env-file-if-exists=.seed.local scripts/seed-firebase.js"
   },

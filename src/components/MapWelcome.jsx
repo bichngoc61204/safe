@@ -2,9 +2,9 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import Icon from './Icon';
 
 const slides = [
-  {id:'intro', icon:'pin', kicker:'welcomeArea', title:['SafeMap','An Thượng'], description:'welcomeDescription', features:[['shield','welcomeSafe'],['recycle','welcomeGreen'],['leaf','partner']]},
+  {id:'intro', icon:'pin', kicker:'welcomeArea', title:['SafeMap','An Thượng'], description:'welcomeDescription', features:[['safety','welcomeSafe'],['recycle','welcomeGreen'],['leaf','partner']]},
   {id:'search', icon:'search', kicker:'welcomeSearchKicker', title:['welcomeSearchTitle','welcomeSearchAccent'], description:'welcomeSearchDescription', features:[['search','welcomeFindName'],['filter','welcomeFindGroup'],['locate','welcomeFindNearby']]},
-  {id:'route', icon:'navigation', kicker:'welcomeRouteKicker', title:['welcomeRouteTitle','welcomeRouteAccent'], description:'welcomeRouteDescription', features:[['motorbike','route_motor_scooter'],['walk','route_foot'],['navigation','welcomeFollowRoute']]},
+  {id:'support', icon:'community', kicker:'welcomeHelpKicker', title:['welcomeHelpTitle','welcomeHelpAccent'], description:'welcomeHelpDescription', features:[['phone','welcomeHelpContact'],['community','welcomeHelpLevels'],['clock','welcomeHelpHours']]},
 ];
 
 const mapScenes = [
@@ -16,7 +16,7 @@ const mapScenes = [
     coast: 'M379 0c42 118-20 175-38 243-16 62 2 114-41 177',
     route: 'm123 215 145-39 31 119 47-13',
     pins: [
-      { x: 123, y: 215, icon: 'shield', tone: 'safe', delay: 260 },
+      { x: 123, y: 215, icon: 'safety', tone: 'safe', delay: 260 },
       { x: 268, y: 176, icon: 'recycle', tone: 'green', delay: 510, ping: true },
       { x: 346, y: 282, icon: 'leaf', tone: 'partner', delay: 780 },
     ],
@@ -26,22 +26,24 @@ const mapScenes = [
     park: 'M55 79 168 53l16 71-114 27ZM313 239l106 30-21 77-108-28ZM143 300l64-15 23 87-65 15Z',
     streets: 'M-30 114 266 45 550 130M-30 184 271 113 550 194M-30 251 275 181 550 261M-30 320 278 248 550 329M-30 391 282 317 550 399M42-18l105 466M126-23l107 468M218-20l98 466M387-17l-86 458M473-14l-94 461',
     pins: [
-      { x: 151, y: 144, icon: 'shield', tone: 'safe', delay: 410, ping: true },
+      { x: 151, y: 144, icon: 'safety', tone: 'safe', delay: 410, ping: true },
       { x: 366, y: 224, icon: 'recycle', tone: 'green', delay: 580, ping: true },
       { x: 187, y: 306, icon: 'leaf', tone: 'partner', delay: 760, ping: true },
       { x: 260, y: 215, icon: 'locate', tone: 'origin', delay: 120 },
     ],
   },
   {
-    id: 'route',
+    id: 'support',
     park: 'M40 204h65v68H40ZM214 82h88v75h-88ZM325 248h100l-32 67h-68Z',
     streets: 'M-10 76H555M-10 168H546M-10 232H466M-10 301H426M-10 365H384M64-10V430M139-10V430M207-10V430M313-10V430M390-10V330M471-10V211',
     water: 'M520 181v239H366c25-43 47-81 59-129 14-52 47-82 95-110Z',
     coast: 'M520 164c-61 29-95 64-109 121-12 49-34 88-63 135',
-    route: 'M139 301h68v-69h106v-64h77',
+    route: 'M145 160Q155 215 240 230M324 145Q258 165 240 230M325 300Q292 250 240 230',
     pins: [
-      { x: 139, y: 301, icon: 'locate', tone: 'origin', delay: 150 },
-      { x: 390, y: 168, icon: 'pin', tone: 'green', delay: 1010, ping: true },
+      { x: 240, y: 230, icon: 'community', tone: 'safe', delay: 120, ping: true },
+      { x: 145, y: 160, icon: 'community', tone: 'safe', delay: 380, ping: true },
+      { x: 324, y: 145, icon: 'community', tone: 'safe', delay: 620, ping: true },
+      { x: 325, y: 300, icon: 'community', tone: 'safe', delay: 860, ping: true },
     ],
   },
 ];
@@ -72,7 +74,7 @@ function WelcomeArtwork({ slide, t }) {
               </g>
             </>}
             {scene.pins.map(({ x, y, icon, tone, delay, ping }) =>
-              <g key={icon} className={`welcome-pin-${tone}`} transform={`translate(${x} ${y})`}
+              <g key={`${x}-${y}`} className={`welcome-pin-${tone}`} transform={`translate(${x} ${y})`}
                 style={{'--pin-delay':`${delay}ms`}}>
                 {ping&&<circle className="welcome-pin-pulse" r="25"/>}
                 <g className="welcome-map-pin">
@@ -86,7 +88,7 @@ function WelcomeArtwork({ slide, t }) {
       </div>
       {slide.id!=='intro'&&<div key={slide.id} className="welcome-art-note">
         <Icon name={slide.icon} size={19}/>
-        <span><strong>{t(slide.kicker)}</strong><small>{t(slide.id==='search'?'welcomeFindNearby':'welcomeFollowRoute')}</small></span>
+        <span><strong>{t(slide.kicker)}</strong><small>{t(slide.id==='search'?'welcomeFindNearby':'welcomeHelpNearby')}</small></span>
       </div>}
       <span className="welcome-compass">N<Icon name="navigation" size={14}/></span>
       <span className="welcome-coordinate">16°03′ N · 108°15′ E</span>

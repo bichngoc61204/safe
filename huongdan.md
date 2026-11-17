@@ -12,11 +12,11 @@ Các tính năng cộng đồng và quản trị mới cần Rules Firebase mớ
 ## Dành cho người xem bản đồ
 
 1. Mở trang chủ. Cuộn xuống trên máy tính hoặc vuốt lên trên điện thoại để vào bản đồ. Có thể vuốt ngang hoặc chọn các chấm để xem các slide giới thiệu.
-2. Mở **Tìm địa điểm** và nhập tên hoặc địa chỉ, có thể gõ không dấu. Chọn **SafePoint**, **GreenPoint** hoặc **Đối tác xanh** để thu hẹp kết quả. **Hiển thị tất cả** mở toàn bộ kết quả của bộ lọc đang dùng. **Xóa bộ lọc** đưa bạn về danh sách chung.
-3. Chọn một ghim hoặc thẻ kết quả để xem ảnh, địa chỉ, trạng thái và thông tin liên hệ. Nếu điểm có ảnh, chạm ảnh để xem lớn hoặc vuốt để chuyển ảnh. GreenPoint có thể hiển thị thêm loại rác tiếp nhận và đơn vị phụ trách.
+2. Mở **Tìm địa điểm** và nhập tên hoặc địa chỉ, có thể gõ không dấu. Chọn **An toàn**, **Điểm xanh** hoặc **Đối tác xanh** để thu hẹp kết quả. **Hiển thị tất cả** mở toàn bộ kết quả của bộ lọc đang dùng. **Xóa bộ lọc** đưa bạn về danh sách chung.
+3. Chọn một ghim hoặc thẻ kết quả để xem ảnh, địa chỉ, trạng thái và thông tin liên hệ. Nếu điểm có ảnh, chạm ảnh để xem lớn hoặc vuốt để chuyển ảnh. Điểm xanh có thể hiển thị thêm loại rác tiếp nhận và đơn vị phụ trách.
 4. Web tự yêu cầu vị trí GPS mỗi lần mở hoặc tải lại bản đồ. Lần đầu cần cho phép trong trình duyệt; khi đã cấp quyền, vị trí và khoảng cách được lấy tự động. Nút **Vị trí của tôi** dùng để thử lại hoặc đưa bản đồ về vị trí của bạn. Khi chưa có GPS, khoảng cách trong gợi ý tìm kiếm được tính từ trung tâm An Thượng.
 
-Trong chi tiết điểm, dùng **Lưu địa điểm** để lưu ngay trên trình duyệt, **Chia sẻ** để lấy liên kết/mã QR, hoặc **Báo thông tin chưa đúng** để cán bộ kiểm tra. Bộ lọc **Đã lưu** và **Đang mở** kết hợp với nội dung tìm kiếm đang có. GreenPoint còn lọc theo loại rác tiếp nhận. Trạng thái đang mở chỉ xuất hiện khi điểm đã khai báo lịch rõ ràng, tính theo giờ Việt Nam.
+Trong chi tiết điểm, dùng **Lưu địa điểm** để lưu ngay trên trình duyệt, **Chia sẻ** để lấy liên kết/mã QR, hoặc **Báo thông tin chưa đúng** để cán bộ kiểm tra. Bộ lọc **Đã lưu** và **Đang mở** kết hợp với nội dung tìm kiếm đang có. Điểm xanh còn lọc theo loại rác tiếp nhận. Trạng thái đang mở chỉ xuất hiện khi điểm đã khai báo lịch rõ ràng, tính theo giờ Việt Nam.
 
 Nền **Tiêu chuẩn** được chọn mặc định và ưu tiên đường, tên đường. Bộ chọn nền có hai mục **Tiêu chuẩn** và **Vệ tinh**. Nút mặt trời/mặt trăng đổi màu sáng tối cho nền Tiêu chuẩn. Thu nhỏ đến mức thấp nhất để xem Việt Nam, Biển Đông, Hoàng Sa và Trường Sa. Trên điện thoại, dùng hai ngón để xoay bản đồ và chạm **N** để trở về hướng Bắc. Nút **VI/EN** đổi ngôn ngữ giao diện. Nút **SOS** mở danh sách gọi khẩn cấp.
 
@@ -34,10 +34,10 @@ Mở đường dẫn **`/admin`** trên cùng tên miền và đăng nhập bằ
 | Màn hình | Công việc |
 | --- | --- |
 | **Tổng quan → Phân bố** | Xem tổng số điểm, số điểm theo nhóm và biểu đồ trạng thái. Chọn nhóm hoặc trạng thái trên biểu đồ để mở danh sách tương ứng. |
-| **Tổng quan → Cập nhật** | Xem địa điểm vừa cập nhật và các GreenPoint cần vệ sinh hoặc quá tải. |
+| **Tổng quan → Cập nhật** | Xem địa điểm vừa cập nhật và các Điểm xanh cần vệ sinh hoặc quá tải. |
 | **Tổng quan → Lượt truy cập** | Xem lượt xem bản đồ, số người dùng và biểu đồ theo ngày trong 7 ngày đã kết thúc gần nhất. Cần cấu hình Google Analytics theo mục [Báo cáo lượt truy cập](README.md#báo-cáo-lượt-truy-cập). |
 | **Địa điểm** | Xem toàn bộ danh sách, tìm kiếm và lọc theo nhóm, danh mục. Có thể chọn trạng thái từ biểu đồ Tổng quan để xem các điểm tương ứng. Bấm tên một điểm để xem vị trí và thông tin. |
-| **SafePoint / GreenPoint / Đối tác xanh** | Mở riêng danh sách của từng nhóm. |
+| **An toàn / Điểm xanh / Đối tác xanh** | Mở riêng danh sách của từng nhóm. |
 | **Danh mục** | Quản lý danh mục theo nhóm, sửa tên Việt/Anh, màu và biểu tượng. Muốn xóa danh mục đang có địa điểm, chuyển các địa điểm sang danh mục khác trước. |
 | **Công cụ dữ liệu** | Rà soát chất lượng, lịch sử/khôi phục, thùng rác và xử lý thông tin người dân gửi về. |
 | **Xuất Excel / Nhập Excel** | Tải tệp `.xlsx`; nhập theo file mẫu, xem trước và sửa các lỗi trước khi xác nhận. Điểm nhập ở trạng thái ẩn để kiểm tra. |
@@ -58,8 +58,8 @@ Mỗi địa điểm thuộc một **danh mục**, và mỗi danh mục thuộc 
 
 | Nhóm | Danh mục | Địa điểm minh họa |
 | --- | --- | --- |
-| SafePoint | Công an, Y tế, Hành chính, Giáo dục, Hỗ trợ cộng đồng | Công an phường, trạm y tế, trường học |
-| GreenPoint | Môi trường | Điểm thu gom pin, điểm phân loại chai nhựa và giấy |
+| An toàn | Công an, Y tế, Hành chính, Giáo dục, Hỗ trợ cộng đồng | Công an phường, trạm y tế, trường học |
+| Điểm xanh | Môi trường | Điểm thu gom pin, điểm phân loại chai nhựa và giấy |
 | Đối tác xanh | Dịch vụ | Quán cà phê xanh, cửa hàng tạp hóa hợp tác |
 
 
@@ -77,12 +77,12 @@ Mở địa chỉ Vite in trong terminal. Thêm `/admin` vào địa chỉ đó 
 - **Firebase.** Điền bốn biến Web config theo [mẫu cấu hình](.env.example), bật Authentication bằng Email/Password và dùng Cloud Firestore. Bật thêm Anonymous để khách gửi phản ánh. Bản công khai nằm tại `catalogs/an-thuong`, bản quản trị tại `management/an-thuong`; lịch sử và phản ánh nằm riêng. Quyền ghi thuộc về tài khoản có document `editors/{UID}` với trường `active` kiểu boolean bằng `true`. Đặt `active` thành `false` để thu hồi quyền. Xuất bản [Firestore Rules](firestore.rules) theo [hướng dẫn kích hoạt](docs/KICH_HOAT_TINH_NANG_MOI.md).
 - **Nạp bản sao.** Chạy `npm run seed:firebase -- backup.json` để kiểm tra tệp, rồi thêm `--write` trước tên tệp để nạp vào dự án Firebase trống. Xem [script nạp dữ liệu](scripts/seed-firebase.js).
 - **Vercel.** Đặt các biến Firebase trong môi trường deploy và dùng `npm run build` để tạo thư mục `dist`. Dự án có cấu hình để mở trực tiếp `/admin` khi tải lại trang. Cấu hình Firebase cần có trước khi build bản triển khai. Xem [cấu hình Vercel](vercel.json).
-- **Kiểm tra.** Chạy `npm test` và `npm run test:ui`. Khi nghiệm thu, thử tìm kiếm, mở địa điểm, dẫn đường trên điện thoại và thêm hoặc sửa một điểm từ tài khoản quản trị.
+- **Kiểm tra.** Chạy `npm test`, `npm run test:ui` và `npm run test:sync` (kiểm tra đồng bộ sau lưu khi phản hồi Firestore đến trễ). Khi nghiệm thu, thử tìm kiếm, mở địa điểm, dẫn đường trên điện thoại và thêm hoặc sửa một điểm từ tài khoản quản trị.
 
 
 ### Màu nhóm và nhập vị trí bằng Plus Code
 
-- SafePoint: cam; GreenPoint: xanh lá nhạt; Đối tác xanh: xanh đậm. Các danh mục con dùng chung màu nhóm, giữ biểu tượng riêng để phân biệt. Dữ liệu màu cũ vẫn đọc được và tự hiển thị theo bảng màu mới.
+- An toàn: cam; Điểm xanh: xanh lá nhạt; Đối tác xanh: xanh đậm. Các danh mục con dùng chung màu nhóm, giữ biểu tượng riêng để phân biệt. Dữ liệu màu cũ vẫn đọc được và tự hiển thị theo bảng màu mới.
 - Khi thêm địa điểm hoặc chỉnh sửa chi tiết → Thông tin dữ liệu, dán mã vào ô **Plus Code** rồi chọn **Đặt ghim**. Ví dụ: `2646+86 Hoa Xuan, Da Nang, Vietnam` → `7P8C2646+86` → tọa độ `16.0058125, 108.2105625`.
 - Kiểm tra ghim và tọa độ rồi **Lưu**. Đặt ghim chỉ đổi bản nháp; **Hủy** không cập nhật Firebase. Có thể tiếp tục kéo ghim, chạm bản đồ hoặc sửa kinh/vĩ độ như trước.
 - Mã đầy đủ (8 ký tự trước dấu `+`) được giải mã trực tiếp. Mã rút gọn dùng tham chiếu An Thượng–Đà Nẵng; khi không kèm địa danh, hệ thống cũng hiểu là mã tại khu vực này. Mã chỉ có 0–2 ký tự trước dấu `+`, hoặc có địa danh ngoài Đà Nẵng, cần đổi sang mã đầy đủ để tránh đặt nhầm vị trí.
@@ -104,16 +104,16 @@ Mở địa chỉ Vite in trong terminal. Thêm `/admin` vào địa chỉ đó 
 
 ### Ba mức của danh mục Hỗ trợ cộng đồng
 
-Cấu trúc: **SafePoint (nhóm, màu cam) → Hỗ trợ cộng đồng (danh mục) → mức hỗ trợ của từng địa điểm**. Đây không phải ba nhóm mới hoặc mức áp dụng cho công an/y tế.
+Cấu trúc: **An toàn (nhóm, màu cam) → Hỗ trợ cộng đồng (danh mục) → mức hỗ trợ của từng địa điểm**. Đây không phải ba nhóm mới hoặc mức áp dụng cho công an/y tế.
 
 | Mức đăng ký | Nội dung hỗ trợ | Mã dữ liệu |
 | --- | --- | --- |
 | Safe Point — Điểm hỗ trợ an toàn | Hỗ trợ ban đầu, hướng dẫn, kết nối dịch vụ | `safe_point` |
-| Family Friendly Point — Điểm hỗ trợ thân thiện với gia đình | Hỗ trợ phụ nữ/trẻ em, trẻ bị lạc, nghỉ ngơi/nước uống, kết nối dịch vụ | `family_friendly` |
+| Family Friendly — Điểm hỗ trợ thân thiện với gia đình | Hỗ trợ phụ nữ/trẻ em, trẻ bị lạc, nghỉ ngơi/nước uống, kết nối dịch vụ | `family_friendly` |
 | Safe Hub — Điểm hỗ trợ trọng yếu | Kết nối công an, y tế, dịch vụ thiết yếu; hỗ trợ trong khả năng | `safe_hub` |
 
 - Thêm hoặc sửa địa điểm, chọn danh mục **Hỗ trợ cộng đồng**, rồi chọn một mức đã đăng ký với phường. Cả ba mức được giải thích ngay trong form; không tự chọn sẵn. Chuyển sang danh mục khác sẽ xóa mức không còn áp dụng.
 - Điểm cũ chưa được phân mức vẫn đọc được, không tự gán thành Safe Point hoặc Safe Hub. Chất lượng dữ liệu có nhắc rà soát; khi chỉnh sửa hoặc công khai lại, phải bổ sung mức.
-- Bản đồ vẫn dùng **ghim cam** cho nhóm SafePoint. Biểu tượng khác nhau theo mức; thẻ và chi tiết hiển thị nhãn mức cùng các nội dung hỗ trợ. Khi lọc danh mục Hỗ trợ cộng đồng, có thêm bộ lọc theo ba mức trên cả trang người dùng và admin.
+- Tất cả ghim thuộc nhóm An toàn dùng **màu cam** và biểu tượng theo danh mục. Điểm Hỗ trợ cộng đồng luôn dùng biểu tượng Hỗ trợ cộng đồng; thẻ hiển thị cả tên danh mục và nhãn mức. Chỉ nhãn mức, bộ lọc và phần giải thích bổ sung dùng **xanh dương (Safe Point), hồng (Family Friendly), xanh lá (Safe Hub)** cùng biểu tượng riêng. Khi lọc danh mục Hỗ trợ cộng đồng, có thêm bộ lọc theo ba mức trên cả trang người dùng và admin.
 - Excel xuất thêm cột **Mức hỗ trợ cộng đồng**. File mẫu có bảng tên/mã ba mức. Khi nhập điểm mới thuộc danh mục này, phải điền một mức hợp lệ; các danh mục khác để trống cột này. Khi cập nhật bằng Excel, mức cũ được giữ nếu bỏ hẳn cột này.
 - Dữ liệu lưu ở trường `supportLevel`; danh mục đặc biệt có thể lưu cờ `supportLevels`. Không phát sinh collection, dịch vụ hoặc quyền quản trị mới; Rules hiện tại cho phép các trường lồng trong danh sách địa điểm.

@@ -109,10 +109,11 @@ export async function writeManagedCatalog(refs,data,expectedRevision,actor){
   if(data.places.some(place=>requiresSupportLevel(place,before,data.categories)&&!isSupportLevel(place.supportLevel)))throw Error('supportLevelRequired');
   data={...data,places:data.places.map(place=>place.review?.status==='verified'&&!place.review.reviewedAt?{...place,review:{...place.review,reviewedAt:new Date().toISOString(),reviewedBy:actor.uid}}:place)};
   const changes=catalogChanges(before,data);
-  if(!changes.length)return;
+  if(!changes.length)return {data:organizeCatalog(before),revision:expectedRevision};
   const revision=expectedRevision+1;
   transaction.set(refs.management,{...data,schemaVersion:2,revision,updatedAt:serverTimestamp()});
   transaction.set(refs.catalog,{...publicCatalog(data),schemaVersion:1,revision,updatedAt:serverTimestamp()});
   transaction.set(doc(refs.db,'catalogHistory',String(revision)),{revision,actor:actor.uid,actorEmail:actor.email||'',createdAt:serverTimestamp(),changes,snapshot:before});
+  return {data,revision};
  });
 }

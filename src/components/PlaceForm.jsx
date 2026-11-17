@@ -6,7 +6,7 @@ import { defaultSchedule,validSchedule,placeWasteTypes } from '../lib/editorial'
 import Icon from './Icon';
 import Dropdown from './Dropdown';
 import { isClockTime, readPlaceHours } from '../lib/placeHours';
-import {supportLevels,isCommunitySupport,isSupportLevel,supportMarkerCategory} from '../lib/supportLevels';
+import {supportLevels,isCommunitySupport,isSupportLevel,supportMarkerCategory,supportLevelStyle} from '../lib/supportLevels';
 import { catalogGroups } from '../lib/catalogGroups';
 import { CoordinatePicker } from './MapView';
 import { resolvePlusCode, resolvePlaceLocation } from '../lib/plusCodes';
@@ -141,7 +141,7 @@ export function usePlaceEditor({place,categories,initialKind,onSave,t,lang,busy,
       {categories.filter(category=>category.kind===kind).map(category=><option key={category.id} value={category.id}>{lang==='en'?category.nameEn:category.name}</option>)}
     </Dropdown></div>;
   const selectedLevel=supportLevels.find(level=>level.id===values.supportLevel);
-  const supportLevelField=isCommunitySupport(getCategory(categories,values.category))&&<fieldset className="support-level-editor span-2"><legend>{t('supportLevel')} <em>*</em></legend><p>{t('supportLevelHint')}</p><div className="support-level-options">{supportLevels.map(level=><label key={level.id} className="support-level-option" data-selected={values.supportLevel===level.id}>
+  const supportLevelField=isCommunitySupport(getCategory(categories,values.category))&&<fieldset className="support-level-editor span-2"><legend>{t('supportLevel')} <em>*</em></legend><p>{t('supportLevelHint')}</p><div className="support-level-options">{supportLevels.map(level=><label key={level.id} className="support-level-option" data-selected={values.supportLevel===level.id} style={supportLevelStyle(level)}>
     <span className="support-level-option-icon"><Icon name={level.icon} size={20}/></span><span className="support-level-option-copy"><strong>{level.name}</strong><small>{t(level.title)}</small></span><input type="radio" name="supportLevel" value={level.id} required checked={values.supportLevel===level.id} onChange={()=>set('supportLevel',level.id)}/>
   </label>)}</div>{selectedLevel&&<p className="support-level-services">{selectedLevel.services.map(service=>t(service)).join(' · ')}</p>}</fieldset>;
   const timeField=(key,icon)=><label key={key} hidden={values.schedule.enabled}><span>{icon&&<Icon name={icon} size={13}/>}<span>{t(key)}</span></span>

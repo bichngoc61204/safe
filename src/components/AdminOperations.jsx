@@ -4,7 +4,7 @@ import Modal from './Modal';
 import {qualityIssues} from '../lib/editorial';
 import {activityTime,placeActivityTime,reportActivityTime,newestFirst,historyByDay,historyAction,readableHistory,changeValues} from '../lib/adminActivity';
 import {normalize} from '../lib/domain';
-import {supportLevels,isCommunitySupport} from '../lib/supportLevels';
+import {supportLevels,isCommunitySupport,categoryVisualIcon} from '../lib/supportLevels';
 import {placeText} from '../lib/locale';
 
 const fieldLabel=(field,t)=>field.endsWith('En')?`${t(field.slice(0,-2))} (EN)`:t({created:'add',removed:'delete',schedule:'weeklyHours',review:'verification',visibility:'publication',wasteTypes:'materials',lat:'latitude',lng:'longitude',images:'placeImages',deletedAt:'deletionState',categories:'categories'}[field]||field);
@@ -30,7 +30,7 @@ function displayValue(field,value,categories,t,lang){
  }
  if(field==='schedule')return !value?.enabled?t('opsScheduleOff'):value.days.map((day,index)=>`${t(`day${index}`)}: ${day.closed?t('dayClosed'):day.allDay?'24h':`${day.opensAt}–${day.closesAt}`}`).concat((value.exceptions||[]).map(day=>`${day.date}: ${day.closed?t('dayClosed'):day.allDay?'24h':`${day.opensAt}–${day.closesAt}`}`)).join('\n');
  if(field==='category'){const category=categories.find(item=>item.id===value);return (lang==='en'?category?.nameEn:category?.name)||value||t('opsNotSet');}
- if(field==='categories')return (value||[]).map(item=><span className="ops-category-history" key={item.id}><Icon name={item.icon} size={15}/><span>{item.name}{item.nameEn?` / ${item.nameEn}`:''}<small>{t(item.kind)}{isCommunitySupport(item)?` · ${t('supportLevel')}`:''}</small></span><i style={{background:item.color}}/></span>);
+ if(field==='categories')return (value||[]).map(item=><span className="ops-category-history" key={item.id}><Icon name={categoryVisualIcon(item)} size={15}/><span>{item.name}{item.nameEn?` / ${item.nameEn}`:''}<small>{t(item.kind)}{isCommunitySupport(item)?` · ${t('supportLevel')}`:''}</small></span><i style={{background:item.color}}/></span>);
  if(field==='wasteTypes')return (value||[]).map(id=>t(`waste_${id}`)).join(', ')||t('opsNotSet');
  if(field==='status'||field==='visibility')return value?t(value):t('opsNotSet');
  if(Array.isArray(value))return value.join('\n')||t('opsNotSet');

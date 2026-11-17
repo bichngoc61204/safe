@@ -54,9 +54,9 @@ export default function App(){
    if(firebase.backend?.observeManagement&&!['ready','legacy'].includes(firebase.managementStatus))throw new Error(firebase.managementStatus==='rules'?'rulesNeeded':'catalogUnavailable');
    if (!session || firebase.catalogStatus !== 'ready' || adminCatalog?.cached) throw new Error('catalogUnavailable');
    try {
-     await firebase.backend.save(next, adminCatalog.revision);
+     await firebase.save(next, adminCatalog.revision);
    } catch (error) {
-     const message = ['catalogConflict', 'catalogInvalid', 'catalogLimit'].includes(error.message)
+     const message = ['catalogConflict', 'catalogInvalid', 'catalogLimit', 'supportLevelRequired'].includes(error.message)
        ? error.message : error.code==='permission-denied'?'rulesNeeded':'catalogSaveError';
      throw new Error(message);
    }

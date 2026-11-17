@@ -3,3 +3,5 @@ dist/
 .DS_Store
 *.local
 .ui-check-generated.mjs
+
+.save-sync-generated.mjs

@@ -104,7 +104,7 @@ try{
  await click(welcome.querySelectorAll('.welcome-pagination button')[1]);
  check(welcome.dataset.slide==='search','The second slide explains search');
  await act(async()=>welcome.querySelector('h2').dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true})));
- check(welcome.dataset.slide==='route','The third slide explains directions and is reachable by keyboard');
+ check(welcome.dataset.slide==='support','The third slide explains community support and is reachable by keyboard');
  await act(async()=>{
    const start=new dom.window.Event('touchstart',{bubbles:true});
    const end=new dom.window.Event('touchend',{bubbles:true});
@@ -162,11 +162,11 @@ try{
  check(discoveryDock.querySelectorAll('button').length===4,'The mobile discovery dock exposes all three groups and saved places');
  await input(document.querySelector('.public-toolbar input'),'khong-co-ket-qua');
  await click(button('Đang mở cửa',document.querySelector('.quick-place-filters')));
- await click(dockButton('GreenPoint'));
+ await click(dockButton('Điểm xanh'));
  check(document.querySelector('.map-workspace').dataset.scope==='green'&&document.querySelectorAll('.place-card').length===2&&document.querySelector('.public-toolbar input').value===''&&document.querySelector('.map-workspace').dataset.searchOpen==='false'&&document.querySelector('.map-workspace').classList.contains('sheet-expanded'),'A dock group clears stale query/open filters and opens its result list directly');
  await click(document.querySelector('.status-chips [data-status=alerts]'));
  await input(document.querySelector('.public-toolbar input'),'khong-co-ket-qua');
- await click(dockButton('SafePoint'));
+ await click(dockButton('An toàn'));
  check(document.querySelectorAll('.place-card').length===6&&document.querySelector('.map-workspace').dataset.scope==='safe','Opening another dock group clears the previous hygiene filter and search');
  await click(dockButton('Đối tác xanh'));
  check(document.querySelectorAll('.place-card').length===3&&document.querySelector('.leaflet-map')===mapBeforeDock,'Group shortcuts keep the existing map renderer while changing results');
@@ -174,14 +174,14 @@ try{
  await click(document.querySelector('.mobile-map-actions button'));
  check(document.querySelectorAll('.mobile-search-preview li').length===4,'Mobile search starts with four nearby suggestions');
  check(document.querySelectorAll('.search-preview-distance').length===4,'Nearby suggestions show distance even before GPS permission');
- await click(button('SafePoint',document.querySelector('.public-tabs')));
+ await click(button('An toàn',document.querySelector('.public-tabs')));
  check(document.querySelectorAll('.public-intro h1').length===1&&document.querySelector('.public-intro h1').textContent==='Điểm hỗ trợ cộng đồng','Changing groups replaces the hero heading');
  check(document.querySelectorAll('.place-card').length===6,'SafePoint screen groups all support categories');
  check(document.querySelectorAll('.mobile-search-preview li').length===4&&document.querySelector('.mobile-search-caption').textContent.includes('6'),'Filtered search previews four places and reports the full result count');
  await input(document.querySelector('.public-toolbar input'),'phuoc thien');
- await click(button('GreenPoint',document.querySelector('.public-tabs')));
+ await click(button('Điểm xanh',document.querySelector('.public-tabs')));
  check(document.querySelector('.public-toolbar input').value==='phuoc thien'&&document.querySelectorAll('.place-card').length===0,'Switching groups keeps the search text and filters the new group');
- await click(button('SafePoint',document.querySelector('.public-tabs')));
+ await click(button('An toàn',document.querySelector('.public-tabs')));
  await click(button('Y tế',document.querySelector('.category-chips')));
  check(document.querySelector('.mobile-search-results').textContent.includes('Xem 1 kết quả'),'Search CTA describes the complete filtered result count');
  const mapBeforeSearchDetail=document.querySelector('.leaflet-map');
@@ -199,12 +199,12 @@ try{
  await click(document.querySelector('.sheet-filter-button'));
  check(document.querySelector('.map-workspace').dataset.searchOpen==='true'&&document.activeElement!==document.querySelector('.public-toolbar input'),'The filter entry opens search refinements without focusing the keyboard');
  await click(document.querySelector('.mobile-map-actions button'));
- await click(button('SafePoint',document.querySelector('.public-tabs')));
+ await click(button('An toàn',document.querySelector('.public-tabs')));
  await click(button('Y tế',document.querySelector('.category-chips')));
  await input(document.querySelector('.public-toolbar input'),'');
  check(document.querySelectorAll('.place-card').length===2,'SafePoint category chips filter the public list');
  await click(button('Tất cả',document.querySelector('.category-chips')));
- await click(button('GreenPoint',document.querySelector('.public-tabs')));
+ await click(button('Điểm xanh',document.querySelector('.public-tabs')));
  check(document.querySelectorAll('.place-card').length===2,'GreenPoint screen has two points');
  await click(document.querySelector('.status-chips [data-status=alerts]'));
  check(document.querySelectorAll('.place-card').length===1,'Green alert filter works');
@@ -655,11 +655,13 @@ try{
  await click(document.querySelector('.login-form-area > button'));
  check([...document.querySelectorAll('.place-card h3')].some(heading=>heading.textContent==='Điểm được đồng bộ'),'The cloud update appears on the public map after sign-out');
  const communityPoint=cloudData.places.find(point=>point.category==='safe'&&!point.deletedAt&&point.visibility!=='hidden');
- for(const [level,label,capability] of [['safe_point','Safe Point','Hỗ trợ ban đầu'],['family_friendly','Family Friendly Point','Hỗ trợ trẻ bị lạc'],['safe_hub','Safe Hub','Kết nối y tế']]){
+ for(const [level,label,capability] of [['safe_point','Safe Point','Hỗ trợ ban đầu'],['family_friendly','Family Friendly','Hỗ trợ trẻ bị lạc'],['safe_hub','Safe Hub','Kết nối y tế']]){
   await act(async()=>{cloudData={...cloudData,places:cloudData.places.map(point=>point.id===communityPoint.id?{...point,supportLevel:level}:point)};publishCatalog({data:publicCatalog(cloudData),revision});});
   await click([...document.querySelectorAll('.place-card')].find(card=>card.querySelector('h3').textContent===communityPoint.name));
   check(document.querySelector('.detail-category .support-badge').textContent.includes(level==='family_friendly'?'Family Friendly':label)&&document.querySelector('.support-level-info').textContent.includes(capability),'Public details expose the correct registered level and services: '+label);
   await click(document.querySelector('.detail-panel-close'));
+  const supportCard=[...document.querySelectorAll('.place-card')].find(card=>card.querySelector('h3').textContent===communityPoint.name);
+  check(supportCard.querySelector('.place-type-category').textContent.includes('Hỗ trợ cộng đồng')&&supportCard.querySelector('.support-badge').textContent===label,'Place cards retain the community category alongside the supplemental level: '+label);
  }
  await click([...document.querySelectorAll('.public-filters [aria-label="Danh mục"] button')].find(control=>control.textContent==='Hỗ trợ cộng đồng'));
  await click(button('Safe Hub',document.querySelector('.support-level-filter')));

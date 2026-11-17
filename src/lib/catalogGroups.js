@@ -5,7 +5,7 @@ export const groupPalette = {
 };
 
 export const catalogGroups = [
-  { id: 'safe', label: 'safe', icon: 'shield', color: groupPalette.safe.ink },
+  { id: 'safe', label: 'safe', icon: 'safety', color: groupPalette.safe.ink },
   { id: 'green', label: 'green', icon: 'recycle', color: groupPalette.green.ink },
   { id: 'partner', label: 'partner', icon: 'leaf', color: groupPalette.partner.ink },
 ];

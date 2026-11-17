@@ -4,8 +4,8 @@ import { placeHourRows } from '../lib/placeHours';
 import { placeText } from '../lib/locale';
 import MapView from './MapView';
 import PlaceGallery from './PlaceGallery';
-import SupportLevelInfo,{SupportBadge} from './SupportLevel';
-import {getSupportLevel,isCommunitySupport,supportLevels,supportMarkerCategory} from '../lib/supportLevels';
+import SupportLevelInfo,{SupportBadge,SupportLevelFilter} from './SupportLevel';
+import {getSupportLevel,isCommunitySupport,supportMarkerCategory,categoryVisualIcon} from '../lib/supportLevels';
 import { PlaceActions,ReportPlace,ScheduleDisplay,OpenBadge,useSavedPlaces } from './PlaceExtras';
 import { openingState,placeWasteTypes,wasteTypes } from '../lib/editorial';
 import { CENTER } from '../lib/mapCenter';
@@ -15,7 +15,7 @@ import { fetchRoute, routeModes } from '../lib/routing';
 import { Status } from './Admin';
 import { filterPlaces, getCategory, directionsUrl, haversine, formatDistance, safeImage, placePhotoUrls, phoneHref, isDemoPhone, isAlert, categoryColor, categoryPalette } from '../lib/domain';
 
-const scopes=[['map','explore','map'],['safe','safe','shield'],['green','green','recycle'],['partner','partner','leaf']];
+const scopes=[['map','explore','map'],['safe','safe','safety'],['green','green','recycle'],['partner','partner','leaf']];
 const areaCenter={lat:CENTER[0],lng:CENTER[1]};
 const mobileQuery='(max-width: 700px)';
 const isMobile=()=>window.matchMedia?.(mobileQuery).matches??false;
@@ -40,7 +40,7 @@ const PlaceCards=memo(function PlaceCards({places,categories,selected,previewed,
       onClick={()=>actions.current.select(p.id)}>
       <div className="place-card-content">
         <h3>{placeText(p,'name',lang)}</h3>
-        <span className="place-type" style={{color}}>{getSupportLevel(p,c)?<SupportBadge place={p} category={c} t={t} compact/>:<><Icon name={c.icon} size={13}/><span>{lang==='en'?c.nameEn:c.name}</span></>}</span>
+        <div className="place-type" style={{color}}><span className="place-type-category"><Icon name={categoryVisualIcon(c)} size={13}/><span>{lang==='en'?c.nameEn:c.name}</span></span><SupportBadge place={p} category={c} t={t} compact/></div>
         <p><Icon name="pin" size={13}/><span>{placeText(p,'address',lang)}</span></p>
         {isAlert(p)?<span className={`place-alert alert-${p.status}`}>{t(p.status)}</span>:
           p.status==='inactive'?<span className="place-alert">{t('inactive')}</span>:null}
@@ -72,7 +72,7 @@ function PlaceDetails({place,categories,position,t,lang,onClose,routing,saved,on
     <PlaceActions place={place} saved={saved} onSave={onSave} t={t}/>
     <PlaceGallery images={images} name={placeText(place,'name',lang)} t={t}/>
     <div className="detail-content">
-      <div className="detail-category"><span className="detail-category-icon" style={{color:categoryColor(c),background:categoryColor(c)+'13'}}><Icon name={c.icon} size={18}/></span>{lang==='en'?c.nameEn:c.name}<SupportBadge place={place} category={c} t={t} compact/></div>
+      <div className="detail-category"><span className="detail-category-label"><span className="detail-category-icon" style={{color:categoryColor(c),background:categoryColor(c)+'13'}}><Icon name={categoryVisualIcon(c)} size={18}/></span>{lang==='en'?c.nameEn:c.name}</span><SupportBadge place={place} category={c} t={t} compact/></div>
       <h2>{placeText(place,'name',lang)}</h2>
       <div className="place-trust-row"><OpenBadge place={place} t={t} now={now}/>{place.verifiedAt&&<span className="verified-badge" title={`${t('verifiedOn')} ${place.verifiedAt.slice(0,10)}`}><Icon name="check" size={13}/>{t('reviewVerified')}</span>}{place.source==='Dữ liệu minh họa'&&<span className="demo-badge">{t('demoRecord')}</span>}</div>
       <p className="detail-address">{placeText(place,'address',lang)}</p>
@@ -374,7 +374,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
           <div className="sidebar-preview-title"><Icon name={icon} size={22}/><strong>{id==='map'?'SafeMap An Thượng':t(`${id}Title`)}</strong></div>
           <p>{t(id==='map'?'subtitle':`${id}Subtitle`)}</p>
           <ul>{id==='map'?scopes.slice(1).map(([group,label,groupIcon])=><li key={group}><Icon name={groupIcon} size={14}/>{t(label)}</li>):
-            categories.map(category=><li key={category.id}><Icon name={category.icon} size={14}/>{lang==='en'?category.nameEn:category.name}</li>)}</ul>
+            categories.map(category=><li key={category.id}><Icon name={categoryVisualIcon(category)} size={14}/>{lang==='en'?category.nameEn:category.name}</li>)}</ul>
           <small>{places.length} {t('results')}</small>
         </div>)}
       </div>
@@ -404,11 +404,11 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
               <div className="category-chips" key={scope} role="group" aria-label={t('category')}>
                 <button type="button" aria-pressed={category==='all'} onClick={()=>{setCategory('all');setSupportLevel('all');clearSelection();}}>{t('all')}</button>
                 {scopeCats.map(c=><button type="button" key={c.id} aria-pressed={category===c.id} style={{'--chip-color':categoryColor(c)}} onClick={()=>{setCategory(c.id);setSupportLevel('all');clearSelection();}}>
-                  <Icon name={c.icon} size={14}/>{lang==='en'?c.nameEn:c.name}
+                  <Icon name={categoryVisualIcon(c)} size={14}/>{lang==='en'?c.nameEn:c.name}
                 </button>)}
               </div>
             </div>
-            {isCommunitySupport(getCategory(data.categories,category))&&<div className="public-filter-section support-level-filter"><span>{t('supportLevel')}</span><div className="category-chips" role="group" aria-label={t('supportLevel')}><button type="button" aria-pressed={supportLevel==='all'} onClick={()=>{setSupportLevel('all');clearSelection();}}>{t('all')}</button>{supportLevels.map(level=><button type="button" key={level.id} aria-pressed={supportLevel===level.id} onClick={()=>{setSupportLevel(level.id);clearSelection();}}><Icon name={level.icon} size={13}/>{level.name}</button>)}</div></div>}
+            {isCommunitySupport(getCategory(data.categories,category))&&<SupportLevelFilter className="public-filter-section" value={supportLevel} onChange={value=>{setSupportLevel(value);clearSelection();}} t={t}/>}
             {scope==='green'&&<details className="green-advanced-filters" open={greenFiltersOpen} onToggle={event=>setGreenFiltersOpen(event.currentTarget.open)}><summary><Icon name="filter" size={14}/>{t('greenFilters')}{(wasteType!=='all'||status!=='all')&&<b>{Number(wasteType!=='all')+Number(status!=='all')}</b>}<Icon name="down" size={14}/></summary><div className="public-filter-section"><span>{t('wasteFilter')}</span><div className="category-chips" role="group" aria-label={t('wasteFilter')}><button type="button" aria-pressed={wasteType==='all'} onClick={()=>{setWasteType('all');clearSelection();}}>{t('all')}</button>{wasteTypes.map(type=><button key={type} type="button" aria-pressed={wasteType===type} onClick={()=>{setWasteType(type);clearSelection();}}>{t(`waste_${type}`)}</button>)}</div></div>
             <div className="public-filter-section">
               <span>{t('status')}</span>
@@ -463,7 +463,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
             <span className="sheet-summary"><Icon name={savedOnly?'bookmark':'list'} size={18}/><strong>{t(savedOnly?'savedPlaces':scope==='map'?'nearby':scopeLabel)}</strong><span className="sheet-count">{visible.length}</span><Icon className="sheet-chevron" name="x" size={18}/></span>
           </button>}
           <div className="list-heading"><h2>{t('nearby')}<span>{visible.length}</span></h2>{hasFilterOptions?<button type="button" className="list-clear-filters" onClick={clearFilters}><Icon name="x" size={12}/>{t('clearFilters')}</button>:position&&<span>{t('nearest')}</span>}</div>
-          {!place&&<div className="mobile-list-context"><div className="category-chips" role="group" aria-label={t('modules')}><button type="button" aria-pressed={scope==='map'&&!savedOnly} onClick={()=>openMobileGroup('map')}>{t('all')}</button>{scopes.slice(1).map(([id,label,icon])=><button type="button" key={id} aria-pressed={scope===id&&!savedOnly} onClick={()=>openMobileGroup(id)}><Icon name={icon} size={13}/>{t(id==='partner'?'partnerShort':label)}</button>)}</div><button type="button" className="sheet-filter-button" aria-label={t('filterPlaces')} onClick={()=>openSearch(false)}><Icon name="filter" size={17}/>{hasFilters&&<i/>}</button></div>}
+          {!place&&<div className="mobile-list-context"><div className="category-chips" role="group" aria-label={t('modules')}><button type="button" aria-pressed={scope==='map'&&!savedOnly} onClick={()=>openMobileGroup('map')}>{t('all')}</button>{scopes.slice(1).map(([id,label,icon])=><button type="button" key={id} style={{'--chip-color':categoryColor({kind:id})}} aria-pressed={scope===id&&!savedOnly} onClick={()=>openMobileGroup(id)}><Icon name={icon} size={13}/>{t(id==='partner'?'partnerShort':label)}</button>)}</div><button type="button" className="sheet-filter-button" aria-label={t('filterPlaces')} onClick={()=>openSearch(false)}><Icon name="filter" size={17}/>{hasFilters&&<i/>}</button></div>}
         </div>
         <div className="public-sheet-content" id="public-sheet-content">
           {place&&<PlaceDetails key={place.id} place={place} categories={data.categories} position={position} t={t} lang={lang} routing={routing} onClose={closeDetails} saved={bookmarks.saved.includes(place.id)} onSave={bookmarks.toggle} backend={backend} now={now}/>}

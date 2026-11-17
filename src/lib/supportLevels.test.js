@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {supportLevels,isCommunitySupport,getSupportLevel,supportMarkerCategory,parseSupportLevel,requiresSupportLevel} from './supportLevels.js';
+import {supportLevels,categoryVisualIcon,isCommunitySupport,getSupportLevel,supportMarkerCategory,parseSupportLevel,requiresSupportLevel} from './supportLevels.js';
 import {makeTestCatalog} from '../../scripts/catalog.fixture.mjs';
 import {validateCatalog} from './firebaseCatalog.js';
 import {filterPlaces,markerColor} from './domain.js';
@@ -15,10 +15,10 @@ test('support levels apply only to the community category, including renamed fla
  assert.equal(isCommunitySupport({...category,kind:'green'}),false);
  assert.equal(isCommunitySupport({...category,id:'custom',name:'Điểm của phường',nameEn:'Ward',supportLevels:true}),true);
 });
-test('three tiers have distinct capabilities and icons while retaining orange map pins',()=>{
+test('three tiers have distinct capabilities and icons with category icons and orange map pins',()=>{
  assert.equal(supportLevels.length,3);
  assert.equal(new Set(supportLevels.map(level=>level.icon)).size,3);
- for(const level of supportLevels){const point={supportLevel:level.id};assert.equal(getSupportLevel(point,category),level);assert.equal(markerColor(supportMarkerCategory(point,category)),'#D97724');}
+ for(const level of supportLevels){const point={supportLevel:level.id};assert.equal(getSupportLevel(point,category),level);assert.equal(markerColor(supportMarkerCategory(point,category)),'#D97724');assert.equal(supportMarkerCategory(point,category).icon,'community');}
  assert.ok(supportLevels.find(level=>level.id==='family_friendly').services.includes('supportLostChildren'));
  assert.ok(supportLevels.find(level=>level.id==='safe_hub').services.includes('supportMedicalConnection'));
  assert.equal(getSupportLevel({},category),undefined);
@@ -64,4 +64,13 @@ test('persisting an already recognized community category flag does not create a
  const data=makeTestCatalog(),after=structuredClone(data);
  after.categories.find(category=>category.id==='safe').supportLevels=true;
  assert.deepEqual(catalogChanges(data,after),[]);
+});
+
+test('group, police, community and registered support icons are distinct without changing stored categories',()=>{
+ const police={id:'police',kind:'safe',name:'Công an',nameEn:'Police',icon:'shield'};
+ const before=structuredClone(police);
+ assert.equal(new Set(['safety',categoryVisualIcon(police),categoryVisualIcon(category),supportLevels[0].icon]).size,4);
+ assert.deepEqual(police,before);
+ assert.equal(supportLevels.find(level=>level.id==='family_friendly').name,'Family Friendly');
+ assert.equal(parseSupportLevel('Family Friendly Point'),'family_friendly');
 });

@@ -5,8 +5,8 @@ import Dropdown from './Dropdown';
 import { catalogGroups } from '../lib/catalogGroups';
 import PlaceForm, { usePlaceEditor } from './PlaceForm';
 import PlaceGallery from './PlaceGallery';
-import SupportLevelInfo,{SupportBadge} from './SupportLevel';
-import {isCommunitySupport,isSupportLevel,getSupportLevel,supportLevels} from '../lib/supportLevels';
+import SupportLevelInfo,{SupportBadge,SupportLevelFilter} from './SupportLevel';
+import {isCommunitySupport,isSupportLevel,getSupportLevel,categoryVisualIcon} from '../lib/supportLevels';
 import AdminOperations from './AdminOperations';
 import ImportPlaces from './ImportPlaces';
 import { ScheduleDisplay } from './PlaceExtras';
@@ -17,7 +17,7 @@ import { placeText } from '../lib/locale';
 import { qualityIssues } from '../lib/editorial';
 import { categoryColor, categoryPalette, markerColor, directionsUrl, filterPlaces, getCategory, isAlert, isDemoPhone, phoneHref, placePhotoUrls } from '../lib/domain';
 export function Status({value,t}) {return <span className={`status status-${value}`}><i/>{t(value)}</span>;}
-export function CategoryIcon({category,size=19}){return <span className="category-icon" style={{'--category-color':categoryColor(category),background:categoryPalette(category).wash,color:categoryColor(category)}}><Icon name={category.icon} size={size}/></span>;}
+export function CategoryIcon({category,size=19}){return <span className="category-icon" style={{'--category-color':categoryColor(category),background:categoryPalette(category).wash,color:categoryColor(category)}}><Icon name={categoryVisualIcon(category)} size={size}/></span>;}
 export function Login({onLogin,onBack,t,available,editorStatus}){
  const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[show,setShow]=useState(false);
  const [error,setError]=useState(''),[pending,setPending]=useState(false);
@@ -34,7 +34,7 @@ export function Login({onLogin,onBack,t,available,editorStatus}){
    }
  }
  const message = error || (editorStatus==='denied'?'editorDenied':editorStatus==='error'?'editorError':'');
- return <main className="login-page"><div className="login-story"><div className="login-symbol"><Icon name="map" size={86}/><span className="orbit one"><Icon name="shield" size={25}/></span><span className="orbit two"><Icon name="recycle" size={25}/></span><span className="orbit three"><Icon name="leaf" size={25}/></span></div><div className="eyebrow">SAFEMAP AN THƯỢNG</div><h1>{t('loginTitle')}</h1><p>{t('footer')}</p><div className="login-pills"><span><Icon name="shield" size={15}/>SafePoint</span><span><Icon name="recycle" size={15}/>GreenPoint</span></div></div><div className="login-form-area"><button className="text-button" onClick={onBack}><Icon name="back" size={16}/>{t('loginBack')}</button><form className="login-form" onSubmit={submit}><span className="login-lock"><Icon name="lock" size={23}/></span><h2>{t('login')}</h2><p>{t('editorLoginSubtitle')}</p><label><span>{t('email')}</span><input type="email" autoComplete="username" value={email} onChange={e=>{setEmail(e.target.value);setError('');}} required/></label><label><span>{t('password')}</span><div className="password-field"><input type={show?'text':'password'} autoComplete="current-password" value={password} onChange={e=>{setPassword(e.target.value);setError('');}} required/><button type="button" aria-label={t(show?'hidePassword':'showPassword')} onClick={()=>setShow(!show)}><Icon name={show?'eyeoff':'eye'} size={18}/></button></div></label>{message&&<p className="form-error" role="alert">{t(message)}</p>}<button className="button primary login-submit" disabled={pending||!available}>{t(pending?'editorChecking':'login')}<Icon name="right" size={17}/></button></form></div></main>;
+ return <main className="login-page"><div className="login-story"><div className="login-symbol"><Icon name="map" size={86}/><span className="orbit one"><Icon name="safety" size={25}/></span><span className="orbit two"><Icon name="recycle" size={25}/></span><span className="orbit three"><Icon name="leaf" size={25}/></span></div><div className="eyebrow">SAFEMAP AN THƯỢNG</div><h1>{t('loginTitle')}</h1><p>{t('footer')}</p><div className="login-pills"><span><Icon name="safety" size={15}/>{t('safe')}</span><span><Icon name="recycle" size={15}/>{t('green')}</span></div></div><div className="login-form-area"><button className="text-button" onClick={onBack}><Icon name="back" size={16}/>{t('loginBack')}</button><form className="login-form" onSubmit={submit}><span className="login-lock"><Icon name="lock" size={23}/></span><h2>{t('login')}</h2><p>{t('editorLoginSubtitle')}</p><label><span>{t('email')}</span><input type="email" autoComplete="username" value={email} onChange={e=>{setEmail(e.target.value);setError('');}} required/></label><label><span>{t('password')}</span><div className="password-field"><input type={show?'text':'password'} autoComplete="current-password" value={password} onChange={e=>{setPassword(e.target.value);setError('');}} required/><button type="button" aria-label={t(show?'hidePassword':'showPassword')} onClick={()=>setShow(!show)}><Icon name={show?'eyeoff':'eye'} size={18}/></button></div></label>{message&&<p className="form-error" role="alert">{t(message)}</p>}<button className="button primary login-submit" disabled={pending||!available}>{t(pending?'editorChecking':'login')}<Icon name="right" size={17}/></button></form></div></main>;
 }
 function moveCardHighlight(event) {
  if (event.pointerType !== 'mouse') return;
@@ -506,10 +506,10 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
              <div className="category-chips" key={scope} role="group" aria-label={t('category')}>
                <button type="button" aria-pressed={category==='all'} onClick={()=>changeCategory('all')}>{t('allCategories')}</button>
                {visibleCategories.map(item=><button type="button" key={item.id} aria-pressed={category===item.id}
-                 style={{'--chip-color':categoryColor(item)}} onClick={()=>changeCategory(item.id)}><Icon name={item.icon} size={14}/>{categoryName(item)}</button>)}
+                 style={{'--chip-color':categoryColor(item)}} onClick={()=>changeCategory(item.id)}><Icon name={categoryVisualIcon(item)} size={14}/>{categoryName(item)}</button>)}
              </div>
            </div>
-           {isCommunitySupport(getCategory(categories,category))&&<div className="admin-filter-row support-level-filter"><span>{t('supportLevel')}</span><div className="category-chips" role="group" aria-label={t('supportLevel')}><button type="button" aria-pressed={levelFilter==='all'} onClick={()=>{setLevelFilter('all');setPage(1);}}>{t('all')}</button>{supportLevels.map(level=><button type="button" key={level.id} aria-pressed={levelFilter===level.id} onClick={()=>{setLevelFilter(level.id);setPage(1);}}><Icon name={level.icon} size={14}/>{level.name}</button>)}</div></div>}
+           {isCommunitySupport(getCategory(categories,category))&&<SupportLevelFilter className="admin-filter-row" value={levelFilter} onChange={value=>{setLevelFilter(value);setPage(1);}} t={t}/>}
            {(query||groupFilter!=='all'||category!=='all'||status!=='all')&&
              <div className="admin-filter-footer">
                {status!=='all'&&<Status value={status==='alerts'?'alertStatus':status} t={t}/>}

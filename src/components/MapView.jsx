@@ -425,7 +425,7 @@ export default function MapView({style,setStyle,welcomePhase,focusRevision,place
       </div>
       <button className="sos-button" aria-label={`SOS ${t('emergency')}`} onClick={onSos}><span/><Icon className="sos-phone-icon" name="phone" size={17}/><span className="sos-text">SOS</span><span className="sos-label">{t('emergency')}</span><Icon className="mobile-sos-icon" name="phone" size={22}/></button>
     </div>
-    <div className="map-legend"><span style={{color:categoryColor({kind:'safe'})}}><Icon name="shield" size={13}/>{t('safe')}</span><span style={{color:categoryColor({kind:'green'})}}><Icon name="recycle" size={13}/>{t('green')}</span><span style={{color:categoryColor({kind:'partner'})}}><Icon name="leaf" size={13}/>{t('partner')}</span></div>
+    <div className="map-legend"><span style={{color:categoryColor({kind:'safe'})}}><Icon name="safety" size={13}/>{t('safe')}</span><span style={{color:categoryColor({kind:'green'})}}><Icon name="recycle" size={13}/>{t('green')}</span><span style={{color:categoryColor({kind:'partner'})}}><Icon name="leaf" size={13}/>{t('partner')}</span></div>
   </section>;
 }
 export function CoordinatePicker({lat,lng,onChange,t,lang,readOnly=false,category,focusRevision=0}) {

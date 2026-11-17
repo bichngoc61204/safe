@@ -1,5 +1,5 @@
 import {
-  IconUsersGroup, IconAffiliate, IconMap2, IconShieldCheck, IconBuildingBank, IconHeartbeat, IconSchool,
+  IconLifebuoy, IconBadge, IconFriends, IconUsersGroup, IconAffiliate, IconMap2, IconShieldCheck, IconBuildingBank, IconHeartbeat, IconSchool,
   IconBuildingStore, IconRecycle, IconLeaf, IconSearch, IconMapPin, IconNavigation,
   IconCurrentLocation, IconPlus, IconMinus, IconX, IconArrowLeft, IconArrowUpRight,
   IconChevronRight, IconChevronLeft, IconAdjustmentsHorizontal, IconLayoutDashboard,
@@ -14,7 +14,7 @@ import {
 
 // Keep these keys stable for categories saved by earlier versions.
 const icons = {
-  family:IconUsersGroup, hub:IconAffiliate,
+  safety:IconLifebuoy, police:IconBadge, community:IconFriends, family:IconUsersGroup, hub:IconAffiliate,
   share:IconShare, bookmark:IconBookmark, settings:IconSettings, history:IconHistory, upload:IconUpload, restore:IconRestore,
   map: IconMap2, shield: IconShieldCheck, landmark: IconBuildingBank, heart: IconHeartbeat,
   school: IconSchool, store: IconBuildingStore, recycle: IconRecycle, leaf: IconLeaf,
@@ -38,4 +38,4 @@ export default function Icon({name,size=18,...props}) {
   return <Component size={size} stroke={1.8} aria-hidden="true" {...props}/>;
 }
 
-export const categoryIconOptions=['shield','landmark','heart','school','store','recycle','leaf','building','help'];
+export const categoryIconOptions=['police','community','safety','shield','landmark','heart','school','store','recycle','leaf','building','help'];
