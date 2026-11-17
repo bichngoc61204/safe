@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Icon from './Icon';
 import Dropdown from './Dropdown';
-import { formatDistance, markerColor } from '../lib/domain';
+import { formatDistance, categoryColor as groupInk } from '../lib/domain';
 import { routeModes } from '../lib/routing';
 import { routeSteps, upcomingManeuver } from '../lib/navigation';
 import { roadName } from '../lib/locale';
@@ -42,7 +42,7 @@ export default function RouteGuide({route, mode, destination, destinationCategor
   const duration = route.distance > 0 ? route.duration * Math.min(1,distance / route.distance) : route.duration;
   const estimate = arrived ? 0 : Math.max(1, Math.ceil(duration / 60));
   const eta = new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : 'vi-VN', {hour:'2-digit',minute:'2-digit'}).format(clock + duration * 1000);
-  const categoryColor = destinationCategory ? markerColor(destinationCategory) : '#287754';
+  const categoryColor = destinationCategory ? groupInk(destinationCategory) : '#287754';
   const upcoming = navigation.active ? upcomingManeuver(route,navigation.remaining?.progress || 0,index) : {step,distance:step?.distance || 0};
   const maneuver = arrived ? {maneuver:{type:'arrive'}} : upcoming.step;
   const turnDistance = arrived ? 0 : maneuver ? upcoming.distance : distance;

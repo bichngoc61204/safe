@@ -4,6 +4,8 @@ import { placeHourRows } from '../lib/placeHours';
 import { placeText } from '../lib/locale';
 import MapView from './MapView';
 import PlaceGallery from './PlaceGallery';
+import SupportLevelInfo,{SupportBadge} from './SupportLevel';
+import {getSupportLevel,isCommunitySupport,supportLevels,supportMarkerCategory} from '../lib/supportLevels';
 import { PlaceActions,ReportPlace,ScheduleDisplay,OpenBadge,useSavedPlaces } from './PlaceExtras';
 import { openingState,placeWasteTypes,wasteTypes } from '../lib/editorial';
 import { CENTER } from '../lib/mapCenter';
@@ -11,7 +13,7 @@ import RouteGuide from './RouteGuide';
 import useNavigation from './useNavigation';
 import { fetchRoute, routeModes } from '../lib/routing';
 import { Status } from './Admin';
-import { filterPlaces, getCategory, directionsUrl, haversine, formatDistance, safeImage, placePhotoUrls, phoneHref, isDemoPhone, isAlert, markerColor } from '../lib/domain';
+import { filterPlaces, getCategory, directionsUrl, haversine, formatDistance, safeImage, placePhotoUrls, phoneHref, isDemoPhone, isAlert, categoryColor, categoryPalette } from '../lib/domain';
 
 const scopes=[['map','explore','map'],['safe','safe','shield'],['green','green','recycle'],['partner','partner','leaf']];
 const areaCenter={lat:CENTER[0],lng:CENTER[1]};
@@ -27,7 +29,7 @@ const greenStatuses=['all','alerts','clean','warning','overloaded','inactive'];
 const PlaceCards=memo(function PlaceCards({places,categories,selected,previewed,position,t,lang,actions,listRef,emptyTitle}) {
   return <div className="places-list" ref={listRef}>{places.length?places.map(p=>{
     const c=getCategory(categories,p.category);
-    const color=markerColor(c);
+    const color=categoryColor(c);
     const image=safeImage(p.image);
     const preview=()=>actions.current.preview(p.id);
     const leave=()=>actions.current.leave(p.id);
@@ -38,13 +40,13 @@ const PlaceCards=memo(function PlaceCards({places,categories,selected,previewed,
       onClick={()=>actions.current.select(p.id)}>
       <div className="place-card-content">
         <h3>{placeText(p,'name',lang)}</h3>
-        <span className="place-type" style={{color}}><Icon name={c.icon} size={13}/><span>{lang==='en'?c.nameEn:c.name}</span></span>
+        <span className="place-type" style={{color}}>{getSupportLevel(p,c)?<SupportBadge place={p} category={c} t={t} compact/>:<><Icon name={c.icon} size={13}/><span>{lang==='en'?c.nameEn:c.name}</span></>}</span>
         <p><Icon name="pin" size={13}/><span>{placeText(p,'address',lang)}</span></p>
         {isAlert(p)?<span className={`place-alert alert-${p.status}`}>{t(p.status)}</span>:
           p.status==='inactive'?<span className="place-alert">{t('inactive')}</span>:null}
       </div>
       <span className={`place-category-icon place-thumbnail category-${c.kind}`} style={{'--category-color':color}}>
-        <Icon name={c.icon} size={21}/>
+        <Icon name={supportMarkerCategory(p,c).icon} size={21}/>
         {image&&<img key={image} src={image} alt="" loading="lazy" decoding="async" onError={e=>{e.currentTarget.hidden=true;}}/>}
       </span>
       <span className="card-distance" title={position?t('straightDistance'):undefined}>{position?formatDistance(haversine(position,p)):<Icon name="right" size={16}/>}</span>
@@ -70,7 +72,7 @@ function PlaceDetails({place,categories,position,t,lang,onClose,routing,saved,on
     <PlaceActions place={place} saved={saved} onSave={onSave} t={t}/>
     <PlaceGallery images={images} name={placeText(place,'name',lang)} t={t}/>
     <div className="detail-content">
-      <div className="detail-category"><span className="detail-category-icon" style={{color:markerColor(c),background:markerColor(c)+'13'}}><Icon name={c.icon} size={18}/></span>{lang==='en'?c.nameEn:c.name}</div>
+      <div className="detail-category"><span className="detail-category-icon" style={{color:categoryColor(c),background:categoryColor(c)+'13'}}><Icon name={c.icon} size={18}/></span>{lang==='en'?c.nameEn:c.name}<SupportBadge place={place} category={c} t={t} compact/></div>
       <h2>{placeText(place,'name',lang)}</h2>
       <div className="place-trust-row"><OpenBadge place={place} t={t} now={now}/>{place.verifiedAt&&<span className="verified-badge" title={`${t('verifiedOn')} ${place.verifiedAt.slice(0,10)}`}><Icon name="check" size={13}/>{t('reviewVerified')}</span>}{place.source==='Dữ liệu minh họa'&&<span className="demo-badge">{t('demoRecord')}</span>}</div>
       <p className="detail-address">{placeText(place,'address',lang)}</p>
@@ -79,6 +81,7 @@ function PlaceDetails({place,categories,position,t,lang,onClose,routing,saved,on
         <button className="button primary" onClick={routing.start}><Icon name="navigation" size={16}/>{t('routeOnMap')}</button>
         <a className="button secondary" href={directionsUrl(place)} target="_blank" rel="noopener noreferrer">Google Maps<Icon name="arrow" size={15}/></a>
       </div>
+      <SupportLevelInfo place={place} category={c} t={t} showBadge={false}/>
       <ScheduleDisplay place={place} t={t}/>
       <dl className="detail-info">
         <div><dt>{t('phone')}</dt><dd className="detail-phone">
@@ -106,6 +109,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
   const searchInput=useRef(null);
   const [query,setQuery]=useState('');
   const [category,setCategory]=useState('all');
+  const [supportLevel,setSupportLevel]=useState('all');
   const [status,setStatus]=useState('all');
   const [expanded,setExpanded]=useState(Boolean(selected));
   const [searchOpen,setSearchOpen]=useState(false);
@@ -163,7 +167,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
   useEffect(()=>()=>{gpsIntent.current=null;},[]);
   const [routeResult,setRouteResult]=useState(null);
   const lastRouteRequest=useRef(0);
-  const visible=useMemo(()=>filterPlaces(data.places,data.categories,{query,category,scope,status,position}).filter(point=>(!savedOnly||bookmarks.saved.includes(point.id))&&(!openOnly||openingState(point,now)==='open')&&(wasteType==='all'||placeWasteTypes(point).includes(wasteType))),[data,query,category,scope,status,position,savedOnly,bookmarks.saved,openOnly,wasteType,now]);
+  const visible=useMemo(()=>filterPlaces(data.places,data.categories,{query,category,scope,status,position,supportLevel}).filter(point=>(!savedOnly||bookmarks.saved.includes(point.id))&&(!openOnly||openingState(point,now)==='open')&&(wasteType==='all'||placeWasteTypes(point).includes(wasteType))),[data,query,category,scope,status,position,supportLevel,savedOnly,bookmarks.saved,openOnly,wasteType,now]);
   const groupPreviews=useMemo(()=>scopes.map(([id,label,icon])=>({
     id,label,icon,
     places:filterPlaces(data.places,data.categories,{scope:id}),
@@ -249,11 +253,11 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
   const routeState=place&&pendingGps?.id===place.id?'loadingGps':activeRequest&&!result?.route?'route_'+(result?.state||'loading'):null;
   const scopeCats=data.categories.filter(c=>scope==='map'||c.kind===scope);
   const clearSelection=()=>{cancelRoute();setSelected(null);};
-  const clear=()=>{setQuery('');setCategory('all');setStatus('all');setOpenOnly(false);setWasteType('all');setSavedOnly(false);setGreenFiltersOpen(false);clearSelection();};
-  const clearFilters=()=>{setCategory('all');setStatus('all');setOpenOnly(false);setWasteType('all');setSavedOnly(false);setGreenFiltersOpen(false);setScope('map');clearSelection();};
+  const clear=()=>{setQuery('');setCategory('all');setSupportLevel('all');setStatus('all');setOpenOnly(false);setWasteType('all');setSavedOnly(false);setGreenFiltersOpen(false);clearSelection();};
+  const clearFilters=()=>{setCategory('all');setSupportLevel('all');setStatus('all');setOpenOnly(false);setWasteType('all');setSavedOnly(false);setGreenFiltersOpen(false);setScope('map');clearSelection();};
   const changeScope=next=>{
     if(next===scope)return;
-    setCategory('all');
+    setCategory('all');setSupportLevel('all');
     setStatus('all');
     setWasteType('all');
     clearSelection();
@@ -285,7 +289,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
       if(!point)return;
       setScope(hoverScope==='map'?'map':getCategory(data.categories,point.category).kind);
       setQuery('');
-      setCategory('all');
+      setCategory('all');setSupportLevel('all');
       setStatus('all');
     }
     setHoverScope(null);
@@ -321,7 +325,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
     clearSelection();
     setExpanded(true);
   };
-  const hasFilterOptions=category!=='all'||status!=='all'||scope!=='map'||savedOnly||openOnly||wasteType!=='all';
+  const hasFilterOptions=supportLevel!=='all'||category!=='all'||status!=='all'||scope!=='map'||savedOnly||openOnly||wasteType!=='all';
   const hasFilters=Boolean(query.trim())||hasFilterOptions;
   const searchPreview=useMemo(()=>{
     if(position)return visible.slice(0,4);
@@ -341,7 +345,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
     <div className={`map-workspace ${expanded?'sheet-expanded':''} ${place?'has-detail':''}`}
       data-scope={scope} data-sidebar={sidebarCollapsed?'collapsed':'open'} data-search-open={searchOpen}>
       <nav className="mobile-discovery-dock" data-visible={discoveryVisible} aria-label={t('quickExplore')} aria-hidden={!discoveryVisible} inert={!discoveryVisible}>
-        {scopes.slice(1).map(([id,label,icon])=><button type="button" key={id} onClick={()=>openMobileGroup(id)} aria-label={t(label)} style={{'--dock-accent':({safe:'#39678b',green:'#237452',partner:'#855f35'})[id]}}><Icon name={icon} size={20}/><span>{t(id==='partner'?'partnerShort':label)}</span></button>)}
+        {scopes.slice(1).map(([id,label,icon])=><button type="button" key={id} onClick={()=>openMobileGroup(id)} aria-label={t(label)} style={{'--dock-accent':categoryColor({kind:id})}}><Icon name={icon} size={20}/><span>{t(id==='partner'?'partnerShort':label)}</span></button>)}
         <button type="button" className="dock-saved" onClick={openSaved} aria-label={t('savedPlaces')}><Icon name="bookmark" size={20}/><span>{t('savedPlaces')}{savedCount>0&&<b>{savedCount}</b>}</span></button>
       </nav>
       <div className="mobile-map-actions">
@@ -389,7 +393,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
             <Icon name={scopeIcon} size={30}/>
           </span>
         </div>
-        <nav className="public-tabs" aria-label={t('modules')} style={{'--scope-index':scopeIndex}}>{scopes.map(([id,label,icon])=><button key={id} data-group={id} className={scope===id?'active':''} aria-pressed={scope===id} onClick={()=>changeScope(id)}><Icon name={icon} size={15}/><span>{t(label)}</span></button>)}</nav>
+        <nav className="public-tabs" aria-label={t('modules')} style={{'--scope-index':scopeIndex}}>{scopes.map(([id,label,icon])=><button key={id} data-group={id} style={{'--tab-ink':id==='map'?'#235744':categoryPalette({kind:id}).ink,'--tab-wash':id==='map'?'#edf4ef':categoryPalette({kind:id}).wash}} className={scope===id?'active':''} aria-pressed={scope===id} onClick={()=>changeScope(id)}><Icon name={icon} size={15}/><span>{t(label)}</span></button>)}</nav>
         <div className="public-toolbar">
           <div className="quick-place-filters"><button type="button" aria-pressed={openOnly} onClick={()=>{setOpenOnly(!openOnly);clearSelection();}}><Icon name="clock" size={14}/>{t('onlyOpen')}</button><button type="button" aria-pressed={savedOnly} onClick={()=>{setSavedOnly(!savedOnly);clearSelection();}}><Icon name="bookmark" size={14}/>{t('savedPlaces')} <span>{bookmarks.saved.length}</span></button></div>
           {savedOnly&&<small className="saved-place-note">{t('savedOnDevice')}</small>}{bookmarks.error&&<small role="status">{t('saveLocalError')}</small>}
@@ -398,12 +402,13 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
             <div className="public-filter-section">
               <span>{t('category')}</span>
               <div className="category-chips" key={scope} role="group" aria-label={t('category')}>
-                <button type="button" aria-pressed={category==='all'} onClick={()=>{setCategory('all');clearSelection();}}>{t('all')}</button>
-                {scopeCats.map(c=><button type="button" key={c.id} aria-pressed={category===c.id} style={{'--chip-color':markerColor(c)}} onClick={()=>{setCategory(c.id);clearSelection();}}>
+                <button type="button" aria-pressed={category==='all'} onClick={()=>{setCategory('all');setSupportLevel('all');clearSelection();}}>{t('all')}</button>
+                {scopeCats.map(c=><button type="button" key={c.id} aria-pressed={category===c.id} style={{'--chip-color':categoryColor(c)}} onClick={()=>{setCategory(c.id);setSupportLevel('all');clearSelection();}}>
                   <Icon name={c.icon} size={14}/>{lang==='en'?c.nameEn:c.name}
                 </button>)}
               </div>
             </div>
+            {isCommunitySupport(getCategory(data.categories,category))&&<div className="public-filter-section support-level-filter"><span>{t('supportLevel')}</span><div className="category-chips" role="group" aria-label={t('supportLevel')}><button type="button" aria-pressed={supportLevel==='all'} onClick={()=>{setSupportLevel('all');clearSelection();}}>{t('all')}</button>{supportLevels.map(level=><button type="button" key={level.id} aria-pressed={supportLevel===level.id} onClick={()=>{setSupportLevel(level.id);clearSelection();}}><Icon name={level.icon} size={13}/>{level.name}</button>)}</div></div>}
             {scope==='green'&&<details className="green-advanced-filters" open={greenFiltersOpen} onToggle={event=>setGreenFiltersOpen(event.currentTarget.open)}><summary><Icon name="filter" size={14}/>{t('greenFilters')}{(wasteType!=='all'||status!=='all')&&<b>{Number(wasteType!=='all')+Number(status!=='all')}</b>}<Icon name="down" size={14}/></summary><div className="public-filter-section"><span>{t('wasteFilter')}</span><div className="category-chips" role="group" aria-label={t('wasteFilter')}><button type="button" aria-pressed={wasteType==='all'} onClick={()=>{setWasteType('all');clearSelection();}}>{t('all')}</button>{wasteTypes.map(type=><button key={type} type="button" aria-pressed={wasteType===type} onClick={()=>{setWasteType(type);clearSelection();}}>{t(`waste_${type}`)}</button>)}</div></div>
             <div className="public-filter-section">
               <span>{t('status')}</span>
@@ -432,8 +437,8 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
               const c=getCategory(data.categories,p.category);
               const distance=formatDistance(haversine(position||areaCenter,p));
               return <li key={p.id} style={{'--preview-index':Math.min(index,3)}}>
-                <button type="button" onClick={()=>selectPlace(p.id)} style={{'--preview-color':markerColor(c)}}>
-                  <Icon name={c.icon} size={17}/><span><strong>{placeText(p,'name',lang)}</strong><small>{placeText(p,'address',lang)}</small></span>
+                <button type="button" onClick={()=>selectPlace(p.id)} style={{'--preview-color':categoryColor(c)}}>
+                  <Icon name={supportMarkerCategory(p,c).icon} size={17}/><span><strong>{placeText(p,'name',lang)}</strong><small>{placeText(p,'address',lang)}</small></span>
                   <span className="search-preview-trailing"><span className="search-preview-distance">{distance}</span><Icon name="right" size={13}/></span>
                 </button>
               </li>;
@@ -470,7 +475,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
       </div>
       <MapView style={mapStyle} setStyle={setMapStyle} welcomePhase={welcomePhase} focusRevision={focusRevision} navigation={navigation}
         routeGuide={result?.route
-          ? <RouteGuide key={activeRequest.mode+':'+lastRouteRequest.current} route={navigation.route} navigation={navigation} mode={activeRequest.mode} destination={placeText(place,'name',lang)} destinationCategory={getCategory(data.categories,place.category)} onExit={exitRoute} onModeChange={mode=>requestRoute(activeRequest.origin,mode)} t={t} lang={lang}/>
+          ? <RouteGuide key={activeRequest.mode+':'+lastRouteRequest.current} route={navigation.route} navigation={navigation} mode={activeRequest.mode} destination={placeText(place,'name',lang)} destinationCategory={supportMarkerCategory(place,getCategory(data.categories,place.category))} onExit={exitRoute} onModeChange={mode=>requestRoute(activeRequest.origin,mode)} t={t} lang={lang}/>
           : routeState&&<section className="route-guide route-request-status">
               <div className="route-guide-heading"><span role="status">{t(routeState)}</span><button className="route-exit" onClick={exitRoute} aria-label={t('routeExit')}><Icon name="x" size={16}/></button></div>
               {result&&<div className="route-navigation-actions">

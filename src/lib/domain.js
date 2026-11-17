@@ -1,4 +1,6 @@
+import {isCommunitySupport,isSupportLevel} from './supportLevels.js';
 import { placeText } from './locale.js';
+import { groupPalette } from './catalogGroups.js';
 
 export const statuses = ['active','clean','warning','overloaded','inactive'];
 export const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase();
@@ -11,10 +13,11 @@ export function haversine(a,b) {
 export function formatDistance(m) { return m<1000 ? `${Math.round(m)}m` : `${(m/1000).toFixed(1)}km`; }
 export function getCategory(categories,id) { return categories.find(c=>c.id===id); }
 const searchablePlaceFields=['name','address','owner','waste'];
-export function filterPlaces(places,categories,{query='',category='all',scope='map',status='all',position=null}={}) {
+export function filterPlaces(places,categories,{query='',category='all',scope='map',status='all',position=null,supportLevel='all'}={}) {
   const terms=normalize(query).trim().split(/\s+/).filter(Boolean);
   const groupCategories=scope==='map'?null:new Set(categories.filter(item=>item.kind===scope).map(item=>item.id));
   const matches=places.filter(p=>{
+    if(supportLevel!=='all'&&(!isCommunitySupport(getCategory(categories,p.category))||(supportLevel==='unassigned'?isSupportLevel(p.supportLevel):p.supportLevel!==supportLevel)))return false;
     if((category!=='all'&&p.category!==category)||(groupCategories&&!groupCategories.has(p.category))||
       (status!=='all'&&!(status==='alerts'?isAlert(p):p.status===status)))return false;
     if(!terms.length)return true;
@@ -38,9 +41,7 @@ export const directionsUrl = p => `https://www.google.com/maps/dir/?api=1&destin
 export const isDemoPhone = phone => /^000 000 \d{4}$/.test(phone || '');
 export const phoneHref = phone => `tel:${String(phone||'').replace(/[^+\d]/g,'')}`;
 
-// Keep custom admin colors; map the sample palette to recognizable functional groups.
-export function markerColor(category) {
- const legacy=['#3788c9','#817bb5','#dd7683','#9a80c0','#cc984f','#199569','#7c9d52'];
- if(legacy.includes(category.color?.toLowerCase())) return {safe:'#3582bc',health:'#cf6c78',admin:'#4e6089',education:'#4e6089',green:'#22936a',partner:'#72964d',service:'#bd9556'}[category.id] || {safe:'#3582bc',green:'#22936a',partner:'#72964d',service:'#bd9556'}[category.kind];
- return category.color;
-}
+// A group's identity stays consistent across all its subcategories.
+export const categoryPalette = category => groupPalette[category?.kind==='service'?'partner':category?.kind]||groupPalette.safe;
+export const markerColor = category => categoryPalette(category).marker;
+export const categoryColor = category => categoryPalette(category).ink;

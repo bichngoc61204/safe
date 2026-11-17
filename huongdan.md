@@ -78,3 +78,42 @@ Mở địa chỉ Vite in trong terminal. Thêm `/admin` vào địa chỉ đó 
 - **Nạp bản sao.** Chạy `npm run seed:firebase -- backup.json` để kiểm tra tệp, rồi thêm `--write` trước tên tệp để nạp vào dự án Firebase trống. Xem [script nạp dữ liệu](scripts/seed-firebase.js).
 - **Vercel.** Đặt các biến Firebase trong môi trường deploy và dùng `npm run build` để tạo thư mục `dist`. Dự án có cấu hình để mở trực tiếp `/admin` khi tải lại trang. Cấu hình Firebase cần có trước khi build bản triển khai. Xem [cấu hình Vercel](vercel.json).
 - **Kiểm tra.** Chạy `npm test` và `npm run test:ui`. Khi nghiệm thu, thử tìm kiếm, mở địa điểm, dẫn đường trên điện thoại và thêm hoặc sửa một điểm từ tài khoản quản trị.
+
+
+### Màu nhóm và nhập vị trí bằng Plus Code
+
+- SafePoint: cam; GreenPoint: xanh lá nhạt; Đối tác xanh: xanh đậm. Các danh mục con dùng chung màu nhóm, giữ biểu tượng riêng để phân biệt. Dữ liệu màu cũ vẫn đọc được và tự hiển thị theo bảng màu mới.
+- Khi thêm địa điểm hoặc chỉnh sửa chi tiết → Thông tin dữ liệu, dán mã vào ô **Plus Code** rồi chọn **Đặt ghim**. Ví dụ: `2646+86 Hoa Xuan, Da Nang, Vietnam` → `7P8C2646+86` → tọa độ `16.0058125, 108.2105625`.
+- Kiểm tra ghim và tọa độ rồi **Lưu**. Đặt ghim chỉ đổi bản nháp; **Hủy** không cập nhật Firebase. Có thể tiếp tục kéo ghim, chạm bản đồ hoặc sửa kinh/vĩ độ như trước.
+- Mã đầy đủ (8 ký tự trước dấu `+`) được giải mã trực tiếp. Mã rút gọn dùng tham chiếu An Thượng–Đà Nẵng; khi không kèm địa danh, hệ thống cũng hiểu là mã tại khu vực này. Mã chỉ có 0–2 ký tự trước dấu `+`, hoặc có địa danh ngoài Đà Nẵng, cần đổi sang mã đầy đủ để tránh đặt nhầm vị trí.
+- Chuyển đổi chạy tại trình duyệt bằng Open Location Code; không cần Google Maps API key hoặc dịch vụ geocoding. Hệ thống không tự tìm tọa độ từ tên địa danh.
+
+
+- Khi tạo mới, Plus Code và kinh/vĩ độ đều để trống. Bắt buộc cung cấp **Plus Code hợp lệ hoặc đủ cả kinh độ và vĩ độ** (chạm bản đồ cũng điền cặp tọa độ). Không còn tự lấy tọa độ mặc định làm vị trí địa điểm. Khi lưu với Plus Code, hệ thống tự chuyển tọa độ nếu chưa bấm Đặt ghim.
+
+
+### Công cụ dữ liệu: rà soát và lịch sử
+
+- **Chất lượng dữ liệu:** danh sách gọn, 8 địa điểm mỗi trang, mới cập nhật trước. Lọc theo **Liên hệ / vị trí**, **Thông tin bổ sung**, **Xác minh**; chọn một địa điểm để xem checklist bên phải trên PC hoặc popup trên điện thoại. Chọn **Xem / chỉnh sửa** để mở trình chỉnh sửa địa điểm. Xác nhận rà soát không tự bổ sung các trường thiếu.
+- **Lịch sử thay đổi:** mỗi lượt cập nhật là một dòng theo ngày. Dòng chỉnh sửa ghi rõ trường đã thay đổi. Chọn để đối chiếu **Trước thay đổi / Sau thay đổi**; nếu một lượt cập nhật nhiều địa điểm, tìm và chuyển từng địa điểm trong khung chi tiết. Khi thiếu bản lưu chính xác, hệ thống báo không đủ dữ liệu thay vì lấy trạng thái hiện tại làm lịch sử.
+- Các thay đổi chỉ do thứ tự thuộc tính hoặc giá trị mặc định chưa sử dụng không còn tạo lịch sử giả. Lịch sử cũ loại này được gom vào mục **đồng bộ hệ thống**, vẫn giữ bản ghi gốc. Khôi phục từng địa điểm hoặc toàn bộ phiên bản vẫn cần xác nhận và lưu ở trạng thái ẩn; khôi phục toàn bộ nằm trong mục mở rộng.
+- **Thông tin cần kiểm tra:** mặc định hiện việc đang chờ kiểm tra. Chọn một dòng để đọc nội dung, nhập ghi chú và xử lý; đổi bộ lọc để xem lại việc đã hoàn tất. Danh sách sắp theo hoạt động gần nhất (lúc gửi hoặc lần xử lý gần nhất).
+- **Thùng rác:** tiếp tục sắp theo thời gian xóa mới nhất và khôi phục ở trạng thái ẩn.
+- Plus Code vẫn điền kinh/vĩ độ và đặt ghim, không có khung kết quả phụ. Bản đồ admin không có nút Về An Thượng riêng.
+
+
+### Ba mức của danh mục Hỗ trợ cộng đồng
+
+Cấu trúc: **SafePoint (nhóm, màu cam) → Hỗ trợ cộng đồng (danh mục) → mức hỗ trợ của từng địa điểm**. Đây không phải ba nhóm mới hoặc mức áp dụng cho công an/y tế.
+
+| Mức đăng ký | Nội dung hỗ trợ | Mã dữ liệu |
+| --- | --- | --- |
+| Safe Point — Điểm hỗ trợ an toàn | Hỗ trợ ban đầu, hướng dẫn, kết nối dịch vụ | `safe_point` |
+| Family Friendly Point — Điểm hỗ trợ thân thiện với gia đình | Hỗ trợ phụ nữ/trẻ em, trẻ bị lạc, nghỉ ngơi/nước uống, kết nối dịch vụ | `family_friendly` |
+| Safe Hub — Điểm hỗ trợ trọng yếu | Kết nối công an, y tế, dịch vụ thiết yếu; hỗ trợ trong khả năng | `safe_hub` |
+
+- Thêm hoặc sửa địa điểm, chọn danh mục **Hỗ trợ cộng đồng**, rồi chọn một mức đã đăng ký với phường. Cả ba mức được giải thích ngay trong form; không tự chọn sẵn. Chuyển sang danh mục khác sẽ xóa mức không còn áp dụng.
+- Điểm cũ chưa được phân mức vẫn đọc được, không tự gán thành Safe Point hoặc Safe Hub. Chất lượng dữ liệu có nhắc rà soát; khi chỉnh sửa hoặc công khai lại, phải bổ sung mức.
+- Bản đồ vẫn dùng **ghim cam** cho nhóm SafePoint. Biểu tượng khác nhau theo mức; thẻ và chi tiết hiển thị nhãn mức cùng các nội dung hỗ trợ. Khi lọc danh mục Hỗ trợ cộng đồng, có thêm bộ lọc theo ba mức trên cả trang người dùng và admin.
+- Excel xuất thêm cột **Mức hỗ trợ cộng đồng**. File mẫu có bảng tên/mã ba mức. Khi nhập điểm mới thuộc danh mục này, phải điền một mức hợp lệ; các danh mục khác để trống cột này. Khi cập nhật bằng Excel, mức cũ được giữ nếu bỏ hẳn cột này.
+- Dữ liệu lưu ở trường `supportLevel`; danh mục đặc biệt có thể lưu cờ `supportLevels`. Không phát sinh collection, dịch vụ hoặc quyền quản trị mới; Rules hiện tại cho phép các trường lồng trong danh sách địa điểm.

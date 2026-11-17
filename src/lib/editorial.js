@@ -1,3 +1,4 @@
+import {isCommunitySupport,isSupportLevel} from './supportLevels.js';
 import { normalize, safeImage, haversine, isDemoPhone } from './domain.js';
 import { isClockTime } from './placeHours.js';
 export const wasteTypes=['battery','electronics','plastic','paper','glass','metal','organic','general'];
@@ -42,6 +43,7 @@ export function openingState(place,now=new Date()){
 }
 export function qualityIssues(place,data,now=Date.now()){
  const issues=[];
+ if(isCommunitySupport(data.categories.find(category=>category.id===place.category))&&!isSupportLevel(place.supportLevel))issues.push('qualitySupportLevel');
  if(isDemoPhone(place.phone)||!/^\+?\d{9,15}$/.test(String(place.phone||'').replace(/[\s()-]/g,'')))issues.push('qualityPhone');
  if(!safeImage(place.image))issues.push('qualityPhoto');
  if(!place.schedule?.enabled)issues.push('qualityHours');
@@ -54,16 +56,33 @@ export function qualityIssues(place,data,now=Date.now()){
  if(data.places.some(other=>other.id!==place.id&&!other.deletedAt&&((normalize(other.name.trim())===normalize(place.name.trim())&&normalize(other.address.trim())===normalize(place.address.trim()))||haversine(other,place)<12)))issues.push('qualityDuplicate');
  return issues;
 }
+// Compare information, not object property order or inactive editor defaults.
+export function canonicalValue(value){
+ if(Array.isArray(value))return value.map(canonicalValue);
+ if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonicalValue(value[key])]));
+ return value??null;
+}
+export function comparablePlaceField(place,field){
+ const value=place?.[field];
+ if(field==='schedule'&&!value?.enabled)return null;
+ if(field==='review'&&(!value||value.status==='pending'))return {status:'pending'};
+ if(field==='visibility')return value||'published';
+ if(field==='images'||field==='wasteTypes')return field==='wasteTypes'?[...(value||[])].sort():value||[];
+ if(['phone','owner','waste','hours','description','source','image'].includes(field)||field.endsWith('En'))return value||'';
+ return canonicalValue(value);
+}
+export const placeFieldChanged=(before,after,field)=>JSON.stringify(canonicalValue(comparablePlaceField(before,field)))!==JSON.stringify(canonicalValue(comparablePlaceField(after,field)));
+export const comparableCategories=categories=>canonicalValue(categories.map(category=>({...category,supportLevels:isCommunitySupport(category)})));
 export function catalogChanges(before,after){
- const fields=['name','nameEn','category','address','addressEn','phone','owner','ownerEn','waste','wasteEn','wasteTypes','status','visibility','deletedAt','image','images','opensAt','closesAt','hours','hoursEn','schedule','description','descriptionEn','source','review','lat','lng'];
+ const fields=['name','nameEn','category','supportLevel','address','addressEn','phone','owner','ownerEn','waste','wasteEn','wasteTypes','status','visibility','deletedAt','image','images','opensAt','closesAt','hours','hoursEn','schedule','description','descriptionEn','source','review','lat','lng'];
  const records=new Map(before.places.map(place=>[place.id,place]));
  const changes=after.places.flatMap(place=>{
   const old=records.get(place.id);records.delete(place.id);
-  const changed=old?fields.filter(key=>JSON.stringify(old[key]??null)!==JSON.stringify(place[key]??null)):['created'];
+  const changed=old?fields.filter(key=>placeFieldChanged(old,place,key)):['created'];
   return changed.length?[{id:place.id,name:place.name,fields:changed}]:[];
  });
  for(const place of records.values())changes.push({id:place.id,name:place.name,fields:['removed']});
- if(JSON.stringify(before.categories)!==JSON.stringify(after.categories))changes.push({id:'categories',name:'categories',fields:['categories']});
+ if(JSON.stringify(comparableCategories(before.categories))!==JSON.stringify(comparableCategories(after.categories)))changes.push({id:'categories',name:'categories',fields:['categories']});
  return changes;
 }
 export const shareUrl=(place,origin=window.location.origin)=>`${origin}/?place=${encodeURIComponent(place.id)}`;

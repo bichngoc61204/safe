@@ -87,3 +87,13 @@ test('three demo records are valid, clearly labelled and belong to three differe
  assert.ok(places.every(place=>place.name.includes('Demo')&&place.review.status==='pending'&&place.source==='Dữ liệu minh họa'));
  assert.doesNotThrow(()=>validateCatalog({...data,places}));
 });
+
+test('inactive editor defaults and object key ordering do not produce spurious history',()=>{
+ const before=makeTestCatalog(),after=structuredClone(before);
+ const point=after.places[0];
+ point.schedule={enabled:false,days:[],exceptions:[]};point.review={status:'pending'};point.visibility='published';
+ after.categories=after.categories.map(category=>Object.fromEntries(Object.entries(category).reverse()));
+ assert.equal(catalogChanges(before,after).length,0);
+ point.phone='0912345678';
+ assert.deepEqual(catalogChanges(before,after)[0].fields,['phone']);
+});

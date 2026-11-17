@@ -3,7 +3,8 @@ import L from 'leaflet';
 import { renderToStaticMarkup } from 'react-dom/server';
 import Icon from './Icon';
 import { CENTER } from '../lib/mapCenter';
-import { getCategory, markerColor } from '../lib/domain';
+import { getCategory, markerColor, categoryColor, categoryPalette } from '../lib/domain';
+import {supportMarkerCategory} from '../lib/supportLevels';
 import { placeText } from '../lib/locale';
 import { addBasemap, DEFAULT_MAP_STYLE, limitVietnamZoom, vietnamMapOptions } from '../lib/basemap';
 import { addCollapsibleAttribution } from '../lib/attribution';
@@ -15,17 +16,17 @@ const pinIcons=new Map();
 const maxPinIcons=256;
 function pinIcon(category,selected=false,status='active',lang='vi') {
   const label=(lang==='en'?category.nameEn:category.name)||'Location';
-  const color=markerColor(category),iconName=category.icon||'pin';
+  const color=markerColor(category),ink=categoryPalette(category).markerInk,iconName=category.icon||'pin';
   const alert=['warning','overloaded'].includes(status);
   // Many places share one visual. Reuse the icon definition, while Leaflet still
   // creates a separate DOM element for each marker. Include editable fields so
   // category and language updates never reuse an outdated appearance or label.
-  const key=JSON.stringify([String(category.kind),color,iconName,label,Boolean(selected),alert]);
+  const key=JSON.stringify([String(category.kind),color,ink,iconName,label,Boolean(selected),alert]);
   const cached=pinIcons.get(key);
   if(cached){pinIcons.delete(key);pinIcons.set(key,cached);return cached;}
   const icon=L.divIcon({
     className:'custom-marker',
-    html:renderToStaticMarkup(<div className="marker-upright"><div className={`marker-pin marker-${category.kind} ${selected?'selected':''} ${alert?'marker-alert':''}`} style={{'--marker-color':color}}><Icon name={iconName} size={19}/><span className="sr-only">{label}</span></div></div>),
+    html:renderToStaticMarkup(<div className="marker-upright"><div className={`marker-pin marker-${category.kind} ${selected?'selected':''} ${alert?'marker-alert':''}`} style={{'--marker-color':color,color:ink,background:color}}><Icon name={iconName} size={19}/><span className="sr-only">{label}</span></div></div>),
     iconSize:[42,46],iconAnchor:[21,40],popupAnchor:[0,-34],
   });
   pinIcons.set(key,icon);
@@ -198,7 +199,7 @@ export default function MapView({style,setStyle,welcomePhase,focusRevision,place
       if(!category)return;
       const name=placeText(p,'name',lang);
       const isSelected=p.id===selected;
-      const icon=pinIcon(category,isSelected,p.status,lang);
+      const icon=pinIcon(supportMarkerCategory(p,category),isSelected,p.status,lang);
       const point=[p.lat,p.lng];
       const existing=markers.current.get(p.id);
       if(existing){
@@ -424,21 +425,23 @@ export default function MapView({style,setStyle,welcomePhase,focusRevision,place
       </div>
       <button className="sos-button" aria-label={`SOS ${t('emergency')}`} onClick={onSos}><span/><Icon className="sos-phone-icon" name="phone" size={17}/><span className="sos-text">SOS</span><span className="sos-label">{t('emergency')}</span><Icon className="mobile-sos-icon" name="phone" size={22}/></button>
     </div>
-    <div className="map-legend"><span style={{color:'#3582bc'}}><Icon name="shield" size={13}/>{t('safe')}</span><span style={{color:'#22936a'}}><Icon name="recycle" size={13}/>{t('green')}</span><span style={{color:'#855f35'}}><Icon name="leaf" size={13}/>{t('partner')}</span></div>
+    <div className="map-legend"><span style={{color:categoryColor({kind:'safe'})}}><Icon name="shield" size={13}/>{t('safe')}</span><span style={{color:categoryColor({kind:'green'})}}><Icon name="recycle" size={13}/>{t('green')}</span><span style={{color:categoryColor({kind:'partner'})}}><Icon name="leaf" size={13}/>{t('partner')}</span></div>
   </section>;
 }
-export function CoordinatePicker({lat,lng,onChange,t,lang,readOnly=false}) {
+export function CoordinatePicker({lat,lng,onChange,t,lang,readOnly=false,category,focusRevision=0}) {
   const el=useRef(null),mapRef=useRef(null),markerRef=useRef(null),creditsRef=useRef(null),change=useRef(onChange);change.current=onChange;
   useEffect(()=>{
-    const initial=[Number.isFinite(lat)?lat:CENTER[0],Number.isFinite(lng)?lng:CENTER[1]];
+    const hasPoint=Number.isFinite(lat)&&Number.isFinite(lng)&&Math.abs(lat)<=90&&Math.abs(lng)<=180;
+    const initial=hasPoint?[lat,lng]:CENTER;
     const map=L.map(el.current,{...vietnamMapOptions,zoomControl:false,attributionControl:false,scrollWheelZoom:false}).setView(initial,15);mapRef.current=map;
     const credits=creditsRef.current=addCollapsibleAttribution(map,t('mapCredits'),creditsIcon);
     L.control.zoom(zoomIcons).addTo(map);
     const stopZoomLimit=limitVietnamZoom(map,el.current);
-    const marker=L.marker(initial,{draggable:!readOnly,icon:pinIcon({kind:'green',icon:'pin',color:'#16845d'},true)}).addTo(map);markerRef.current=marker;
+    const marker=L.marker(initial,{draggable:!readOnly,icon:pinIcon(category||{kind:'safe',icon:'pin'},true)});markerRef.current=marker;
+    if(hasPoint)marker.addTo(map);
     const update=ll=>change.current({lat:Number(ll.lat.toFixed(6)),lng:Number(ll.lng.toFixed(6))});
     if(!readOnly){
-      map.on('click',e=>{marker.setLatLng(e.latlng);update(e.latlng);});
+      map.on('click',e=>{marker.setLatLng(e.latlng).addTo(map);update(e.latlng);});
       marker.on('dragend',()=>update(marker.getLatLng()));
     }
     const resize=new ResizeObserver(()=>map.invalidateSize());resize.observe(el.current);
@@ -447,10 +450,17 @@ export function CoordinatePicker({lat,lng,onChange,t,lang,readOnly=false}) {
   useMapLabels(mapRef,lang,t);
   useEffect(()=>{creditsRef.current?.setLabel(t('mapCredits'));},[lang]);
   useEffect(()=>{
-    if(!Number.isFinite(Number(lat))||!Number.isFinite(Number(lng))||Math.abs(lat)>90||Math.abs(lng)>180)return;
-    markerRef.current?.setLatLng([lat,lng]);
+    if(!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180){markerRef.current?.remove();return;}
+    if(markerRef.current&&mapRef.current)markerRef.current.setLatLng([lat,lng]).addTo(mapRef.current);
     if(readOnly)mapRef.current?.panTo([lat,lng],{animate:false});
   },[lat,lng,readOnly]);
+  useEffect(()=>{
+    const icon=pinIcon(category||{kind:'safe',icon:'pin'},true);
+    if(markerRef.current&&markerRef.current.options.icon.options.html!==icon.options.html)markerRef.current.setIcon(icon);
+  },[category]);
+  useEffect(()=>{
+    if(focusRevision&&Number.isFinite(lat)&&Number.isFinite(lng))mapRef.current?.setView([lat,lng],17,{animate:false});
+  },[focusRevision]);
   return <><div ref={el} className="coordinate-map" aria-label={t('locationSection')}/>{!readOnly&&<small className="field-hint">{t('pickHint')}</small>}</>;
 }
 
@@ -484,10 +494,10 @@ export function AdminPlacesMap({places,categories,selected,hovered,onSelect,t,la
       const category=getCategory(categories,place.category);
       if(!category)continue;
       const marker=L.marker([place.lat,place.lng],{
-        title:place.name,icon:pinIcon(category,false,place.status),autoPanOnFocus:false,
+        title:place.name,icon:pinIcon(supportMarkerCategory(place,category),false,place.status),autoPanOnFocus:false,
       }).on('click',()=>select.current(place.id)).addTo(layer);
       marker.getElement()?.setAttribute('aria-label',place.name);
-      pins.current.set(place.id,{marker,category,status:place.status});
+      pins.current.set(place.id,{marker,category:supportMarkerCategory(place,category),status:place.status});
     }
     return ()=>{layer.remove();pins.current.clear();};
   },[places,categories]);

@@ -5,6 +5,8 @@ import Dropdown from './Dropdown';
 import { catalogGroups } from '../lib/catalogGroups';
 import PlaceForm, { usePlaceEditor } from './PlaceForm';
 import PlaceGallery from './PlaceGallery';
+import SupportLevelInfo,{SupportBadge} from './SupportLevel';
+import {isCommunitySupport,isSupportLevel,getSupportLevel,supportLevels} from '../lib/supportLevels';
 import AdminOperations from './AdminOperations';
 import ImportPlaces from './ImportPlaces';
 import { ScheduleDisplay } from './PlaceExtras';
@@ -13,9 +15,9 @@ import { AdminPlacesMap } from './MapView';
 import { placeHourRows } from '../lib/placeHours';
 import { placeText } from '../lib/locale';
 import { qualityIssues } from '../lib/editorial';
-import { directionsUrl, filterPlaces, getCategory, isAlert, isDemoPhone, phoneHref, placePhotoUrls } from '../lib/domain';
+import { categoryColor, categoryPalette, markerColor, directionsUrl, filterPlaces, getCategory, isAlert, isDemoPhone, phoneHref, placePhotoUrls } from '../lib/domain';
 export function Status({value,t}) {return <span className={`status status-${value}`}><i/>{t(value)}</span>;}
-export function CategoryIcon({category,size=19}){return <span className="category-icon" style={{'--category-color':category.color,background:category.color+'13',color:category.color}}><Icon name={category.icon} size={size}/></span>;}
+export function CategoryIcon({category,size=19}){return <span className="category-icon" style={{'--category-color':categoryColor(category),background:categoryPalette(category).wash,color:categoryColor(category)}}><Icon name={category.icon} size={size}/></span>;}
 export function Login({onLogin,onBack,t,available,editorStatus}){
  const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[show,setShow]=useState(false);
  const [error,setError]=useState(''),[pending,setPending]=useState(false);
@@ -43,10 +45,10 @@ function moveCardHighlight(event) {
 }
 
 function CategoryForm({category,initialKind,onSave,onClose,t,busy,saveError}) {
- const [v,setV]=useState(category||{id:crypto.randomUUID(),name:'',nameEn:'',color:'#199569',icon:'store',kind:initialKind||'safe'});
- return <Modal title={t(category?'edit':'addCategory')} onClose={onClose} t={t} dismissible={!busy}><form onSubmit={e=>{e.preventDefault();if(v.name.trim()&&v.nameEn.trim())onSave({...v,name:v.name.trim(),nameEn:v.nameEn.trim()});}}><div className="form-scroll"><div className="form-grid"><label className="span-2"><span>{t('categoryName')} *</span><input required value={v.name} maxLength={60} onChange={e=>setV({...v,name:e.target.value})}/></label><label className="span-2"><span>{t('nameEn')} *</span><input required value={v.nameEn} maxLength={60} onChange={e=>setV({...v,nameEn:e.target.value})}/></label><div className="form-dropdown span-2"><span>{t('kind')}</span><Dropdown label={t('kind')} value={v.kind} disabled={!!category} onChange={kind=>setV({...v,kind})}>
+ const [v,setV]=useState(category?{...category,...(isCommunitySupport(category)?{supportLevels:true}:{})}:{id:crypto.randomUUID(),name:'',nameEn:'',color:'#199569',icon:'store',kind:initialKind||'safe'});
+ return <Modal title={t(category?'edit':'addCategory')} onClose={onClose} t={t} dismissible={!busy}><form onSubmit={e=>{e.preventDefault();if(v.name.trim()&&v.nameEn.trim())onSave({...v,...(isCommunitySupport(v)?{supportLevels:true}:{}),color:markerColor(v),name:v.name.trim(),nameEn:v.nameEn.trim()});}}><div className="form-scroll"><div className="form-grid"><label className="span-2"><span>{t('categoryName')} *</span><input required value={v.name} maxLength={60} onChange={e=>setV({...v,name:e.target.value})}/></label><label className="span-2"><span>{t('nameEn')} *</span><input required value={v.nameEn} maxLength={60} onChange={e=>setV({...v,nameEn:e.target.value})}/></label><div className="form-dropdown span-2"><span>{t('kind')}</span><Dropdown label={t('kind')} value={v.kind} disabled={!!category} onChange={kind=>setV({...v,kind,supportLevels:kind==='safe'&&v.supportLevels===true})}>
    {catalogGroups.map(group=><option key={group.id} value={group.id}>{t(group.label)}</option>)}
- </Dropdown></div><label><span>{t('color')}</span><input type="color" value={v.color} onChange={e=>setV({...v,color:e.target.value})}/></label><div className="form-dropdown"><span>{t('icon')}</span><Dropdown label={t('icon')} value={v.icon} onChange={icon=>setV({...v,icon})}>
+ </Dropdown></div>{isCommunitySupport(v)&&<p className="span-2 field-hint">{t('supportCategoryFlag')}</p>}<label><span>{t('color')}</span><span className="group-color-swatch" style={{background:categoryPalette(v).wash,color:categoryColor(v)}}><i style={{background:markerColor(v)}}/>{t(v.kind)}</span><small className="field-hint">{t('groupColorHint')}</small></label><div className="form-dropdown"><span>{t('icon')}</span><Dropdown label={t('icon')} value={v.icon} onChange={icon=>setV({...v,icon})}>
    {categoryIconOptions.map(icon=><option key={icon} value={icon}>{icon}</option>)}
  </Dropdown></div><div className="category-preview span-2"><CategoryIcon category={v}/><strong>{v.name||t('categoryName')}</strong><small>{v.nameEn}</small></div></div></div>{saveError&&<p className="form-error place-form-error" role="alert">{t(saveError)}</p>}<div className="modal-footer"><button className="button secondary" type="button" data-dialog-dismiss disabled={busy}>{t('cancel')}</button><button className="button primary" disabled={busy}>{t(busy?'saving':'save')}</button></div></form></Modal>;
 }
@@ -85,7 +87,7 @@ function subscribeMobileAdmin(notify) {
 
 function MobilePlaceCard({place,category,categoryName,groupLabel,t,lang,index,onDetails}) {
   const [image]=placePhotoUrls(place);
-  return <li className="admin-mobile-place" style={{'--card-delay':`${index*34}ms`,'--category-color':category.color}}>
+  return <li className="admin-mobile-place" style={{'--card-delay':`${index*34}ms`,'--category-color':categoryColor(category)}}>
     <button type="button" className="admin-mobile-place-main" aria-haspopup="dialog" onClick={onDetails}>
       <span className="admin-mobile-place-image">
         <CategoryIcon category={category} size={20}/>
@@ -101,7 +103,7 @@ function MobilePlaceCard({place,category,categoryName,groupLabel,t,lang,index,on
       <span className="admin-category-tag">{categoryName}</span>
       <Status value={place.status} t={t}/>
       {place.visibility==='hidden'&&<span className="admin-publication-badge"><Icon name="eyeoff" size={11}/>{t('hidden')}</span>}
-      <small>{groupLabel}</small>
+      <small>{getSupportLevel(place,category)?<SupportBadge place={place} category={category} t={t} compact/>:groupLabel}</small>
     </div>
   </li>;
 }
@@ -136,7 +138,7 @@ function PlacePreview({place,categories,groupLabel,t,lang,editing,busy,saveError
     });
   }
   return <><form className="admin-preview-content" aria-label={t('details')} data-editing={editing}
-    style={{'--preview-accent':category?.color}} onSubmit={editing?editor.submit:event=>event.preventDefault()}
+    style={{'--preview-accent':categoryColor(category)}} onSubmit={editing?editor.submit:event=>event.preventDefault()}
     onInvalid={event=>{
       const details=event.target.closest('details');
       if(details)details.open=true;
@@ -167,6 +169,8 @@ function PlacePreview({place,categories,groupLabel,t,lang,editing,busy,saveError
           </>}
         </div>
         </div>
+        {editing&&editor.supportLevelField}
+        {!editing&&<SupportLevelInfo place={place} category={category} t={t}/>}
         {editing&&editor.extendedFields}
         {!editing&&<div className="preview-publication"><span className={`publication-${place.visibility||'published'}`}>{t(place.visibility==='hidden'?'hidden':'published')}</span><span>{t(place.review?.status==='verified'?'reviewVerified':'reviewPending')}</span><button type="button" className="text-button" onClick={onVisibility} disabled={busy}>{t(place.visibility==='hidden'?'publishPlace':'hidePlace')}</button></div>}
       </section>
@@ -194,7 +198,7 @@ function PlacePreview({place,categories,groupLabel,t,lang,editing,busy,saveError
       <details className="admin-preview-section admin-preview-metadata" onToggle={event=>setMetadataOpen(event.currentTarget.open)}>
         <summary><Icon name="info" size={15}/>{t('dataDetails')}<Icon name="down" size={14}/></summary>
         {editing?<div className="admin-preview-fields">
-          <div className="admin-preview-coordinates">{editor.coordinateFields}</div>
+          {editor.plusCodeField}<div className="admin-preview-coordinates">{editor.coordinateFields}</div>
           {metadataOpen&&editor.coordinatePicker}
           {editor.field('source',{maxLength:150})}
         </div>:<dl>
@@ -221,7 +225,7 @@ function PlacePreview({place,categories,groupLabel,t,lang,editing,busy,saveError
   </form>{editor.imagePreview}</>;
 }
 
-export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdToken,backend,managementStatus}) {
+export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdToken,backend,managementStatus,currentRevision}) {
  const mobile=useSyncExternalStore(subscribeMobileAdmin,isMobileAdmin);
  const [tab,setTab]=useState('overview');
  const [toolTab,setToolTab]=useState('quality');
@@ -230,6 +234,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
  const [query,setQuery]=useState('');
  const [groupFilter,setGroupFilter]=useState('all');
  const [category,setCategory]=useState('all');
+ const [levelFilter,setLevelFilter]=useState('all');
  const [status,setStatus]=useState('all');
  const [page,setPage]=useState(1);
  const [edit,setEdit]=useState(null);
@@ -257,9 +262,9 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
  const visibleCategories=categories.filter(item=>scope==='map'||item.kind===scope);
  const filtered=useMemo(()=>{
    const rank=new Map(catalogGroups.flatMap(group=>categories.filter(category=>category.kind===group.id)).map((item,index)=>[item.id,index]));
-   return filterPlaces(places,categories,{query,category,status,scope})
+   return filterPlaces(places,categories,{query,category,status,scope,supportLevel:levelFilter})
      .sort((a,b)=>(rank.get(a.category)??0)-(rank.get(b.category)??0)||a.name.localeCompare(b.name,'vi'));
- },[places,categories,query,category,status,scope]);
+ },[places,categories,query,category,status,scope,levelFilter]);
  const pages=Math.max(1,Math.ceil(filtered.length/7));
  const current=Math.min(page,pages);
  const visible=filtered.slice((current-1)*7,current*7);
@@ -276,7 +281,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
  const title=tab==='overview'?'overview':tab==='categories'?'manageCategories':tab==='operations'?'adminTools':group?.label??'managePlaces';
 
  function clearFilters(){
-   setQuery('');setGroupFilter('all');setCategory('all');setStatus('all');setPage(1);
+   setQuery('');setGroupFilter('all');setCategory('all');setLevelFilter('all');setStatus('all');setPage(1);
  }
  function navigate(next){
    if(inlineEdit){if(saving.current)return;closeDialog(setEdit);}
@@ -290,10 +295,10 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
  }
  function changeGroup(value){
    if(group)navigate(value==='all'?'places':value);
-   else{setGroupFilter(value);setCategory('all');setStatus('all');setPage(1);}
+   else{setGroupFilter(value);setCategory('all');setLevelFilter('all');setStatus('all');setPage(1);}
  }
  function changeCategory(value){
-   setCategory(value);setPage(1);
+   setCategory(value);setLevelFilter('all');setPage(1);
  }
  function selectPreview(id){
    if(inlineEdit)return;
@@ -357,7 +362,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
    groupLabel={groupName(getCategory(categories,preview.category)?.kind??'safe')} t={t} lang={lang} inDialog={mobile}
    editing={inlineEdit} busy={busy} saveError={saveError} onClose={closePreview}
    onEdit={()=>setEdit({place:preview})} onSave={savePlace} onCancel={()=>closeDialog(setEdit)}
-   onVisibility={()=>apply({...data,places:data.places.map(item=>item.id===preview.id?{...item,visibility:item.visibility==='hidden'?'published':'hidden',updatedAt:new Date().toISOString()}:item)},()=>notify('saved'))}
+   onVisibility={()=>{if(preview.visibility==='hidden'&&isCommunitySupport(getCategory(categories,preview.category))&&!isSupportLevel(preview.supportLevel)){notify('supportLevelRequired');setEdit({place:preview});return;}return apply({...data,places:data.places.map(item=>item.id===preview.id?{...item,visibility:item.visibility==='hidden'?'published':'hidden',updatedAt:new Date().toISOString()}:item)},()=>notify('saved'));}}
    onDelete={()=>setDeleting({type:'place',record:preview})}/>;
  function groupHasCategories(id){return categories.some(category=>category.kind===id);}
  async function exportData(){
@@ -375,7 +380,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
  const states=['active','clean','warning','overloaded','inactive'];
  const stateCounts=states.map(id=>({id,count:places.filter(place=>place.status===id).length}));
 
- return <div className="admin-layout">
+ return <div className="admin-layout" data-section={tab}>
    <aside className="admin-sidebar">
      <div className="admin-sidebar-label">{t('workspace')}</div>
      <nav aria-label={t('workspace')} style={{'--dock-index':nav.findIndex(item=>item.id===tab),'--dock-count':nav.length}}>{nav.map(item=><button key={item.id} data-section={item.id}
@@ -393,7 +398,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
        <div className="admin-heading-actions">
          <button className="button secondary" onClick={()=>setImportOpen(true)} disabled={inlineEdit}><Icon name="upload" size={16}/>{t('importExcel')}</button>
          <button className="button secondary" onClick={exportData} disabled={exporting}><Icon name="download" size={16}/>{t(exporting?'exportingExcel':'exportExcel')}</button>
-         {tab!=='categories'&&<button className="button primary" onClick={add} disabled={inlineEdit}><Icon name="plus" size={16}/>{t('add')}</button>}
+         {tab!=='categories'&&tab!=='operations'&&<button className="button primary" onClick={add} disabled={inlineEdit}><Icon name="plus" size={16}/>{t('add')}</button>}
        </div>
      </div>
      {managementStatus==='rules'&&<p className="admin-rules-notice" role="status"><Icon name="info"/>{t('rulesNeeded')}</p>}
@@ -462,14 +467,14 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
            </div>:<TrafficDashboard t={t} lang={lang} getIdToken={getIdToken}/>}
 
          </div>
-       </>:tab==='operations'?<AdminOperations data={data} backend={backend} t={t} lang={lang} busy={busy} initialTab={toolTab} onTabChange={setToolTab} onOpen={id=>{navigate('places');selectPreview(id);}} onApply={commitTools}/>:tab==='categories'?<div className="admin-category-groups">
+       </>:tab==='operations'?<AdminOperations data={data} currentRevision={currentRevision} mobile={mobile} backend={backend} t={t} lang={lang} busy={busy} initialTab={toolTab} onTabChange={setToolTab} onOpen={id=>{navigate('places');selectPreview(id);}} onApply={commitTools}/>:tab==='categories'?<div className="admin-category-groups">
          {groups.map(item=><section className="panel category-group-panel" key={item.id} style={{'--group-color':item.color}}>
            <div className="panel-heading"><div><span className="section-kicker">{t('kind')}</span><h2>{t(item.label)} <span className="count-pill">{item.children.length}</span></h2></div>
              <button className="button secondary" onClick={()=>setEditCategory({initialKind:item.id})}><Icon name="plus" size={16}/>{t('addCategory')}</button>
            </div>
            {item.children.length?<div className="category-grid">{item.children.map(child=>{
              const count=places.filter(place=>place.category===child.id).length;
-             return <article className="category-card" key={child.id} style={{'--category-color':child.color}}>
+             return <article className="category-card" key={child.id} style={{'--category-color':categoryColor(child)}}>
                <CategoryIcon category={child}/><h3>{categoryName(child)}</h3>
                <button className="text-button category-place-count" onClick={()=>{navigate(item.id);setCategory(child.id);}}>{count} {t('results')}</button>
                <div><button className="text-button" onClick={()=>setEditCategory({category:child})}><Icon name="edit" size={14}/>{t('edit')}</button>
@@ -501,9 +506,10 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
              <div className="category-chips" key={scope} role="group" aria-label={t('category')}>
                <button type="button" aria-pressed={category==='all'} onClick={()=>changeCategory('all')}>{t('allCategories')}</button>
                {visibleCategories.map(item=><button type="button" key={item.id} aria-pressed={category===item.id}
-                 style={{'--chip-color':item.color}} onClick={()=>changeCategory(item.id)}><Icon name={item.icon} size={14}/>{categoryName(item)}</button>)}
+                 style={{'--chip-color':categoryColor(item)}} onClick={()=>changeCategory(item.id)}><Icon name={item.icon} size={14}/>{categoryName(item)}</button>)}
              </div>
            </div>
+           {isCommunitySupport(getCategory(categories,category))&&<div className="admin-filter-row support-level-filter"><span>{t('supportLevel')}</span><div className="category-chips" role="group" aria-label={t('supportLevel')}><button type="button" aria-pressed={levelFilter==='all'} onClick={()=>{setLevelFilter('all');setPage(1);}}>{t('all')}</button>{supportLevels.map(level=><button type="button" key={level.id} aria-pressed={levelFilter===level.id} onClick={()=>{setLevelFilter(level.id);setPage(1);}}><Icon name={level.icon} size={14}/>{level.name}</button>)}</div></div>}
            {(query||groupFilter!=='all'||category!=='all'||status!=='all')&&
              <div className="admin-filter-footer">
                {status!=='all'&&<Status value={status==='alerts'?'alertStatus':status} t={t}/>}
@@ -530,7 +536,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
                  <button className="admin-place-name" type="button" aria-disabled={inlineEdit} aria-expanded={previewId===place.id} onClick={()=>selectPreview(place.id)}>{placeText(place,'name',lang)}</button>
                  <small>{placeText(place,'address',lang)}</small>{group?.id==='green'&&placeText(place,'waste',lang)&&<small>{placeText(place,'waste',lang)}</small>}
                </div></div></td>
-               <td><span className="admin-category-tag" style={{'--category-color':item.color}}>{categoryName(item)}</span>{!group&&<small className="table-group-label">{groupName(item.kind)}</small>}</td>
+               <td><span className="admin-category-tag" style={{'--category-color':categoryColor(item)}}>{categoryName(item)}</span>{getSupportLevel(place,item)?<small className="table-group-label"><SupportBadge place={place} category={item} t={t} compact/></small>:!group&&<small className="table-group-label">{groupName(item.kind)}</small>}</td>
                <td><Status value={place.status} t={t}/>{place.visibility==='hidden'&&<span className="admin-publication-badge"><Icon name="eyeoff" size={11}/>{t('hidden')}</span>}</td>
              </tr>;
            })}</tbody></table>

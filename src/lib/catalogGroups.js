@@ -1,7 +1,13 @@
+export const groupPalette = {
+  safe: { marker:'#D97724', markerInk:'#FFFFFF', ink:'#A65117', wash:'#FFF0E2', line:'#F0CDAE' },
+  green: { marker:'#BDE3A1', markerInk:'#285634', ink:'#467333', wash:'#F0F8E9', line:'#D1E4C1' },
+  partner: { marker:'#176B47', markerInk:'#FFFFFF', ink:'#176044', wash:'#E5F2EA', line:'#BEDBCB' },
+};
+
 export const catalogGroups = [
-  { id: 'safe', label: 'safe', icon: 'shield', color: '#39678b' },
-  { id: 'green', label: 'green', icon: 'recycle', color: '#237452' },
-  { id: 'partner', label: 'partner', icon: 'leaf', color: '#855f35' },
+  { id: 'safe', label: 'safe', icon: 'shield', color: groupPalette.safe.ink },
+  { id: 'green', label: 'green', icon: 'recycle', color: groupPalette.green.ink },
+  { id: 'partner', label: 'partner', icon: 'leaf', color: groupPalette.partner.ink },
 ];
 
 // Older catalogs used "service" as a fourth group and had a duplicate partner category.

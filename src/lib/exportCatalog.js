@@ -1,3 +1,4 @@
+import {getSupportLevel} from './supportLevels.js';
 import { catalogGroups } from './catalogGroups.js';
 import { readPlaceHours } from './placeHours.js';
 import { placeWasteTypes } from './editorial.js';
@@ -16,7 +17,7 @@ export function catalogWorkbook({ places, categories }, t, lang) {
 
   return [
     makeSheet('places',
-      ['placeId','name','kind','category','categoryId','address','phone','status','owner','waste','wasteTypes','opensAt','closesAt','hours','latitude','longitude','image','galleryUrls','description','source','updated','publication','nameEn','addressEn','ownerEn','wasteEn','hoursEn','descriptionEn',...Array.from({length:7},(_,index)=>`day${index}`),'exceptions'],
+      ['placeId','name','kind','category','categoryId','address','phone','status','owner','waste','wasteTypes','opensAt','closesAt','hours','latitude','longitude','image','galleryUrls','description','source','updated','publication','nameEn','addressEn','ownerEn','wasteEn','hoursEn','descriptionEn',...Array.from({length:7},(_,index)=>`day${index}`),'exceptions','supportLevel'],
       [38,38,20,24,24,46,19,20,26,28,26,15,15,21,15,15,40,40,40,22,24],
       places.map(place=>{
         const category=names.get(place.category);
@@ -25,7 +26,7 @@ export function catalogWorkbook({ places, categories }, t, lang) {
           place.owner??'',place.waste??'',placeWasteTypes(place).join(';'),opensAt,closesAt,hours,place.lat,place.lng,place.image??'',(place.images??[]).join('\n'),
           place.description??'',place.source??'',place.updatedAt??'',t(place.visibility==='hidden'?'hidden':'published'),place.nameEn||'',place.addressEn||'',place.ownerEn||'',place.wasteEn||'',place.hoursEn||'',place.descriptionEn||'',
           ...Array.from({length:7},(_,index)=>{const day=place.schedule?.enabled&&place.schedule.days[index];return !day?'':day.closed?t('dayClosed'):day.allDay?'24/7':`${day.opensAt}-${day.closesAt}`;}),
-          (place.schedule?.exceptions||[]).map(day=>`${day.date}=${day.closed?t('dayClosed'):day.allDay?'24/7':day.opensAt+'-'+day.closesAt}`).join(';')];
+          (place.schedule?.exceptions||[]).map(day=>`${day.date}=${day.closed?t('dayClosed'):day.allDay?'24/7':day.opensAt+'-'+day.closesAt}`).join(';'),getSupportLevel(place,category)?.name||''];
       })),
     makeSheet('categories',['category','kind','placeCount'],[34,22,18],
       categories.map(category=>[label(category),groupName(category.kind),places.filter(place=>place.category===category.id).length])),

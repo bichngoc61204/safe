@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { doc, getFirestore, onSnapshot, runTransaction, serverTimestamp } from 'firebase/firestore';
+import {isCommunitySupport,isSupportLevel,requiresSupportLevel} from './supportLevels.js';
 import { safeImage, validData } from './domain.js';
 import { organizeCatalog } from './catalogGroups.js';
 import { isClockTime } from './placeHours.js';
@@ -20,7 +21,8 @@ export function catalogRefs(config) {
 
 export function validateCatalog(data) {
   try {
-    if (!validData(data) || data.places.some(place =>
+    if (!validData(data) || data.categories.some(category=>category.supportLevels!=null&&(typeof category.supportLevels!=='boolean'||(category.supportLevels&&category.kind!=='safe'))) || data.places.some(place =>
+      (place.supportLevel!=null&&(!isSupportLevel(place.supportLevel)||!isCommunitySupport(data.categories.find(category=>category.id===place.category))))||
       (place.visibility!=null&&!['published','hidden'].includes(place.visibility))||
       (place.deletedAt!=null&&typeof place.deletedAt!=='string')||
       (place.schedule!=null&&!validSchedule(place.schedule))||
@@ -104,6 +106,7 @@ export async function writeManagedCatalog(refs,data,expectedRevision,actor){
   const previous=privateDoc.exists()?privateDoc:publicDoc;
   if(previous.data()?.revision!==expectedRevision)throw Error('catalogConflict');
   const before={categories:previous.data().categories,places:previous.data().places};
+  if(data.places.some(place=>requiresSupportLevel(place,before,data.categories)&&!isSupportLevel(place.supportLevel)))throw Error('supportLevelRequired');
   data={...data,places:data.places.map(place=>place.review?.status==='verified'&&!place.review.reviewedAt?{...place,review:{...place.review,reviewedAt:new Date().toISOString(),reviewedBy:actor.uid}}:place)};
   const changes=catalogChanges(before,data);
   if(!changes.length)return;

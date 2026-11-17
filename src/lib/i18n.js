@@ -288,3 +288,74 @@ Object.assign(messages.vi,communityMessages.vi);
 Object.assign(messages.en,communityMessages.en);
 Object.assign(messages.vi,{placeId:'Mã địa điểm',categoryId:'Mã danh mục',addressEn:'Địa chỉ tiếng Anh',ownerEn:'Đơn vị phụ trách tiếng Anh',wasteEn:'Loại rác tiếng Anh',hoursEn:'Ghi chú giờ tiếng Anh',descriptionEn:'Mô tả tiếng Anh'});
 Object.assign(messages.en,{placeId:'Place ID',categoryId:'Category ID',addressEn:'English address',ownerEn:'English operator',wasteEn:'English materials',hoursEn:'English hours notes',descriptionEn:'English description'});
+
+Object.assign(messages.vi,{
+ groupColorHint:'Màu được đồng bộ theo nhóm địa điểm.',
+ applyPlusCode:'Đặt ghim',
+ plusCodeHint:'Dán Plus Code đầy đủ, hoặc mã rút gọn tại Đà Nẵng (ví dụ bên trên). Kiểm tra ghim trên bản đồ trước khi lưu.',
+ plusCodeInvalid:'Plus Code không hợp lệ. Hãy sao chép mã có dấu + từ Google Maps.',
+ plusCodeNeedsFull:'Mã rút gọn này cần vị trí tham chiếu chính xác hơn. Vui lòng sao chép Plus Code đầy đủ (8 ký tự trước dấu +). Mã rút gọn có địa danh chỉ hỗ trợ Đà Nẵng.',
+ plusCodeLocalResult:'Đã đặt ghim theo mã rút gọn, tham chiếu khu vực An Thượng – Đà Nẵng. Kiểm tra vị trí rồi lưu.',
+ plusCodeFullResult:'Đã đặt ghim theo Plus Code đầy đủ. Lưu địa điểm để cập nhật.',
+});
+Object.assign(messages.en,{
+ groupColorHint:'Colors are shared by all categories in each group.',
+ applyPlusCode:'Set pin',
+ plusCodeHint:'Paste a full Plus Code, or a short code in Da Nang (as above). Check the map pin before saving.',
+ plusCodeInvalid:'Invalid Plus Code. Copy a code containing + from Google Maps.',
+ plusCodeNeedsFull:'This short code needs a more precise reference. Please copy the full Plus Code (8 characters before +). Short codes with a locality are supported for Da Nang only.',
+ plusCodeLocalResult:'Pin set using the An Thuong – Da Nang reference. Check its location before saving.',
+ plusCodeFullResult:'Pin set from the full Plus Code. Save the place to apply this change.',
+});
+
+Object.assign(messages.vi,{orCoordinates:'hoặc kinh/vĩ độ',locationRequired:'Nhập Plus Code hoặc đủ cả vĩ độ và kinh độ; cũng có thể chạm bản đồ để đặt ghim.',locationInvalid:'Tọa độ không hợp lệ. Vĩ độ từ −90 đến 90, kinh độ từ −180 đến 180.'});
+Object.assign(messages.en,{orCoordinates:'or latitude/longitude',locationRequired:'Enter a Plus Code or both latitude and longitude, or tap the map to set a pin.',locationInvalid:'Invalid coordinates. Latitude must be between −90 and 90, longitude between −180 and 180.'});
+
+Object.assign(messages.vi,{
+ needsReview:'cần rà soát',qualityPhoneShort:'Thiếu liên hệ',qualityPhotoShort:'Thiếu ảnh chính',qualityHoursShort:'Thiếu lịch hoạt động',qualityReviewShort:'Cần xác minh',
+ latestActivity:'Mới cập nhật trước',lastActivity:'Cập nhật',noActivityDate:'Chưa có thời gian',moreChecks:'mục cần kiểm tra thêm',
+ historyTimelineHint:'Theo ngày, mới nhất trước. Mỗi thay đổi ghi rõ hành động và người thực hiện.',activityEvents:'lần cập nhật',unknownEditor:'Chưa có người cập nhật',
+ history_added:'Thêm mới',history_edited:'Chỉnh sửa',history_deleted:'Xóa',history_restored:'Khôi phục',
+ reportQueueHint:'Tiếp nhận thông tin người dân gửi về, kiểm tra địa điểm và ghi lại kết quả xử lý.',awaitingReview:'chờ kiểm tra',reportItems:'thông tin',
+ noReportNote:'Không có ghi chú thêm.',resolutionPlaceholder:'Ghi kết quả kiểm tra hoặc nội dung đã cập nhật…',reportFilterEmpty:'Không có thông tin phù hợp với bộ lọc hiện tại.',
+});
+Object.assign(messages.en,{
+ needsReview:'to review',qualityPhoneShort:'Missing contact',qualityPhotoShort:'Missing cover photo',qualityHoursShort:'Missing daily hours',qualityReviewShort:'Needs verification',
+ latestActivity:'Latest activity first',lastActivity:'Updated',noActivityDate:'Time unavailable',moreChecks:'more checks',
+ historyTimelineHint:'Grouped by day, newest first. Each change shows its action and editor.',activityEvents:'updates',unknownEditor:'Editor unavailable',
+ history_added:'Added',history_edited:'Edited',history_deleted:'Deleted',history_restored:'Restored',
+ reportQueueHint:'Review visitor reports, check the place and record the outcome.',awaitingReview:'awaiting review',reportItems:'reports',
+ noReportNote:'No additional note.',resolutionPlaceholder:'Record what you checked or updated…',reportFilterEmpty:'No reports match the current filters.',
+});
+
+messages.vi.deletionState='Trạng thái xóa';
+messages.en.deletionState='Deletion status';
+
+messages.vi.moreChanges='thay đổi khác';
+messages.en.moreChanges='more changes';
+Object.assign(messages.vi,{
+ opsReviewPlace:'Kiểm tra địa điểm',opsCompleteThese:'Thông tin cần hoàn thiện',opsVerificationNote:'Chỉ xác nhận sau khi kiểm tra thực tế. Xác minh không tự bổ sung dữ liệu còn thiếu.',
+ opsPlacesNeedWork:'địa điểm cần hoàn thiện thông tin',opsQuality_all:'Tất cả',opsQuality_contact:'Liên hệ / vị trí',opsQuality_content:'Thông tin bổ sung',opsQuality_review:'Xác minh',opsOtherIssues:'mục khác',
+ opsHistoryHint:'Mở một lượt cập nhật để xem thông tin trước và sau.',opsHistorySearch:'Tìm địa điểm, người cập nhật…',opsMixedUpdate:'Cập nhật',opsSyncEvents:'lượt đồng bộ hệ thống',opsSyncHint:'Chỉ chuẩn hóa cấu trúc hoặc giá trị mặc định; không thay đổi nội dung hiển thị. Bản ghi gốc vẫn được giữ.',
+ opsChangeDetails:'Nội dung thay đổi',opsFindChangedPlace:'Tìm trong các địa điểm đã thay đổi',opsBefore:'Trước thay đổi',opsAfter:'Sau thay đổi',opsMissingSnapshot:'Không đủ bản lưu để xác định giá trị sau thay đổi.',opsAdvancedRestore:'Khôi phục toàn bộ phiên bản…',
+ opsHandleReport:'Xử lý thông tin',opsReceivedInfo:'Nội dung nhận được',opsNoPending:'Không còn thông tin chờ kiểm tra',opsShowAll:'Hiển thị tất cả',opsNotSet:'Chưa có',opsTrashed:'Trong thùng rác',opsNotTrashed:'Đang sử dụng',opsScheduleOff:'Không dùng lịch theo ngày',
+});
+Object.assign(messages.en,{
+ opsReviewPlace:'Review place',opsCompleteThese:'Information to complete',opsVerificationNote:'Confirm only after checking the place. Verification does not fill missing information.',
+ opsPlacesNeedWork:'places need information updates',opsQuality_all:'All',opsQuality_contact:'Contact / location',opsQuality_content:'Other information',opsQuality_review:'Verification',opsOtherIssues:'more',
+ opsHistoryHint:'Open an update to compare information before and after.',opsHistorySearch:'Find a place or editor…',opsMixedUpdate:'Updated',opsSyncEvents:'system synchronizations',opsSyncHint:'Structure or default values were normalized without changing displayed information. Original records are retained.',
+ opsChangeDetails:'Change details',opsFindChangedPlace:'Find within changed places',opsBefore:'Before',opsAfter:'After',opsMissingSnapshot:'There is no exact snapshot for this value after the change.',opsAdvancedRestore:'Restore the entire version…',
+ opsHandleReport:'Review report',opsReceivedInfo:'Reported information',opsNoPending:'No reports awaiting review',opsShowAll:'Show all',opsNotSet:'Not set',opsTrashed:'In trash',opsNotTrashed:'In use',opsScheduleOff:'Daily schedule disabled',
+});
+Object.assign(messages.vi,{
+ supportLevel:'Mức hỗ trợ cộng đồng',supportLevelHint:'Chọn mức hỗ trợ đã đăng ký với phường.',supportCategoryFlag:'Danh mục Hỗ trợ cộng đồng — cho phép phân 3 mức hỗ trợ',supportLevelRequired:'Chọn mức hỗ trợ cho địa điểm Hỗ trợ cộng đồng.',supportLevelUnassigned:'Chưa cập nhật mức hỗ trợ',
+ supportSafeTitle:'Điểm hỗ trợ an toàn',supportFamilyTitle:'Điểm hỗ trợ thân thiện với gia đình',supportHubTitle:'Điểm hỗ trợ trọng yếu',
+ supportInitial:'Hỗ trợ ban đầu',supportGuidance:'Hướng dẫn',supportReferral:'Kết nối dịch vụ',supportWomenChildren:'Hỗ trợ phụ nữ, trẻ em',supportLostChildren:'Hỗ trợ trẻ bị lạc',supportRestWater:'Nghỉ ngơi, nước uống',supportPoliceConnection:'Kết nối nhanh với công an',supportMedicalConnection:'Kết nối y tế',supportEssentialConnection:'Kết nối dịch vụ thiết yếu',supportWithinCapacity:'Hỗ trợ trong khả năng',
+ qualitySupportLevel:'Chưa chọn mức hỗ trợ cộng đồng',importSupportLevel:'Chọn Safe Point, Family Friendly Point hoặc Safe Hub cho điểm Hỗ trợ cộng đồng.',importSupportLevelCategory:'Mức hỗ trợ chỉ áp dụng cho danh mục Hỗ trợ cộng đồng.',
+});
+Object.assign(messages.en,{
+ supportLevel:'Community support level',supportLevelHint:'Choose the support level registered with the ward.',supportCategoryFlag:'Community support category — enable the three support levels',supportLevelRequired:'Choose a support level for this community support place.',supportLevelUnassigned:'Support level not yet provided',
+ supportSafeTitle:'Safety support point',supportFamilyTitle:'Family friendly support point',supportHubTitle:'Key support hub',
+ supportInitial:'Initial support',supportGuidance:'Guidance',supportReferral:'Service referral',supportWomenChildren:'Support for women and children',supportLostChildren:'Support for lost children',supportRestWater:'Rest area, drinking water',supportPoliceConnection:'Police connection',supportMedicalConnection:'Medical services connection',supportEssentialConnection:'Essential services connection',supportWithinCapacity:'Support within capacity',
+ qualitySupportLevel:'Community support level missing',importSupportLevel:'Choose Safe Point, Family Friendly Point or Safe Hub for community support places.',importSupportLevelCategory:'Support levels only apply to the community support category.',
+});

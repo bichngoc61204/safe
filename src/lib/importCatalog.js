@@ -1,10 +1,11 @@
+import {isCommunitySupport,isSupportLevel,parseSupportLevel,supportLevels} from './supportLevels.js';
 import {normalize,safeImage,statuses} from './domain.js';
 import {isClockTime} from './placeHours.js';
 import {defaultSchedule,validSchedule,wasteTypes,placeWasteTypes} from './editorial.js';
 import {translatedPlaceFields} from './locale.js';
 export const importColumns=[
  ['id','Mã địa điểm','Place ID'],['category','Mã danh mục','Category ID'],['name','Tên địa điểm','Place name'],['address','Địa chỉ','Address'],['lat','Vĩ độ','Latitude'],['lng','Kinh độ','Longitude'],['phone','Số điện thoại','Phone number'],['owner','Đơn vị phụ trách','Responsible organization'],['waste','Loại rác tiếp nhận','Accepted materials'],['wasteTypes','Mã loại rác','Material type IDs'],['status','Trạng thái','Status'],['opensAt','Giờ mở cửa','Opens at'],['closesAt','Giờ đóng cửa','Closes at'],['hours','Giờ hoạt động','Opening hours'],['image','URL ảnh chính','Cover image URL'],['images','Link ảnh phụ','Additional image URLs'],['description','Mô tả','Description'],['source','Nguồn dữ liệu','Source'],['nameEn','Tên tiếng Anh','English name'],['addressEn','Địa chỉ tiếng Anh','English address'],['ownerEn','Đơn vị phụ trách tiếng Anh','English operator'],['wasteEn','Loại rác tiếng Anh','English materials'],['hoursEn','Ghi chú giờ tiếng Anh','English hours notes'],['descriptionEn','Mô tả tiếng Anh','English description'],
- ...Array.from({length:7},(_,index)=>[`day${index}`,['Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy','Chủ Nhật'][index],['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][index]]),['holidays','Ngày nghỉ đặc biệt','Holiday dates'],
+ ...Array.from({length:7},(_,index)=>[`day${index}`,['Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy','Chủ Nhật'][index],['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][index]]),['holidays','Ngày nghỉ đặc biệt','Holiday dates'],['supportLevel','Mức hỗ trợ cộng đồng','Community support level'],
 ];
 const aliases={category:['Danh mục','Category'],image:['URL hình ảnh','Image URL'],lat:['latitude'],lng:['longitude'],images:['Link ảnh phụ','Gallery image URLs','Ảnh phụ','Additional photos'],source:['Data source'],id:['id'],nameEn:['nameEn'],holidays:['Ngày nghỉ / lịch đặc biệt','Holidays / special hours']};
 const text=value=>String(value??'').trim();
@@ -42,6 +43,14 @@ export function parseImportRows(rows,data,{update=false,idFactory=()=>crypto.ran
    point.wasteTypes=[...new Set(get('wasteTypes').split(/[;,\n]/).map(value=>text(value).toLowerCase()).filter(Boolean))];
    if(point.wasteTypes.some(type=>!wasteTypes.includes(type)))errors.push('importWasteTypes');
   }else if(get('waste')!==undefined)point.wasteTypes=placeWasteTypes({waste:point.waste});
+  if(isCommunitySupport(category)){
+   const rawLevel=get('supportLevel');
+   if(rawLevel)point.supportLevel=parseSupportLevel(rawLevel)||rawLevel;
+   if(!isSupportLevel(point.supportLevel)&&(!existing||existing.supportLevel||rawLevel))errors.push('importSupportLevel');
+  }else{
+   if(get('supportLevel'))errors.push('importSupportLevelCategory');
+   delete point.supportLevel;
+  }
   if(Object.entries(translatedPlaceFields).some(([key,max])=>(point[`${key}En`]?.length||0)>max))errors.push('importRequired');
   if((point.opensAt||point.closesAt)&&(!isClockTime(point.opensAt)||!isClockTime(point.closesAt)||point.opensAt===point.closesAt))errors.push('importHours');
   const raw=get('status');
@@ -69,6 +78,7 @@ export async function downloadImportTemplate(data,lang='vi'){
  await write([
   {sheet:lang==='en'?'Places':'Địa điểm',data:[row(importColumns.map(column=>column[lang==='en'?2:1]))],columns:importColumns.map(()=>({width:24}))},
   {sheet:lang==='en'?'Categories':'Danh mục',data:[row(['ID','Nhóm / Group','Tên / Name','English']),...data.categories.map(category=>row([category.id,category.kind,category.name,category.nameEn]))],columns:[{width:24},{width:20},{width:30},{width:30}]},
+  {sheet:lang==='en'?'Support levels':'Mức hỗ trợ',data:[row(['ID','Name','Category']),...supportLevels.map(level=>row([level.id,level.name,lang==='en'?'Community support only':'Chỉ danh mục Hỗ trợ cộng đồng']))],columns:[{width:25},{width:32},{width:40}]},
   {sheet:lang==='en'?'Material IDs':'Mã loại rác',data:[row([lang==='en'?'Material type IDs (separate with ;)':'Mã loại rác (ngăn cách bằng ;)']),...wasteTypes.map(type=>row([type]))],columns:[{width:42}]},
  ]).toFile('safemap-import-template.xlsx');
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import Modal from './Modal';
 import ScheduleEditor from './ScheduleEditor';
 import { WasteChoices } from './PlaceExtras';
@@ -6,9 +6,10 @@ import { defaultSchedule,validSchedule,placeWasteTypes } from '../lib/editorial'
 import Icon from './Icon';
 import Dropdown from './Dropdown';
 import { isClockTime, readPlaceHours } from '../lib/placeHours';
+import {supportLevels,isCommunitySupport,isSupportLevel,supportMarkerCategory} from '../lib/supportLevels';
 import { catalogGroups } from '../lib/catalogGroups';
 import { CoordinatePicker } from './MapView';
-import { CENTER } from '../lib/mapCenter';
+import { resolvePlusCode, resolvePlaceLocation } from '../lib/plusCodes';
 import { getCategory, safeImage, statuses } from '../lib/domain';
 import { translatedPlaceFields } from '../lib/locale';
 const maxExtraImages=5;
@@ -16,7 +17,7 @@ const maxExtraImages=5;
 function placeValues(place,categories,initialKind) {
   return {
     name:'', category:categories.find(c=>!initialKind||c.kind===initialKind)?.id||categories[0]?.id,
-    address:'', phone:'', owner:'', lat:CENTER[0], lng:CENTER[1], waste:'',
+    address:'', phone:'', owner:'', supportLevel:'', lat:'', lng:'', waste:'',
     status:initialKind==='green'?'clean':'active', description:'', source:'',
     ...place, image:safeImage(place?.image), ...readPlaceHours(place),visibility:place?.visibility||'published',review:place?.review||{status:'pending'},schedule:defaultSchedule(place),wasteTypes:placeWasteTypes(place||{}),
   };
@@ -29,6 +30,10 @@ function placeGallery(place) {
 
 export function usePlaceEditor({place,categories,initialKind,onSave,t,lang,busy,saveError,active=true}) {
   const [values,setValues]=useState(()=>placeValues(place,categories,initialKind));
+  const plusId=useId();
+  const [plusInput,setPlusInput]=useState('');
+  const [plusError,setPlusError]=useState('');
+  const [coordinateFocus,setCoordinateFocus]=useState(0);
   const [gallery,setGallery]=useState(()=>placeGallery(place));
   const nextImageId=useRef(0);
   const [error,setError]=useState('');
@@ -46,11 +51,13 @@ export function usePlaceEditor({place,categories,initialKind,onSave,t,lang,busy,
   function reset(){
     setValues(placeValues(place,categories,initialKind));
     setGallery(placeGallery(place));
+    setPlusInput('');setPlusError('');
     setError('');
   }
   const set=(key,value)=>{
     setError('');
-    setValues(v=>({...v,[key]:value,...(['name','nameEn','category','address','addressEn','phone','owner','ownerEn','lat','lng','schedule','wasteTypes','waste','wasteEn','opensAt','closesAt','hours','hoursEn','description','descriptionEn','status'].includes(key)?{review:{status:'pending'}}:{})}));
+    if(key==='lat'||key==='lng'){setPlusInput('');setPlusError('');}
+    setValues(v=>({...v,[key]:value,...(key==='category'&&!isCommunitySupport(getCategory(categories,value))?{supportLevel:''}:{}),...(['name','nameEn','category','address','addressEn','phone','owner','ownerEn','lat','lng','schedule','wasteTypes','waste','wasteEn','opensAt','closesAt','hours','hoursEn','description','descriptionEn','status','supportLevel'].includes(key)?{review:{status:'pending'}}:{})}));
   };
   function addImage(){
     if(gallery.length>=maxExtraImages)return;
@@ -92,6 +99,7 @@ export function usePlaceEditor({place,categories,initialKind,onSave,t,lang,busy,
     }
     if(!validSchedule(values.schedule)){showError('scheduleInvalid');return;}
     if(!name||!address){showError('required',form.elements.namedItem(!name?'name':'address'));return;}
+    if(isCommunitySupport(getCategory(categories,values.category))&&!isSupportLevel(values.supportLevel)){showError('supportLevelRequired',form.elements.namedItem('supportLevel')?.[0]||form.querySelector('[name=supportLevel]'));return;}
     if(mainUrl&&!image){showError('invalidImageUrl',form.elements.namedItem('image'));return;}
     if((opensAt||closesAt)&&(!isClockTime(opensAt)||!isClockTime(closesAt)||opensAt===closesAt)){
       showError('hoursInvalid',form.elements.namedItem(!opensAt?'opensAt':'closesAt'));
@@ -101,24 +109,41 @@ export function usePlaceEditor({place,categories,initialKind,onSave,t,lang,busy,
       showError('invalidGallery',form.querySelector('.extra-image-row [aria-invalid="true"]'));
       return;
     }
-    const p={...values,name,address,opensAt,closesAt,lat:Number(values.lat),lng:Number(values.lng),id:place?.id||crypto.randomUUID(),image,images,updatedAt:new Date().toISOString()};
+    let location;
+    try{location=resolvePlaceLocation({plusCode:plusInput,lat:values.lat,lng:values.lng});}
+    catch(error){
+      const codeError=error.message.startsWith('plusCode');
+      if(codeError)setPlusError(error.message);
+      showError(error.message,form.elements.namedItem(codeError?'plusCode':!String(values.lat).trim()?'lat':'lng'));
+      return;
+    }
+    if(location.code){
+      setValues(v=>({...v,lat:location.lat,lng:location.lng,review:{status:'pending'}}));
+      setPlusError('');setCoordinateFocus(v=>v+1);
+    }
+    const p={...values,name,address,opensAt,closesAt,lat:location.lat,lng:location.lng,review:location.code?{status:'pending'}:values.review,id:place?.id||crypto.randomUUID(),image,images,updatedAt:new Date().toISOString()};
     for(const key of Object.keys(translatedPlaceFields)){
       const field=`${key}En`;
       const translation=values[field]?.trim();
       if(translation)p[field]=translation;
       else delete p[field];
     }
+    if(!isCommunitySupport(getCategory(categories,p.category)))delete p.supportLevel;
     if(!['green','partner'].includes(kind)){p.waste='';delete p.wasteEn;}
     if(kind!=='green'&&['clean','warning','overloaded'].includes(p.status))p.status='active';
     onSave(p);
   }
   const groupField=<div className="form-dropdown"><span>{t('kind')}</span><Dropdown label={t('kind')} value={kind} onChange={group=>{
       const next=categories.find(category=>category.kind===group);
-      if(next){setError('');setValues(v=>({...v,category:next.id,status:v.status==='inactive'?v.status:group==='green'?'clean':'active',review:{status:'pending'}}));}
+      if(next){setError('');setValues(v=>({...v,category:next.id,supportLevel:'',status:v.status==='inactive'?v.status:group==='green'?'clean':'active',review:{status:'pending'}}));}
     }}>{catalogGroups.map(group=><option key={group.id} value={group.id} disabled={!categories.some(category=>category.kind===group.id)}>{t(group.label)}</option>)}</Dropdown></div>;
   const categoryField=<div className="form-dropdown"><span>{t('category')} <em>*</em></span><Dropdown label={t('category')} value={values.category} onChange={value=>set('category',value)}>
       {categories.filter(category=>category.kind===kind).map(category=><option key={category.id} value={category.id}>{lang==='en'?category.nameEn:category.name}</option>)}
     </Dropdown></div>;
+  const selectedLevel=supportLevels.find(level=>level.id===values.supportLevel);
+  const supportLevelField=isCommunitySupport(getCategory(categories,values.category))&&<fieldset className="support-level-editor span-2"><legend>{t('supportLevel')} <em>*</em></legend><p>{t('supportLevelHint')}</p><div className="support-level-options">{supportLevels.map(level=><label key={level.id} className="support-level-option" data-selected={values.supportLevel===level.id}>
+    <span className="support-level-option-icon"><Icon name={level.icon} size={20}/></span><span className="support-level-option-copy"><strong>{level.name}</strong><small>{t(level.title)}</small></span><input type="radio" name="supportLevel" value={level.id} required checked={values.supportLevel===level.id} onChange={()=>set('supportLevel',level.id)}/>
+  </label>)}</div>{selectedLevel&&<p className="support-level-services">{selectedLevel.services.map(service=>t(service)).join(' · ')}</p>}</fieldset>;
   const timeField=(key,icon)=><label key={key} hidden={values.schedule.enabled}><span>{icon&&<Icon name={icon} size={13}/>}<span>{t(key)}</span></span>
         <input type="time" name={key} value={values[key]} aria-invalid={error==='hoursInvalid'} onInput={event=>set(key,event.currentTarget.value)} onChange={event=>set(key,event.currentTarget.value)}/>
       </label>;
@@ -133,12 +158,30 @@ export function usePlaceEditor({place,categories,initialKind,onSave,t,lang,busy,
     <ScheduleEditor value={values.schedule} onChange={value=>set('schedule',value)} t={t}/>
     <fieldset className="verification-editor"><legend>{t('verification')}</legend><label className="schedule-check"><input type="checkbox" checked={values.review.status==='verified'} onChange={event=>set('review',{status:event.target.checked?'verified':'pending'})}/>{t('confirmVerified')}</label><p className="field-hint">{t('reviewHint')}</p></fieldset>
   </div>;
+  function applyPlusCode(){
+    if(busy)return;
+    try{
+      const result=resolvePlusCode(plusInput);
+      setValues(v=>({...v,lat:result.lat,lng:result.lng,review:{status:'pending'}}));
+      setPlusError('');setError('');setCoordinateFocus(v=>v+1);
+    }catch(error){setPlusError(error.message);}
+  }
+  const plusCodeField=<div className="plus-code-field span-2">
+    <label htmlFor={plusId}><span>Plus Code <em>*</em><span className="location-alternative">{t('orCoordinates')}</span></span></label><div className="plus-code-controls">
+      <input id={plusId} name="plusCode" autoComplete="off" spellCheck={false} value={plusInput} maxLength={200}
+        aria-label="Plus Code" required={values.lat===''||values.lng===''} aria-invalid={Boolean(plusError)}
+        onChange={event=>{setPlusInput(event.target.value);setPlusError('');}}
+        onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();applyPlusCode();}}}/>
+      <button type="button" className="button secondary" disabled={busy||!plusInput.trim()} onClick={applyPlusCode}>{t('applyPlusCode')}</button>
+    </div>
+    {plusError&&<p className="form-error" role="alert">{t(plusError)}</p>}
+  </div>;
   const coordinateFields=[['lat','latitude',90],['lng','longitude',180]].map(([key,label,max])=>
     <label key={key}><span>{t(label)} <em>*</em></span>
-      <input type="number" step="any" min={-max} max={max} required value={values[key]} onChange={e=>set(key,e.target.value)}/>
+      <input name={key} type="number" step="any" min={-max} max={max} required={!plusInput.trim()} value={values[key]} onChange={e=>set(key,e.target.value)}/>
     </label>);
-  const coordinatePicker=<CoordinatePicker lat={Number(values.lat)} lng={Number(values.lng)}
-    onChange={coords=>{setError('');setValues(v=>({...v,...coords,review:{status:'pending'}}));}} t={t} lang={lang}/>;
+  const coordinatePicker=<CoordinatePicker lat={values.lat===''?NaN:Number(values.lat)} lng={values.lng===''?NaN:Number(values.lng)} category={supportMarkerCategory(values,getCategory(categories,values.category))} focusRevision={coordinateFocus}
+    onChange={coords=>{setError('');setPlusInput('');setPlusError('');setValues(v=>({...v,...coords,review:{status:'pending'}}));}} t={t} lang={lang}/>;
   const englishFields=<details className="span-2 admin-preview-section admin-preview-metadata">
     <summary><Icon name="globe" size={15}/>{t('englishPlaceDetails')}<Icon name="down" size={14}/></summary>
     <p className="field-hint">{t('englishOptional')}</p>
@@ -191,7 +234,7 @@ export function usePlaceEditor({place,categories,initialKind,onSave,t,lang,busy,
       </div>
     </fieldset>;
   return {
-    extendedFields,field, phoneField, timeField, hoursHint, groupField, categoryField, statusField, coordinateFields, coordinatePicker, imageFields, englishFields,
+    supportLevelField,extendedFields,field, phoneField, timeField, hoursHint, groupField, categoryField, statusField, plusCodeField, coordinateFields, coordinatePicker, imageFields, englishFields,
     acceptsWaste:['green','partner'].includes(kind), scheduleEnabled:values.schedule.enabled, reset, submit,
     errorMessage:(error||saveError)&&<p className="form-error place-form-error" role="alert">{t(error||saveError)}</p>,
     imagePreview:preview&&<Modal title={t('previewImages')} onClose={()=>setPreview(null)} t={t} className="image-link-modal">
@@ -211,6 +254,7 @@ export default function PlaceForm({categories,initialKind,onSave,onClose,t,lang,
           <div className="form-grid">
             {field('name',{required:true,full:true,maxLength:150})}
             {editor.groupField}{editor.categoryField}
+            {editor.supportLevelField}
             {editor.phoneField()}
             {field('address',{required:true,full:true,maxLength:250})}
             {field('owner',{full:true,maxLength:150})}
@@ -226,6 +270,7 @@ export default function PlaceForm({categories,initialKind,onSave,onClose,t,lang,
           </div>
           <div className="form-section-heading"><Icon name="pin" size={16}/>{t('locationSection')}</div>
           <div className="form-grid">
+            {editor.plusCodeField}
             {editor.coordinateFields}
             <div className="span-2">{editor.coordinatePicker}</div>
             {editor.imageFields}

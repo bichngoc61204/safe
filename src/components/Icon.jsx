@@ -1,5 +1,5 @@
 import {
-  IconMap2, IconShieldCheck, IconBuildingBank, IconHeartbeat, IconSchool,
+  IconUsersGroup, IconAffiliate, IconMap2, IconShieldCheck, IconBuildingBank, IconHeartbeat, IconSchool,
   IconBuildingStore, IconRecycle, IconLeaf, IconSearch, IconMapPin, IconNavigation,
   IconCurrentLocation, IconPlus, IconMinus, IconX, IconArrowLeft, IconArrowUpRight,
   IconChevronRight, IconChevronLeft, IconAdjustmentsHorizontal, IconLayoutDashboard,
@@ -14,6 +14,7 @@ import {
 
 // Keep these keys stable for categories saved by earlier versions.
 const icons = {
+  family:IconUsersGroup, hub:IconAffiliate,
   share:IconShare, bookmark:IconBookmark, settings:IconSettings, history:IconHistory, upload:IconUpload, restore:IconRestore,
   map: IconMap2, shield: IconShieldCheck, landmark: IconBuildingBank, heart: IconHeartbeat,
   school: IconSchool, store: IconBuildingStore, recycle: IconRecycle, leaf: IconLeaf,

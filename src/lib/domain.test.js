@@ -35,12 +35,16 @@ test('retired local image references remain readable in Firestore but are skippe
 });
 test('image sources reject executable and non-web protocols',()=>{assert.equal(safeImage('javascript:alert(1)'),'');assert.equal(safeImage('data:text/html,x'),'');assert.equal(safeImage('https://example.org/photo.jpg'),'https://example.org/photo.jpg');});
 
-test('sample markers share a quiet palette and custom category colors still work',()=>{
- assert.equal(markerColor({color:'#dd7683',kind:'safe'}),'#3582bc');
- assert.equal(markerColor({color:'#334455',kind:'green'}),'#334455');
+test('all categories in a group share the client palette, including old custom colors',()=>{
+ const data=makeTestCatalog();
+ const safe=data.categories.filter(c=>c.kind==='safe');
+ assert.ok(safe.length>=4);
+ assert.deepEqual(new Set(safe.map(markerColor)),new Set(['#D97724']));
+ assert.equal(markerColor({color:'#334455',kind:'green'}),'#BDE3A1');
+ assert.equal(markerColor({color:'#855f35',kind:'partner'}),'#176B47');
+ assert.equal(markerColor({kind:'service'}),'#176B47');
+ assert.equal(new Set(['safe','green','partner'].map(kind=>markerColor({kind}))).size,3);
 });
-
-test('functional groups have distinct marker colors without changing custom colors',()=>{const d=makeTestCatalog();const color=id=>markerColor(d.categories.find(c=>c.id===id));assert.notEqual(color('safe'),color('health'));assert.equal(color('admin'),color('education'));assert.notEqual(color('admin'),color('green'));});
 
 test('Vietnam display filters keep land labels and reject boundaries, ferries and unknown layers',()=>{
  const source={version:8,sources:{world:{type:'vector',attribution:'Required source'}},layers:[
