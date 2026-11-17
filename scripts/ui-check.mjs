@@ -42,7 +42,7 @@ dom.window.HTMLDialogElement.prototype.close=function(){this.removeAttribute('op
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;
 const output=new URL('../.ui-check-generated.mjs',import.meta.url);
 const result=await build({
- entryPoints:['src/App.jsx'],bundle:true,format:'esm',platform:'node',packages:'external',jsx:'automatic',write:false,
+ entryPoints:['src/App.jsx'],bundle:true,format:'esm',platform:'node',packages:'external',jsx:'automatic',write:false,loader:{'.css':'empty'},
  define:{'import.meta.env':JSON.stringify({
    VITE_FIREBASE_API_KEY:'fixture',VITE_FIREBASE_AUTH_DOMAIN:'example.invalid',
    VITE_FIREBASE_PROJECT_ID:'fixture',VITE_FIREBASE_APP_ID:'fixture',
@@ -159,7 +159,7 @@ try{
  const discoveryDock=document.querySelector('.mobile-discovery-dock');
  const dockButton=name=>[...discoveryDock.querySelectorAll('button')].find(item=>item.getAttribute('aria-label')===name);
  const mapBeforeDock=document.querySelector('.leaflet-map');
- check(discoveryDock.querySelectorAll('button').length===4,'The mobile discovery dock exposes all three groups and saved places');
+ check(discoveryDock.querySelectorAll('button').length===4&&!!dockButton('Khám phá')&&!dockButton('Đã lưu'),'The mobile dock exposes Explore and the three main groups without a saved shortcut');
  await input(document.querySelector('.public-toolbar input'),'khong-co-ket-qua');
  await click(button('Đang mở cửa',document.querySelector('.quick-place-filters')));
  await click(dockButton('Điểm xanh'));
@@ -172,12 +172,16 @@ try{
  check(document.querySelectorAll('.place-card').length===3&&document.querySelector('.leaflet-map')===mapBeforeDock,'Group shortcuts keep the existing map renderer while changing results');
  await click(button('Khám phá',document.querySelector('.public-tabs')));
  await click(document.querySelector('.mobile-map-actions button'));
- check(document.querySelectorAll('.mobile-search-preview li').length===4,'Mobile search starts with four nearby suggestions');
- check(document.querySelectorAll('.search-preview-distance').length===4,'Nearby suggestions show distance even before GPS permission');
+ check(document.querySelectorAll('.mobile-search-preview li').length===6,'Mobile search starts with six nearby suggestions');
+ check(document.querySelectorAll('.search-preview-distance').length===6,'Nearby suggestions show distance even before GPS permission');
+ const searchPhoto=document.querySelector('.mobile-search-preview img');
+ check(!!searchPhoto&&!!searchPhoto.closest('.search-preview-thumbnail').querySelector('svg'),'Search suggestions render a real cover URL with a category fallback underneath');
+ await act(async()=>searchPhoto.dispatchEvent(new dom.window.Event('error')));
+ check(searchPhoto.hidden&&!searchPhoto.closest('.search-preview-thumbnail').querySelector('svg').hidden,'A broken cover returns to its category icon without losing the result');
  await click(button('An toàn',document.querySelector('.public-tabs')));
  check(document.querySelectorAll('.public-intro h1').length===1&&document.querySelector('.public-intro h1').textContent==='Điểm hỗ trợ cộng đồng','Changing groups replaces the hero heading');
  check(document.querySelectorAll('.place-card').length===6,'SafePoint screen groups all support categories');
- check(document.querySelectorAll('.mobile-search-preview li').length===4&&document.querySelector('.mobile-search-caption').textContent.includes('6'),'Filtered search previews four places and reports the full result count');
+ check(document.querySelectorAll('.mobile-search-preview li').length===6&&document.querySelector('.mobile-search-caption').textContent.includes('6'),'Filtered search previews six places and reports the full result count');
  await input(document.querySelector('.public-toolbar input'),'phuoc thien');
  await click(button('Điểm xanh',document.querySelector('.public-tabs')));
  check(document.querySelector('.public-toolbar input').value==='phuoc thien'&&document.querySelectorAll('.place-card').length===0,'Switching groups keeps the search text and filters the new group');
@@ -231,7 +235,8 @@ try{
  const savedPlaceName=document.querySelector('.place-details h2').textContent;
  const mapBeforeSaved=document.querySelector('.leaflet-map');
  await input(document.querySelector('.public-toolbar input'),'khong-co-ket-qua');
- await click(dockButton('Đã lưu'));
+ await click(dockButton('Khám phá'));
+ await click([...document.querySelectorAll('.quick-place-filters button')].find(control=>control.textContent.includes('Đã lưu')));
  check(document.querySelectorAll('.place-card').length===1&&document.querySelector('.place-card h3').textContent===savedPlaceName&&document.querySelector('.map-workspace').dataset.scope==='map'&&document.querySelector('.public-toolbar input').value==='','Saved shortcut clears stale search and opens only the saved result');
  await click(document.querySelector('.place-card'));
  check(document.querySelector('.place-details h2').textContent===savedPlaceName&&document.querySelector('.leaflet-map')===mapBeforeSaved,'Selecting a saved result opens details without replacing the map DOM');
@@ -368,7 +373,9 @@ try{
  globalThis.fetch=originalFetch;
 
  check(!button('Quản trị',document.querySelector('.site-header')),'The public header contains no Admin link');
+ await click(document.querySelector('.language-switch button[lang="en"]'));
  await goAdmin();
+ check(document.documentElement.lang==='vi'&&!document.querySelector('.language-switch'),'Admin uses Vietnamese without changing the saved public language preference');
  check(!!document.querySelector('.login-form'),'Admin opens Firebase login');
  await input(document.querySelector('input[type=email]'),'wrong@example.com');
  await input(document.querySelector('input[type=password]'),'wrong');
@@ -380,11 +387,11 @@ try{
  check(!!document.querySelector('.login-form [role=alert]')&&!document.querySelector('.admin-layout'),'An account without editor access stays outside Admin');
  await input(document.querySelector('input[type=email]'),'editor@example.invalid');
  await submit(document.querySelector('.login-form'));
- check(document.querySelectorAll('.stat-card').length===4,'Firebase editor login opens dashboard');
+ check(!!document.querySelector('.ao-total')&&document.querySelectorAll('.ao-group').length===3,'Firebase editor login opens an overview with three distinct groups');
  check([...document.querySelectorAll('.admin-sidebar nav [data-section]')].map(button=>button.dataset.section).join(',')==='overview,places,safe,green,partner,categories,operations','The admin sidebar exposes all three groups separately');
- check([...document.querySelectorAll('.stat-card>strong')].map(x=>x.textContent).join(',')==='11,06,02,03','Dashboard uses shared data');
- const overviewShortcut=name=>[...document.querySelectorAll('.admin-tool-shortcuts button')].find(item=>item.querySelector('strong')?.textContent===name);
- check(document.querySelectorAll('.admin-tool-shortcuts button').length===4,'Overview exposes the four data tools as labelled shortcuts');
+ check([...document.querySelectorAll('.ao-total strong,.ao-group-main > b')].map(x=>x.textContent).join(',')==='11,6,2,3','Dashboard uses shared data');
+ const overviewShortcut=name=>[...document.querySelectorAll('.ao-tool-strip button')].find(item=>item.querySelector('strong')?.textContent===name);
+ check(document.querySelectorAll('.ao-tool-strip button').length===4,'Overview exposes the four data tools as labelled shortcuts');
  for(const name of ['Chất lượng dữ liệu','Thông tin cần kiểm tra','Lịch sử thay đổi','Thùng rác']){
    await click(overviewShortcut(name));
    check(document.querySelector('.admin-sidebar [data-section=operations]').getAttribute('aria-current')==='page'&&document.querySelector('.operations-tabs button[aria-pressed=true]')?.textContent===name,'Overview shortcut opens its exact data-tool tab: '+name);
@@ -396,7 +403,7 @@ try{
  await click(document.querySelector('.admin-sidebar [data-section=operations]'));
  check(document.querySelector('.operations-tabs button[aria-pressed=true]')?.textContent==='Lịch sử thay đổi','Returning to data tools preserves the last selected subtab');
  await click(document.querySelector('.admin-sidebar [data-section=overview]'));
- await click(document.querySelector('.stat-1'));
+ await click(document.querySelector('.ao-group-main'));
  check(document.querySelectorAll('tbody tr').length===6,'The SafePoint metric opens only SafePoint places');
  await click([...document.querySelectorAll('.admin-sidebar nav button')].find(b=>b.textContent==='Địa điểm'));
  check(document.querySelectorAll('tbody tr').length===7,'Admin table paginates');
@@ -543,8 +550,7 @@ try{
  check(document.querySelectorAll('.category-group-panel').length===3,'Categories are grouped under the three primary groups');
  await click(document.querySelector('.category-card .danger-text'));
  check(document.querySelector('.toast').textContent.includes('đang có địa điểm'),'In-use category deletion is blocked');
- await click(document.querySelector('.language-switch button[lang="en"]'));
- check(document.documentElement.lang==='en'&&document.querySelector('.admin-heading h1').textContent==='Manage categories','English updates the dashboard');
+ check(document.documentElement.lang==='vi'&&!document.querySelector('.language-switch')&&document.querySelector('.admin-heading h1').textContent==='Quản lý danh mục','All admin screens stay Vietnamese without a language control');
  await click(document.querySelector('.header-logout'));
  check(window.location.pathname==='/admin'&&!!document.querySelector('.login-form'),'Sign-out stays on the admin route');
  await click(document.querySelector('.login-form-area > button'));
@@ -563,7 +569,7 @@ try{
  check(reloadedWelcome.classList.contains('is-leaving'),'Scrolling down starts the transition on desktop');
 
  await goAdmin();
- await click(document.querySelector('.language-switch button[lang="vi"]'));
+ check(document.documentElement.lang==='vi','Reopening admin keeps its fixed Vietnamese locale');
  await input(document.querySelector('input[type=email]'),'editor@example.invalid');
  await input(document.querySelector('input[type=password]'),'fixture');
  await submit(document.querySelector('.login-form'));
@@ -654,6 +660,7 @@ try{
  await click(document.querySelector('.header-logout'));
  await click(document.querySelector('.login-form-area > button'));
  check([...document.querySelectorAll('.place-card h3')].some(heading=>heading.textContent==='Điểm được đồng bộ'),'The cloud update appears on the public map after sign-out');
+ await click(document.querySelector('.language-switch button[lang="vi"]'));
  const communityPoint=cloudData.places.find(point=>point.category==='safe'&&!point.deletedAt&&point.visibility!=='hidden');
  for(const [level,label,capability] of [['safe_point','Safe Point','Hỗ trợ ban đầu'],['family_friendly','Family Friendly','Hỗ trợ trẻ bị lạc'],['safe_hub','Safe Hub','Kết nối y tế']]){
   await act(async()=>{cloudData={...cloudData,places:cloudData.places.map(point=>point.id===communityPoint.id?{...point,supportLevel:level}:point)};publishCatalog({data:publicCatalog(cloudData),revision});});

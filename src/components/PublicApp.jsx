@@ -30,7 +30,7 @@ const PlaceCards=memo(function PlaceCards({places,categories,selected,previewed,
   return <div className="places-list" ref={listRef}>{places.length?places.map(p=>{
     const c=getCategory(categories,p.category);
     const color=categoryColor(c);
-    const image=safeImage(p.image);
+    const image=placePhotoUrls(p)[0];
     const preview=()=>actions.current.preview(p.id);
     const leave=()=>actions.current.leave(p.id);
     return <button className={`place-card ${p.status==='inactive'?'is-inactive':''} ${previewed===p.id?'is-previewed':''}`}
@@ -328,8 +328,8 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
   const hasFilterOptions=supportLevel!=='all'||category!=='all'||status!=='all'||scope!=='map'||savedOnly||openOnly||wasteType!=='all';
   const hasFilters=Boolean(query.trim())||hasFilterOptions;
   const searchPreview=useMemo(()=>{
-    if(position)return visible.slice(0,4);
-    return [...visible].sort((a,b)=>haversine(areaCenter,a)-haversine(areaCenter,b)).slice(0,4);
+    if(position)return visible.slice(0,6);
+    return [...visible].sort((a,b)=>haversine(areaCenter,a)-haversine(areaCenter,b)).slice(0,6);
   },[hasFilters,position,visible]);
   const scopeIndex=scopes.findIndex(([id])=>id===scope);
   const [, scopeLabel, scopeIcon]=scopes[scopeIndex];
@@ -338,15 +338,12 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
     setHoverScope(id);
   };
   const openMobileGroup=next=>{clear();setScope(next);setSearchOpen(false);setExpanded(true);};
-  const openSaved=()=>{clear();setScope('map');setSavedOnly(true);setSearchOpen(false);setExpanded(true);};
-  const savedCount=data.places.filter(point=>bookmarks.saved.includes(point.id)).length;
   const discoveryVisible=mobile&&!expanded&&!searchOpen&&!activeRequest&&!pickingOrigin&&!pendingGps;
   return <main className="public-app" data-welcome={welcomePhase}>
     <div className={`map-workspace ${expanded?'sheet-expanded':''} ${place?'has-detail':''}`}
       data-scope={scope} data-sidebar={sidebarCollapsed?'collapsed':'open'} data-search-open={searchOpen}>
       <nav className="mobile-discovery-dock" data-visible={discoveryVisible} aria-label={t('quickExplore')} aria-hidden={!discoveryVisible} inert={!discoveryVisible}>
-        {scopes.slice(1).map(([id,label,icon])=><button type="button" key={id} onClick={()=>openMobileGroup(id)} aria-label={t(label)} style={{'--dock-accent':categoryColor({kind:id})}}><Icon name={icon} size={20}/><span>{t(id==='partner'?'partnerShort':label)}</span></button>)}
-        <button type="button" className="dock-saved" onClick={openSaved} aria-label={t('savedPlaces')}><Icon name="bookmark" size={20}/><span>{t('savedPlaces')}{savedCount>0&&<b>{savedCount}</b>}</span></button>
+        {scopes.map(([id,label,icon])=><button type="button" key={id} onClick={()=>openMobileGroup(id)} aria-label={t(label)} style={{'--dock-accent':categoryColor({kind:id})}}><Icon name={icon} size={20}/><span>{t(id==='partner'?'partnerShort':label)}</span></button>)}
       </nav>
       <div className="mobile-map-actions">
         <button ref={searchToggle} className={`map-tool ${hasFilters?'has-filters':''}`} aria-label={t('search')} aria-expanded={searchOpen} aria-controls="map-search-panel" onClick={toggleSearch}><Icon name={searchOpen?'x':'search'} size={21}/></button>
@@ -438,7 +435,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
               const distance=formatDistance(haversine(position||areaCenter,p));
               return <li key={p.id} style={{'--preview-index':Math.min(index,3)}}>
                 <button type="button" onClick={()=>selectPlace(p.id)} style={{'--preview-color':categoryColor(c)}}>
-                  <Icon name={supportMarkerCategory(p,c).icon} size={17}/><span><strong>{placeText(p,'name',lang)}</strong><small>{placeText(p,'address',lang)}</small></span>
+                  <span className="search-preview-thumbnail"><Icon name={categoryVisualIcon(c)} size={19}/>{placePhotoUrls(p)[0]&&<img key={placePhotoUrls(p)[0]} src={placePhotoUrls(p)[0]} alt="" loading="lazy" decoding="async" onError={event=>{event.currentTarget.hidden=true;}}/>}</span><span className="search-preview-copy"><strong>{placeText(p,'name',lang)}</strong><small>{placeText(p,'address',lang)}</small><OpenBadge place={p} t={t} now={now}/></span>
                   <span className="search-preview-trailing"><span className="search-preview-distance">{distance}</span><Icon name="right" size={13}/></span>
                 </button>
               </li>;

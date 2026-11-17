@@ -16,7 +16,7 @@ Object.assign(messages.vi, {
  title:'Khám phá An Thượng', safeTitle:'Điểm hỗ trợ cộng đồng', greenTitle:'Thu gom & tái chế', partnerTitle:'Đối tác địa phương',
  subtitle:'An toàn, tiện ích và môi trường quanh bạn.', localGuide:'BẢN ĐỒ CỘNG ĐỒNG', explore:'Khám phá', modules:'Các nhóm địa điểm', allCategories:'Tất cả danh mục',
  osmDirections:'Mở chỉ đường trên OpenStreetMap', mapLight:'Tiêu chuẩn', mapDark:'Nền tối', mapStyle:'Nền bản đồ', vectorFallback:'Đang dùng nền cơ bản vì bản đồ vector không khả dụng.',
- previousPage:'Trang trước',nextPage:'Trang sau',adminTitle:'Tổng quan hệ thống',adminSubtitle:'Quản lý địa điểm và trạng thái điểm thu gom tại An Thượng.',
+ previousPage:'Trang trước',nextPage:'Trang sau',adminTitle:'Tổng quan hệ thống',adminSubtitle:'Nắm tình hình địa điểm, rà soát dữ liệu và xử lý thông tin cần bổ sung.',
  loginTitle:'Quản trị SafeMap',loginSubtitle:'Quản lý dữ liệu địa điểm cộng đồng.', defaultSort:'Danh sách địa điểm'
 });
 Object.assign(messages.en, {
@@ -111,7 +111,7 @@ Object.assign(messages.vi,{placePhotos:'Ảnh địa điểm',photoEnlarge:'Phó
 Object.assign(messages.en,{placePhotos:'Place photos',photoEnlarge:'Enlarge photo',photoPrevious:'Previous photo',routeRetry:'Try again',routeRemaining:'Remaining',photoNext:'Next photo'});
 Object.assign(messages.vi, {
   welcomeArea: 'An Thượng · Đà Nẵng',
-  welcomeDescription: 'Bản đồ cộng đồng giúp bạn tìm điểm hỗ trợ, nơi thu gom tái chế và các cửa hàng đồng hành quanh An Thượng.',
+  welcomeDescription: 'Mới đến An Thượng hay đang cần giúp đỡ? Tìm cơ sở y tế, điểm hỗ trợ cộng đồng, nơi tái chế và các đối tác xanh trên cùng bản đồ.',
   welcomeSafe: 'An toàn',
   welcomeGreen: 'Điểm xanh',
   welcomeScroll: 'Cuộn xuống để vào bản đồ',
@@ -122,7 +122,7 @@ Object.assign(messages.vi, {
   welcomeSearchKicker: 'Tìm địa điểm',
   welcomeSearchTitle: 'Tìm điểm',
   welcomeSearchAccent: 'quanh bạn',
-  welcomeSearchDescription: 'Tìm theo tên hoặc lọc theo nhóm. Xem địa chỉ và khoảng cách ngay trong kết quả.',
+  welcomeSearchDescription: 'Gõ tên, chọn nhóm hoặc xem các điểm gần bạn. Mở một địa điểm để xem ảnh, giờ hoạt động, khả năng hỗ trợ và liên hệ trực tiếp.',
   welcomeFindName: 'Tìm theo tên',
   welcomeFindGroup: 'Lọc theo nhóm',
   welcomeFindNearby: 'Điểm gần bạn',
@@ -134,7 +134,7 @@ Object.assign(messages.vi, {
 });
 Object.assign(messages.en, {
   welcomeArea: 'An Thượng · Da Nang',
-  welcomeDescription: 'Find community support, recycling points and participating local shops on this map of An Thượng.',
+  welcomeDescription: 'New to An Thượng or looking for help? Find healthcare, community support, recycling locations and green partners together on one map.',
   welcomeSafe: 'Safety',
   welcomeGreen: 'Green points',
   welcomeScroll: 'Scroll down to open the map',
@@ -145,7 +145,7 @@ Object.assign(messages.en, {
   welcomeSearchKicker: 'Find a place',
   welcomeSearchTitle: 'Find places',
   welcomeSearchAccent: 'near you',
-  welcomeSearchDescription: 'Search by name or filter by group. See addresses and distances in the results.',
+  welcomeSearchDescription: 'Search by name, choose a group or explore places nearby. Open a place to see photos, hours, available support and direct contact details.',
   welcomeFindName: 'Search by name',
   welcomeFindGroup: 'Filter by group',
   welcomeFindNearby: 'Nearby places',
@@ -320,7 +320,7 @@ Object.assign(messages.vi,{
  noReportNote:'Không có ghi chú thêm.',resolutionPlaceholder:'Ghi kết quả kiểm tra hoặc nội dung đã cập nhật…',reportFilterEmpty:'Không có thông tin phù hợp với bộ lọc hiện tại.',
 });
 Object.assign(messages.en,{
- needsReview:'to review',qualityPhoneShort:'Missing contact',qualityPhotoShort:'Missing cover photo',qualityHoursShort:'Missing daily hours',qualityReviewShort:'Needs verification',
+ needsReview:'to review',qualityPhoneShort:'Missing contact',qualityPhotoShort:'Missing cover photo',qualityHoursShort:'Missing opening hours',qualityReviewShort:'Needs verification',
  latestActivity:'Latest activity first',lastActivity:'Updated',noActivityDate:'Time unavailable',moreChecks:'more checks',
  historyTimelineHint:'Grouped by day, newest first. Each change shows its action and editor.',activityEvents:'updates',unknownEditor:'Editor unavailable',
  history_added:'Added',history_edited:'Edited',history_deleted:'Deleted',history_restored:'Restored',
@@ -359,3 +359,6 @@ Object.assign(messages.en,{
  supportInitial:'Initial support',supportGuidance:'Guidance',supportReferral:'Service referral',supportWomenChildren:'Support for women and children',supportLostChildren:'Support for lost children',supportRestWater:'Rest area, drinking water',supportPoliceConnection:'Police connection',supportMedicalConnection:'Medical services connection',supportEssentialConnection:'Essential services connection',supportWithinCapacity:'Support within capacity',
  qualitySupportLevel:'Community support level missing',importSupportLevel:'Choose Safe Point, Family Friendly or Safe Hub for community support places.',importSupportLevelCategory:'Support levels only apply to the community support category.',
 });
+
+Object.assign(messages.vi,{welcomeIntroNote:'Một bản đồ, nhiều điểm tựa',welcomeIntroHint:'An toàn · Tiện ích · Môi trường',welcomeSearchExample:'Bạn cần tìm gì?',welcomeSearchResultSupport:'Điểm hỗ trợ quanh bạn',welcomeSearchResultGreen:'Nơi tiếp nhận tái chế',welcomeSearchResultInfo:'Địa chỉ · Giờ hoạt động · Liên hệ'});
+Object.assign(messages.en,{welcomeIntroNote:'One map, many ways to help',welcomeIntroHint:'Safety · Local services · Environment',welcomeSearchExample:'What do you need?',welcomeSearchResultSupport:'Support nearby',welcomeSearchResultGreen:'Local recycling',welcomeSearchResultInfo:'Address · Hours · Contact'});

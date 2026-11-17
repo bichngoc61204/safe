@@ -10,11 +10,10 @@ import {isCommunitySupport,isSupportLevel,getSupportLevel,categoryVisualIcon} fr
 import AdminOperations from './AdminOperations';
 import ImportPlaces from './ImportPlaces';
 import { ScheduleDisplay } from './PlaceExtras';
-import TrafficDashboard from './TrafficDashboard';
+import AdminOverview from './AdminOverview';
 import { AdminPlacesMap } from './MapView';
 import { placeHourRows } from '../lib/placeHours';
 import { placeText } from '../lib/locale';
-import { qualityIssues } from '../lib/editorial';
 import { categoryColor, categoryPalette, markerColor, directionsUrl, filterPlaces, getCategory, isAlert, isDemoPhone, phoneHref, placePhotoUrls } from '../lib/domain';
 export function Status({value,t}) {return <span className={`status status-${value}`}><i/>{t(value)}</span>;}
 export function CategoryIcon({category,size=19}){return <span className="category-icon" style={{'--category-color':categoryColor(category),background:categoryPalette(category).wash,color:categoryColor(category)}}><Icon name={categoryVisualIcon(category)} size={size}/></span>;}
@@ -36,14 +35,6 @@ export function Login({onLogin,onBack,t,available,editorStatus}){
  const message = error || (editorStatus==='denied'?'editorDenied':editorStatus==='error'?'editorError':'');
  return <main className="login-page"><div className="login-story"><div className="login-symbol"><Icon name="map" size={86}/><span className="orbit one"><Icon name="safety" size={25}/></span><span className="orbit two"><Icon name="recycle" size={25}/></span><span className="orbit three"><Icon name="leaf" size={25}/></span></div><div className="eyebrow">SAFEMAP AN THƯỢNG</div><h1>{t('loginTitle')}</h1><p>{t('footer')}</p><div className="login-pills"><span><Icon name="safety" size={15}/>{t('safe')}</span><span><Icon name="recycle" size={15}/>{t('green')}</span></div></div><div className="login-form-area"><button className="text-button" onClick={onBack}><Icon name="back" size={16}/>{t('loginBack')}</button><form className="login-form" onSubmit={submit}><span className="login-lock"><Icon name="lock" size={23}/></span><h2>{t('login')}</h2><p>{t('editorLoginSubtitle')}</p><label><span>{t('email')}</span><input type="email" autoComplete="username" value={email} onChange={e=>{setEmail(e.target.value);setError('');}} required/></label><label><span>{t('password')}</span><div className="password-field"><input type={show?'text':'password'} autoComplete="current-password" value={password} onChange={e=>{setPassword(e.target.value);setError('');}} required/><button type="button" aria-label={t(show?'hidePassword':'showPassword')} onClick={()=>setShow(!show)}><Icon name={show?'eyeoff':'eye'} size={18}/></button></div></label>{message&&<p className="form-error" role="alert">{t(message)}</p>}<button className="button primary login-submit" disabled={pending||!available}>{t(pending?'editorChecking':'login')}<Icon name="right" size={17}/></button></form></div></main>;
 }
-function moveCardHighlight(event) {
- if (event.pointerType !== 'mouse') return;
- const card = event.currentTarget;
- const bounds = card.getBoundingClientRect();
- card.style.setProperty('--highlight-x', `${event.clientX - bounds.left}px`);
- card.style.setProperty('--highlight-y', `${event.clientY - bounds.top}px`);
-}
-
 function CategoryForm({category,initialKind,onSave,onClose,t,busy,saveError}) {
  const [v,setV]=useState(category?{...category,...(isCommunitySupport(category)?{supportLevels:true}:{})}:{id:crypto.randomUUID(),name:'',nameEn:'',color:'#199569',icon:'store',kind:initialKind||'safe'});
  return <Modal title={t(category?'edit':'addCategory')} onClose={onClose} t={t} dismissible={!busy}><form onSubmit={e=>{e.preventDefault();if(v.name.trim()&&v.nameEn.trim())onSave({...v,...(isCommunitySupport(v)?{supportLevels:true}:{}),color:markerColor(v),name:v.name.trim(),nameEn:v.nameEn.trim()});}}><div className="form-scroll"><div className="form-grid"><label className="span-2"><span>{t('categoryName')} *</span><input required value={v.name} maxLength={60} onChange={e=>setV({...v,name:e.target.value})}/></label><label className="span-2"><span>{t('nameEn')} *</span><input required value={v.nameEn} maxLength={60} onChange={e=>setV({...v,nameEn:e.target.value})}/></label><div className="form-dropdown span-2"><span>{t('kind')}</span><Dropdown label={t('kind')} value={v.kind} disabled={!!category} onChange={kind=>setV({...v,kind,supportLevels:kind==='safe'&&v.supportLevels===true})}>
@@ -53,31 +44,6 @@ function CategoryForm({category,initialKind,onSave,onClose,t,busy,saveError}) {
  </Dropdown></div><div className="category-preview span-2"><CategoryIcon category={v}/><strong>{v.name||t('categoryName')}</strong><small>{v.nameEn}</small></div></div></div>{saveError&&<p className="form-error place-form-error" role="alert">{t(saveError)}</p>}<div className="modal-footer"><button className="button secondary" type="button" data-dialog-dismiss disabled={busy}>{t('cancel')}</button><button className="button primary" disabled={busy}>{t(busy?'saving':'save')}</button></div></form></Modal>;
 }
 const mobileAdminQuery='(max-width: 700px)';
-const overviewTabs=[
-  ['summary','overviewSummary','dashboard'],
-  ['activity','overviewActivity','clock'],
-  ['traffic','overviewTraffic','chart'],
-];
-
-function OverviewTabs({value,onChange,t}) {
-  const active=overviewTabs.findIndex(([id])=>id===value);
-  function moveTab(event){
-    const last=overviewTabs.length-1;
-    const offsets={ArrowLeft:active-1,ArrowRight:active+1,Home:0,End:last};
-    if(!Object.hasOwn(offsets,event.key))return;
-    event.preventDefault();
-    const index=(offsets[event.key]+overviewTabs.length)%overviewTabs.length;
-    onChange(overviewTabs[index][0]);
-    event.currentTarget.querySelectorAll('[role="tab"]')[index]?.focus({preventScroll:true});
-  }
-  return <div className="overview-switch" role="tablist" aria-label={t('overview')} onKeyDown={moveTab}
-    style={{'--overview-index':active}}>
-    {overviewTabs.map(([id,label,icon])=><button type="button" key={id} role="tab" id={`overview-tab-${id}`}
-      aria-controls="overview-panel" aria-selected={value===id} tabIndex={value===id?0:-1} onClick={()=>onChange(id)}>
-      <Icon name={icon} size={15}/><span>{t(label)}</span>
-    </button>)}
-  </div>;
-}
 const isMobileAdmin=()=>window.matchMedia?.(mobileAdminQuery).matches??false;
 function subscribeMobileAdmin(notify) {
   const media=window.matchMedia?.(mobileAdminQuery);
@@ -230,7 +196,6 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
  const [tab,setTab]=useState('overview');
  const [toolTab,setToolTab]=useState('quality');
  const [importOpen,setImportOpen]=useState(false);
- const [overview,setOverview]=useState('summary');
  const [query,setQuery]=useState('');
  const [groupFilter,setGroupFilter]=useState('all');
  const [category,setCategory]=useState('all');
@@ -275,9 +240,6 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
    return [...filtered,preview];
  },[filtered,preview]);
  const mapHoverId=!inlineEdit&&visible.some(place=>place.id===hoveredPlaceId)?hoveredPlaceId:null;
- const recent=[...places].sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))).slice(0,5);
- const qualityCount=useMemo(()=>places.filter(place=>qualityIssues(place,data).length).length,[places,data]);
- const trashCount=data.places.filter(place=>place.deletedAt).length;
  const title=tab==='overview'?'overview':tab==='categories'?'manageCategories':tab==='operations'?'adminTools':group?.label??'managePlaces';
 
  function clearFilters(){
@@ -377,8 +339,6 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
  }
  const nav=[{id:'overview',label:'overview',icon:'dashboard'},{id:'places',label:'places',icon:'pin'},...catalogGroups,{id:'categories',label:'categories',icon:'tags'},{id:'operations',label:'adminTools',icon:'settings'}];
  const dockLabel=item=>item.id==='operations'?(lang==='en'?'Tools':'Công cụ'):item.id==='categories'?(lang==='en'?'Categories':'Danh mục'):t(item.label);
- const states=['active','clean','warning','overloaded','inactive'];
- const stateCounts=states.map(id=>({id,count:places.filter(place=>place.status===id).length}));
 
  return <div className="admin-layout" data-section={tab}>
    <aside className="admin-sidebar">
@@ -403,71 +363,12 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
      </div>
      {managementStatus==='rules'&&<p className="admin-rules-notice" role="status"><Icon name="info"/>{t('rulesNeeded')}</p>}
      <div className="admin-content" key={tab}>
-       {tab==='overview'?<>
-         <section className="admin-tool-launcher" aria-label={t('adminTools')}>
-           <div className="admin-tool-launcher-heading"><h2>{t('adminTools')}</h2><Icon name="settings" size={15}/></div>
-           <div className="admin-tool-shortcuts">
-             {[['quality','check',qualityCount],['reports','alert',null],['history','history',null],['trash','restore',trashCount]].map(([id,icon,count],index)=><button type="button" key={id} style={{'--tool-order':index}} onClick={()=>{setToolTab(id);navigate('operations');}}>
-               <span className={`admin-tool-shortcut-icon tool-${id}`}><Icon name={icon} size={18}/></span>
-               <strong>{t(id)}</strong>{count!==null&&<b>{count}</b>}<Icon name="right" size={14}/>
-             </button>)}
-           </div>
-         </section>
-         <OverviewTabs value={overview} onChange={setOverview} t={t}/>
-         <div className="overview-view" key={overview} id="overview-panel" role="tabpanel" aria-labelledby={`overview-tab-${overview}`} tabIndex={0}>
-           {overview==='summary'?<>
-             <div className="stats-grid">
-               {[{id:'places',label:'total',icon:'pin',count:places.length},...groups].map((item,index)=><button key={item.id}
-                 className={`stat-card stat-${index}`} onPointerMove={moveCardHighlight} onClick={()=>navigate(item.id)}>
-                 <div><span>{t(item.label)}</span><span className="stat-icon"><Icon name={item.icon} size={20}/></span></div>
-                 <strong>{String(item.count).padStart(2,'0')}</strong><small>{t('viewAll')} <span className="stat-arrow"><Icon name="arrow" size={15}/></span></small>
-               </button>)}
-             </div>
-             <div className="overview-grid">
-               <section className="panel">
-                 <div className="panel-heading"><h2>{t('groupDistribution')}</h2><Icon name="tags" size={18}/></div>
-                 <div className="admin-chart">{groups.map(item=><button key={item.id} onClick={()=>navigate(item.id)} className="admin-chart-row" style={{'--chart-color':item.color}}>
-                   <span>{t(item.label)}</span><b>{item.count}</b><i><i style={{width:`${places.length?100*item.count/places.length:0}%`}}/></i>
-                 </button>)}</div>
-               </section>
-               <section className="panel">
-                 <div className="panel-heading"><h2>{t('statusDistribution')}</h2><Icon name="list" size={18}/></div>
-                 <div className="admin-chart">{stateCounts.map(item=><button key={item.id} data-status={item.id} className="admin-chart-row"
-                   onClick={()=>{navigate('places');setStatus(item.id);}}>
-                   <span>{t(item.id)}</span><b>{item.count}</b><i><i style={{width:`${places.length?100*item.count/places.length:0}%`}}/></i>
-                 </button>)}</div>
-               </section>
-             </div>
-           </>:overview==='activity'?<div className="overview-grid">
-             <section className="panel attention-panel">
-               <div className="panel-heading"><div><span className="section-kicker">GREENPOINT</span><h2>{t('attention')}</h2></div>
-                 <button className="text-button" onClick={()=>{navigate('green');setStatus('alerts');}}>{t('viewAll')}<Icon name="arrow" size={15}/></button>
-               </div>
-               {alerts.length?alerts.map(place=><div className="attention-row" key={place.id}>
-                 <CategoryIcon category={getCategory(categories,place.category)}/><div><strong>{placeText(place,'name',lang)}</strong><p>{placeText(place,'address',lang)}</p><Status value={place.status} t={t}/></div>
-                 <button className="icon-button" aria-label={`${t('edit')} ${placeText(place,'name',lang)}`} onClick={()=>{navigate('green');selectPreview(place.id);setEdit({place});}}><Icon name="edit" size={16}/></button>
-               </div>):<div className="empty-state"><Icon name="check"/><p>{t('noAlerts')}</p></div>}
-             </section>
-             <section className="panel recent-panel">
-               <div className="panel-heading"><h2>{t('recent')}</h2><button className="text-button" onClick={()=>navigate('places')}>{t('viewAll')}</button></div>
-               {recent.length?<div className="recent-places">{recent.map(place=>{
-                 const item=getCategory(categories,place.category);
-                 const timestamp=Date.parse(place.updatedAt);
-                 const time=Number.isFinite(timestamp)?new Intl.DateTimeFormat(lang,{dateStyle:'medium',timeZone:'Asia/Ho_Chi_Minh'}).format(timestamp):t('unknownDate');
-                 return <button key={place.id} onClick={()=>{navigate('places');selectPreview(place.id);}}>
-                   <CategoryIcon category={item} size={17}/>
-                   <span className="recent-place-label"><strong>{placeText(place,'name',lang)}</strong><small>{placeText(place,'address',lang)}</small>
-                     <span>{categoryName(item)} <span aria-hidden="true">·</span> {groupName(item.kind)}</span>
-                   </span>
-                   <span className="recent-place-meta"><time dateTime={Number.isFinite(timestamp)?place.updatedAt:undefined}>{time}</time><Status value={place.status} t={t}/></span>
-                   <Icon name="right" size={15}/>
-                 </button>;
-               })}</div>:<div className="empty-state">{t('noResults')}</div>}
-             </section>
-           </div>:<TrafficDashboard t={t} lang={lang} getIdToken={getIdToken}/>}
-
-         </div>
-       </>:tab==='operations'?<AdminOperations data={data} currentRevision={currentRevision} mobile={mobile} backend={backend} t={t} lang={lang} busy={busy} initialTab={toolTab} onTabChange={setToolTab} onOpen={id=>{navigate('places');selectPreview(id);}} onApply={commitTools}/>:tab==='categories'?<div className="admin-category-groups">
+       {tab==='overview'?<AdminOverview data={data} t={t} lang={lang} getIdToken={getIdToken}
+         onNavigate={navigate}
+         onCategory={(kind,id)=>{navigate(kind);setCategory(id);}}
+         onTools={id=>{setToolTab(id);navigate('operations');}}
+         onPoint={id=>{navigate('places');selectPreview(id);}}/>
+       :tab==='operations'?<AdminOperations data={data} currentRevision={currentRevision} mobile={mobile} backend={backend} t={t} lang={lang} busy={busy} initialTab={toolTab} onTabChange={setToolTab} onOpen={id=>{navigate('places');selectPreview(id);}} onApply={commitTools}/>:tab==='categories'?<div className="admin-category-groups">
          {groups.map(item=><section className="panel category-group-panel" key={item.id} style={{'--group-color':item.color}}>
            <div className="panel-heading"><div><span className="section-kicker">{t('kind')}</span><h2>{t(item.label)} <span className="count-pill">{item.children.length}</span></h2></div>
              <button className="button secondary" onClick={()=>setEditCategory({initialKind:item.id})}><Icon name="plus" size={16}/>{t('addCategory')}</button>

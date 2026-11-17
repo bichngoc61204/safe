@@ -117,3 +117,11 @@ Cấu trúc: **An toàn (nhóm, màu cam) → Hỗ trợ cộng đồng (danh m�
 - Tất cả ghim thuộc nhóm An toàn dùng **màu cam** và biểu tượng theo danh mục. Điểm Hỗ trợ cộng đồng luôn dùng biểu tượng Hỗ trợ cộng đồng; thẻ hiển thị cả tên danh mục và nhãn mức. Chỉ nhãn mức, bộ lọc và phần giải thích bổ sung dùng **xanh dương (Safe Point), hồng (Family Friendly), xanh lá (Safe Hub)** cùng biểu tượng riêng. Khi lọc danh mục Hỗ trợ cộng đồng, có thêm bộ lọc theo ba mức trên cả trang người dùng và admin.
 - Excel xuất thêm cột **Mức hỗ trợ cộng đồng**. File mẫu có bảng tên/mã ba mức. Khi nhập điểm mới thuộc danh mục này, phải điền một mức hợp lệ; các danh mục khác để trống cột này. Khi cập nhật bằng Excel, mức cũ được giữ nếu bỏ hẳn cột này.
 - Dữ liệu lưu ở trường `supportLevel`; danh mục đặc biệt có thể lưu cờ `supportLevels`. Không phát sinh collection, dịch vụ hoặc quyền quản trị mới; Rules hiện tại cho phép các trường lồng trong danh sách địa điểm.
+
+### Cập nhật trải nghiệm mobile và tổng quan
+
+- Dock bản đồ gồm Khám phá, An toàn, Điểm xanh, Đối tác. Điểm đã lưu vẫn xem được bằng bộ lọc trong tìm kiếm.
+- Tìm kiếm xem trước tối đa 6 kết quả đã lọc, có khoảng cách và ảnh bìa (hoặc ảnh phụ đầu tiên nếu chưa có bìa); ảnh thiếu hoặc lỗi dùng icon danh mục. Nút xem kết quả luôn giữ các bộ lọc hiện tại.
+- Bộ lọc Đang mở cửa tính theo giờ Việt Nam, ưu tiên lịch theo ngày và ngày đặc biệt. Khi chưa dùng lịch theo ngày, một cặp giờ mở/đóng hợp lệ được hiểu là lịch hằng ngày; ghi chú ngày trong tuần rõ ràng sẽ giới hạn các ngày đó. Nội dung ghi chú không rõ, thiếu giờ hoặc lịch lỗi sẽ không được coi là đang mở. Giờ qua đêm được tính sang ngày hôm sau.
+- Admin dùng tiếng Việt cố định; tùy chọn ngôn ngữ của trang cộng đồng vẫn được giữ riêng.
+- Tổng quan tập trung vào điểm đang quản lý, công khai/ẩn, nhóm/danh mục và việc cần chú ý. Lịch sử chỉ nằm ở Công cụ dữ liệu, không lặp lại dưới dạng danh sách cập nhật gần đây. Các công cụ và tab công cụ trên mobile cuộn ngang một hàng.

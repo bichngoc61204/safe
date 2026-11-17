@@ -17,12 +17,26 @@ test('public projection excludes hidden/trash and removes internal review inform
  assert.equal(point.verifiedAt,'2026-11-13T00:00:00Z');assert.equal(point.review,undefined);assert.equal(point.reviewNotes,undefined);
  assert.ok(data.places[2].review.reviewedBy);
 });
-test('weekly hours use Vietnam time and keep legacy hours unknown for Open now',()=>{
+test('weekly and regular daily hours use Vietnam time for Open now',()=>{
  const schedule=scheduled(),place={schedule};
  assert.equal(openingState(place,new Date('2026-11-13T02:00:00Z')),'open');
  assert.equal(openingState(place,new Date('2026-11-13T11:00:00Z')),'closed');
- assert.equal(openingState({opensAt:'08:00',closesAt:'17:00'}),'unknown');
+ assert.equal(openingState({opensAt:'08:00',closesAt:'17:00'},new Date('2026-11-13T02:00:00Z')),'open');
  assert.equal(openingState({...place,status:'inactive'},new Date('2026-11-13T02:00:00Z')),'closed');
+});
+test('regular hours respect weekdays, overnight carry, notes and incomplete hours',()=>{
+ const weekday={opensAt:'20:00',closesAt:'02:00',hours:'Thứ Hai – Thứ Sáu'};
+ assert.equal(openingState(weekday,new Date('2026-11-13T14:00:00Z')),'open'); // Friday 21:00
+ assert.equal(openingState(weekday,new Date('2026-11-13T18:00:00Z')),'open'); // Saturday 01:00
+ assert.equal(openingState(weekday,new Date('2026-11-14T14:00:00Z')),'closed');
+ assert.equal(openingState({...weekday,hours:'Mon–Fri'},new Date('2026-11-13T18:00:00Z')),'open');
+ assert.equal(openingState({hours:'08:00 – 17:00'},new Date('2026-11-13T02:00:00Z')),'open');
+ assert.equal(openingState({...weekday,hours:'Liên hệ trước khi đến'}),'unknown');
+ assert.equal(openingState({opensAt:'08:00',closesAt:''}),'unknown');
+ assert.equal(openingState({hours:'24/7'},new Date('2026-11-13T20:00:00Z')),'open');
+ assert.equal(openingState({hours:'24/7',status:'inactive'}),'closed');
+ const invalid=scheduled();invalid.days=[];
+ assert.equal(openingState({...weekday,schedule:invalid}),'unknown');
 });
 test('overnight hours carry from yesterday and a holiday closure takes precedence',()=>{
  const schedule=scheduled();schedule.days[3]={closed:false,allDay:false,opensAt:'20:00',closesAt:'02:00'};schedule.days[4].closed=true;

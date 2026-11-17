@@ -390,3 +390,22 @@ dialog.modal[open]:has(.community-modal-body) { display:flex; flex-direction:col
 }
 @media(max-width:700px){ .support-level-options { grid-template-columns:1fr; } .support-level-option strong {font-size:12px;} .support-level-option small {font-size:11px;} }
 @media(prefers-reduced-motion:reduce){ .support-level-option {transition:none;} }
+
+/* Search is an intentional focus surface; suggestions remain scrollable. */
+.search-preview-thumbnail { position:relative; display:grid; place-items:center; width:36px; height:36px; overflow:hidden; border-radius:10px; color:var(--preview-color); background:color-mix(in srgb,var(--preview-color) 9%,white); flex:none; }
+.search-preview-thumbnail img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.search-preview-thumbnail img[hidden],.place-thumbnail img[hidden] { display:none; }
+.search-preview-copy { min-width:0; }
+.mobile-search-preview .opening-badge { display:inline-flex; margin:3px 0 0; padding:0; background:none; font-size:9px; }
+@media(max-width:700px){
+ .map-workspace .explore-panel .mobile-search-preview { max-height:min(340px,43dvh); min-height:58px; }
+ .map-workspace .mobile-search-preview button { grid-template-columns:36px minmax(0,1fr) auto; min-height:54px; padding:7px 4px; gap:8px; }
+ .map-workspace .mobile-search-preview strong { line-height:1.45; }
+ .map-workspace .mobile-search-preview small { line-height:1.45; margin-top:1px; }
+ .map-workspace .mobile-search-summary { gap:6px; min-height:48px; }
+ .map-workspace .mobile-clear-filters { min-height:33px; padding:6px 10px; gap:5px; color:#954c1b; border:1px solid #edc8ac; border-radius:9px; background:#fff3e8; box-shadow:0 2px 5px #9c5c1410; transition:background-color 250ms,border-color 250ms; }
+ .map-workspace .mobile-clear-filters:active { background:#ffe5cf; border-color:#c98958; }
+ .map-workspace .mobile-search-caption { max-width:calc(100% - 112px); font-size:11px; }
+ .map-workspace .mobile-search-caption > span { display:block; margin-top:2px; font-size:9px; }
+ .mobile-discovery-dock button:first-child { background:#edf4f1; color:#245a45; }
+}

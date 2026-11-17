@@ -1,6 +1,6 @@
 import {isCommunitySupport,isSupportLevel} from './supportLevels.js';
 import { normalize, safeImage, haversine, isDemoPhone } from './domain.js';
-import { isClockTime } from './placeHours.js';
+import { isClockTime, regularOpeningSchedule } from './placeHours.js';
 export const wasteTypes=['battery','electronics','plastic','paper','glass','metal','organic','general'];
 export const reportReasons=['wrongPhone','wrongLocation','closedPlace','wrongHours','wrongWaste','otherReport'];
 export const isPublished=place=>!place.deletedAt&&place.visibility!=='hidden';
@@ -30,8 +30,8 @@ export function defaultSchedule(place={}){
 }
 export function openingState(place,now=new Date()){
  if(place.status==='inactive')return 'closed';
- const schedule=place.schedule;
- if(!schedule?.enabled||!validSchedule(schedule))return 'unknown';
+ const schedule=place.schedule?.enabled?place.schedule:regularOpeningSchedule(place);
+ if(!schedule||!validSchedule(schedule))return 'unknown';
  const p=localParts(now),date=`${p.year}-${p.month}-${p.day}`;
  const today=new Date(date+'T00:00:00Z'),yesterday=new Date(today.getTime()-86400000).toISOString().slice(0,10);
  const dayFor=stamp=>schedule.exceptions.find(day=>day.date===stamp)||schedule.days[(new Date(stamp+'T00:00:00Z').getUTCDay()+6)%7];
@@ -46,7 +46,7 @@ export function qualityIssues(place,data,now=Date.now()){
  if(isCommunitySupport(data.categories.find(category=>category.id===place.category))&&!isSupportLevel(place.supportLevel))issues.push('qualitySupportLevel');
  if(isDemoPhone(place.phone)||!/^\+?\d{9,15}$/.test(String(place.phone||'').replace(/[\s()-]/g,'')))issues.push('qualityPhone');
  if(!safeImage(place.image))issues.push('qualityPhoto');
- if(!place.schedule?.enabled)issues.push('qualityHours');
+ if(!(place.schedule?.enabled?validSchedule(place.schedule):regularOpeningSchedule(place)))issues.push('qualityHours');
  if(!place.nameEn?.trim()||!place.addressEn?.trim()||(place.description&&!place.descriptionEn?.trim()))issues.push('qualityEnglish');
  if(!place.source?.trim())issues.push('qualitySource');
  if(place.review?.status!=='verified'||!place.review.reviewedAt||now-Date.parse(place.review.reviewedAt)>90*86400000)issues.push('qualityReview');

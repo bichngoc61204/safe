@@ -3,7 +3,8 @@ import Icon from './Icon';
 import Modal from './Modal';
 import {qualityIssues} from '../lib/editorial';
 import {activityTime,placeActivityTime,reportActivityTime,newestFirst,historyByDay,historyAction,readableHistory,changeValues} from '../lib/adminActivity';
-import {normalize} from '../lib/domain';
+import {normalize,safeImage,categoryColor,categoryPalette} from '../lib/domain';
+import '../admin-operations.css';
 import {supportLevels,isCommunitySupport,categoryVisualIcon} from '../lib/supportLevels';
 import {placeText} from '../lib/locale';
 
@@ -12,6 +13,17 @@ const tabs=[['quality','check'],['history','history'],['trash','delete'],['repor
 const issueOrder=['qualitySupportLevel','qualityPhone','qualityArea','qualityDuplicate','qualityWaste','qualityHours','qualityPhoto','qualitySource','qualityEnglish','qualityReview'];
 const qualityGroups={contact:['qualityPhone','qualityArea','qualityDuplicate'],content:['qualityPhoto','qualityHours','qualitySource','qualityEnglish','qualityWaste'],review:['qualitySupportLevel','qualityReview']};
 const PAGE_SIZE=8;
+const historyPlace=(event,change)=>event.after?.places?.find(place=>place.id===change.id)||event.snapshot?.places?.find(place=>place.id===change.id);
+function PlaceStamp({place,categories,lang,t}){
+ if(!place)return null;
+ const category=categories.find(item=>item.id===place.category);
+ return <span className="ops-place-stamp" style={{'--record-color':categoryColor(category)}}><Icon name={categoryVisualIcon(category)} size={13}/>{category&&(lang==='en'?category.nameEn:category.name)}{category&&<span> · {t(category.kind)}</span>}</span>;
+}
+function PlaceThumb({place,categories}){
+ const category=categories.find(item=>item.id===place?.category);
+ const image=safeImage(place?.image);
+ return <span className="ops-place-thumb" style={{color:categoryColor(category),background:categoryPalette(category).wash}}><Icon name={categoryVisualIcon(category)} size={21}/>{image&&<img src={image} alt="" loading="lazy" decoding="async" onError={event=>{event.currentTarget.hidden=true;}}/>}</span>;
+}
 function Pager({page,total,onChange,t}){
  const pages=Math.max(1,Math.ceil(total/PAGE_SIZE));
  if(pages<2)return null;
@@ -57,7 +69,7 @@ export default function AdminOperations({data,currentRevision,backend,t,lang,mob
  const processedHistory=useMemo(()=>history.map(event=>readableHistory(event,history,data,currentRevision)),[history,data,currentRevision]);
  const searchText=normalize(query).trim();
  const visibleQuality=quality.filter(item=>(filter==='all'||item.issues.some(issue=>qualityGroups[filter]?.includes(issue)))&&normalize(`${item.place.name} ${item.place.nameEn||''} ${item.place.address}`).includes(searchText));
- const visibleHistory=processedHistory.filter(event=>!event.systemSync&&normalize(`${event.actorEmail||event.actor} ${event.changes.map(change=>`${change.name} ${change.fields.map(field=>fieldLabel(field,t)).join(' ')}`).join(' ')}`).includes(searchText));
+ const visibleHistory=processedHistory.filter(event=>!event.systemSync&&normalize(`${event.actorEmail||event.actor} ${event.changes.map(change=>`${change.name} ${historyPlace(event,change)?.address||''} ${change.fields.map(field=>fieldLabel(field,t)).join(' ')}`).join(' ')}`).includes(searchText));
  const syncHistory=processedHistory.filter(event=>event.systemSync);
  const sortedReports=useMemo(()=>newestFirst(reports,reportActivityTime),[reports]);
  const visibleReports=sortedReports.filter(report=>(filter==='all'||report.status===filter)&&normalize(`${report.placeName} ${report.note||''} ${t(report.reason)}`).includes(searchText));
@@ -98,8 +110,8 @@ export default function AdminOperations({data,currentRevision,backend,t,lang,mob
  const requestRestore=value=>{setSelected(null);setRestore(value);};
  async function resolve(item,status){if(reportBusy)return;setReportBusy(true);setError('');try{await backend.resolveReport(item.id,status,notes[item.id]??item.resolution??'');}catch{setError('operationError');}finally{setReportBusy(false);}}
  const empty=message=><div className="ops-empty"><Icon name="check" size={26}/><strong>{t(message)}</strong>{(query||filter!=='all')&&<button type="button" className="text-button" onClick={clearFilters}>{t('opsShowAll')}</button>}</div>;
- return <section className="admin-operations ops-simple">
-  <nav className="operations-tabs" aria-label={t('adminTools')}>{tabs.map(([id,icon])=><button type="button" key={id} aria-pressed={tab===id} onClick={()=>selectTab(id)}><Icon name={icon} size={17}/>{t(id)}</button>)}</nav>
+ return <section className="admin-operations ops-simple" data-tool={tab}>
+  <nav className="operations-tabs" aria-label={t('adminTools')}>{tabs.map(([id,icon])=><button type="button" key={id} data-tool={id} aria-pressed={tab===id} onClick={()=>selectTab(id)}><Icon name={icon} size={17}/>{t(id)}</button>)}</nav>
   <div className="operations-view" key={tab} aria-busy={loading}>
    {error&&<p className="form-error" role="alert">{t(error)}</p>}{loading&&<div className="operations-loading" role="status"><span className="operations-spinner"/>{t('opsLoading')}<div/><div/><div/></div>}
    {tab==='quality'&&<div className={`ops-workspace ${qualityItem?'has-selection':''}`}><section className="panel ops-queue quality-workspace">
@@ -109,18 +121,18 @@ export default function AdminOperations({data,currentRevision,backend,t,lang,mob
     </div></div>
     <div className="ops-list-caption">{visibleQuality.length} {t('results')}<span>{t('latestActivity')}</span>{query&&<button type="button" className="text-button" onClick={clearFilters}>{t('clearFilters')}</button>}</div>
     {visibleQuality.length?slice(visibleQuality).map(({place,issues})=><article className="operation-record ops-row quality-record" key={place.id}>
-     <button type="button" className="ops-row-open" aria-expanded={selected===place.id} onClick={()=>select(place.id)}><div className="ops-row-info"><h3>{placeText(place,'name',lang)}</h3><p>{t(issues[0])}{issues.length>1&&<span> · +{issues.length-1} {t('opsOtherIssues')}</span>}</p><small>{date(placeActivityTime(place))}</small></div><Icon name="right" size={18}/></button>
+     <button type="button" className="ops-row-open" aria-expanded={selected===place.id} onClick={()=>select(place.id)}><PlaceThumb place={place} categories={data.categories}/><div className="ops-row-info"><h3>{placeText(place,'name',lang)}</h3><p className="ops-place-address">{placeText(place,'address',lang)}</p><PlaceStamp place={place} categories={data.categories} t={t} lang={lang}/><div className="ops-issue-summary">{issues.slice(0,2).map(issue=><span key={issue}>{t(issue)}</span>)}{issues.length>2&&<b>+{issues.length-2}</b>}</div><small className="ops-record-date"><Icon name="clock" size={11}/>{date(placeActivityTime(place))}</small></div><span className="ops-issue-total">{issues.length}<small>mục</small></span><Icon name="right" size={18}/></button>
     </article>):empty('noIssues')}
     <Pager page={currentPage(visibleQuality)} total={visibleQuality.length} onChange={value=>{setPage(value);setSelected(null);}} t={t}/>
    </section>{qualityItem&&<Detail mobile={mobile} title={t('opsReviewPlace')} onClose={()=>setSelected(null)} t={t}>
-    <h3 className="ops-detail-name">{placeText(qualityItem.place,'name',lang)}</h3><p className="ops-detail-muted">{placeText(qualityItem.place,'address',lang)}</p>
+    <h3 className="ops-detail-name">{placeText(qualityItem.place,'name',lang)}</h3><p className="ops-detail-muted">{placeText(qualityItem.place,'address',lang)}</p><PlaceStamp place={qualityItem.place} categories={data.categories} t={t} lang={lang}/>
     <h4>{t('opsCompleteThese')}</h4><ul className="ops-checks">{qualityItem.issues.map(issue=><li key={issue}><Icon name="alert" size={15}/><div><strong>{t(issue)}</strong>{issue==='qualityPhone'&&<p>{qualityItem.place.phone||t('opsNotSet')}</p>}{issue==='qualityReview'&&<p>{t('opsVerificationNote')}</p>}</div></li>)}</ul>
     <div className="ops-detail-actions"><button type="button" className="button primary" onClick={()=>onOpen(qualityItem.place.id)}><Icon name="edit" size={15}/>{t('inspect')}</button>{qualityItem.issues.includes('qualityReview')&&<button type="button" className="button secondary" disabled={busy} onClick={()=>patch(qualityItem.place,{review:{status:'verified'}})}>{t('markVerified')}</button>}</div>
    </Detail>}</div>}
    {tab==='history'&&!loading&&!error&&<div className={`ops-workspace ${event?'has-selection':''}`}><section className="panel ops-queue history-workspace">
     <header className="ops-queue-heading"><div><h2>{t('history')}</h2><p>{t('opsHistoryHint')}</p></div></header><div className="ops-queue-tools">{search}</div>
     {historyByDay(slice(visibleHistory)).map(({day,events})=><section className="history-day" key={day}><h3 className="history-day-title">{dayTitle(day)}</h3>{events.map(entry=><article className="history-record ops-row" key={entry.id}>
-     <button type="button" className="ops-row-open" aria-label={`${eventSummary(entry)}, ${date(entry.createdAt)}, #${entry.revision}`} aria-expanded={selected===entry.id} onClick={()=>select(entry.id)}><time className="ops-event-time">{date(entry.createdAt,true)}</time><div className="ops-row-info"><h3>{eventSummary(entry)}</h3><p>{entry.changes.slice(0,2).map(change=>change.id==='categories'?t('categories'):change.name).join(' · ')}{entry.changes.length>2?'…':''}</p><small>{entry.actorEmail||entry.actor||t('unknownEditor')}</small></div><Icon name="right" size={18}/></button>
+     <button type="button" className="ops-row-open" aria-label={`${eventSummary(entry)}, ${date(entry.createdAt)}, #${entry.revision}`} aria-expanded={selected===entry.id} onClick={()=>select(entry.id)}><div className="ops-row-info"><div className="ops-event-topline"><span className={`ops-action-label action-${entry.changes.length===1?historyAction(entry.changes[0],entry):'edited'}`}>{eventSummary(entry)}</span><time className="ops-event-time">{date(entry.createdAt,true)}</time></div><div className="ops-history-places">{entry.changes.slice(0,2).map(change=>{const point=historyPlace(entry,change);return <div key={change.id}><h3>{change.id==='categories'?t('categories'):change.name}</h3>{point&&<><p className="ops-place-address">{point.address}</p><PlaceStamp place={point} categories={entry.after?.categories||entry.snapshot.categories} t={t} lang={lang}/></>}</div>;})}{entry.changes.length>2&&<span className="ops-more-changes">Và {entry.changes.length-2} địa điểm khác — nhấn để xem</span>}</div><small className="ops-record-date"><Icon name="edit" size={11}/>{entry.actorEmail||entry.actor||t('unknownEditor')}<span>#{entry.revision}</span></small></div><Icon name="right" size={18}/></button>
     </article>)}</section>)}
     {!visibleHistory.length&&empty('historyEmpty')}
     <Pager page={currentPage(visibleHistory)} total={visibleHistory.length} onChange={value=>{setPage(value);setSelected(null);}} t={t}/>
@@ -128,7 +140,7 @@ export default function AdminOperations({data,currentRevision,backend,t,lang,mob
    </section>{event&&<Detail mobile={mobile} title={t('opsChangeDetails')} onClose={()=>setSelected(null)} t={t}>
     <div className="ops-history-meta"><strong>{date(event.createdAt)}</strong><p>{event.actorEmail||event.actor} · #{event.revision}</p></div>
     {event.changes.length>1&&<><label className="ops-change-search"><span>{t('opsFindChangedPlace')}</span><input value={historyQuery} onChange={e=>{setHistoryQuery(e.target.value);setChangeIndex(0);}}/></label><div className="ops-change-paging"><span>{matchingChanges.length?Math.min(changeIndex,matchingChanges.length-1)+1:0} / {matchingChanges.length}</span><button type="button" className="icon-button" aria-label={t('previousPage')} disabled={!changeIndex} onClick={()=>setChangeIndex(index=>index-1)}><Icon name="left" size={16}/></button><button type="button" className="icon-button" aria-label={t('nextPage')} disabled={changeIndex>=matchingChanges.length-1} onClick={()=>setChangeIndex(index=>index+1)}><Icon name="right" size={16}/></button></div></>}
-    {activeChange?<><h3 className="ops-detail-name">{activeChange.id==='categories'?t('categories'):activeChange.name}</h3><span className={`ops-action-label action-${historyAction(activeChange,event)}`}>{t(`history_${historyAction(activeChange,event)}`)}</span>
+    {activeChange?<><h3 className="ops-detail-name">{activeChange.id==='categories'?t('categories'):activeChange.name}</h3>{historyPlace(event,activeChange)&&<><p className="ops-detail-muted">{historyPlace(event,activeChange).address}</p><PlaceStamp place={historyPlace(event,activeChange)} categories={event.after?.categories||event.snapshot.categories} t={t} lang={lang}/></>}<span className={`ops-action-label action-${historyAction(activeChange,event)}`}>{t(`history_${historyAction(activeChange,event)}`)}</span>
      <div className="ops-diff">{changeValues(event,activeChange).map(row=><section key={row.field}><h4>{fieldLabel(row.field,t)}</h4><div><span>{t('opsBefore')}</span><p>{displayValue(row.field,row.before,event.snapshot.categories,t,lang)}</p></div><div className="ops-diff-after"><span>{t('opsAfter')}</span><p>{row.knownAfter?displayValue(row.field,row.after,event.after.categories,t,lang):t('opsMissingSnapshot')}</p></div></section>)}</div>
      {event.snapshot.places.some(place=>place.id===activeChange.id)&&<button type="button" className="button secondary ops-restore-one" onClick={()=>requestRestore({event,place:event.snapshot.places.find(place=>place.id===activeChange.id)})}><Icon name="restore" size={14}/>{t('restorePlace')}</button>}
     </>:<p className="ops-detail-muted">{t('noResults')}</p>}
@@ -138,10 +150,10 @@ export default function AdminOperations({data,currentRevision,backend,t,lang,mob
    {tab==='reports'&&!loading&&!error&&<div className={`ops-workspace ${report?'has-selection':''}`}><section className="panel ops-queue reports-workspace">
     <header className="ops-queue-heading"><div><h2>{t('reports')}</h2><p>{reports.filter(item=>item.status==='new').length} {t('awaitingReview')}</p></div></header><div className="ops-queue-tools">{search}<div className="ops-filters report-filters" role="group" aria-label={t('status')}>{['new','resolved','dismissed','all'].map(status=><button type="button" key={status} aria-pressed={filter===status} onClick={()=>changeFilter(status)}>{t(status==='all'?'all':`report_${status}`)}</button>)}</div></div>
     <div className="ops-list-caption">{visibleReports.length} {t('reportItems')}<span>{t('latestActivity')}</span></div>
-    {visibleReports.length?slice(visibleReports).map(item=><article className="report-record ops-row" key={item.id}><button type="button" className="ops-row-open" aria-expanded={selected===item.id} onClick={()=>select(item.id)}><div className="ops-row-info"><h3>{item.placeName}</h3><p>{t(item.reason)}</p><small>{date(reportActivityTime(item))}</small></div><span className={`report-state report-${item.status}`}>{t(`report_${item.status}`)}</span><Icon name="right" size={18}/></button></article>):empty(filter==='new'?'opsNoPending':'reportsEmpty')}
+    {visibleReports.length?slice(visibleReports).map(item=><article className="report-record ops-row" key={item.id}><button type="button" className="ops-row-open" aria-expanded={selected===item.id} onClick={()=>select(item.id)}><div className="ops-row-info"><h3>{item.placeName}</h3>{data.places.find(place=>place.id===item.placeId)&&<p className="ops-place-address">{data.places.find(place=>place.id===item.placeId).address}</p>}<p className="ops-report-category"><Icon name="alert" size={12}/>{t(item.reason)}</p>{item.note&&<p className="ops-report-excerpt">{item.note}</p>}<small className="ops-record-date"><Icon name="clock" size={11}/>{date(reportActivityTime(item))}</small></div><span className={`report-state report-${item.status}`}>{t(`report_${item.status}`)}</span><Icon name="right" size={18}/></button></article>):empty(filter==='new'?'opsNoPending':'reportsEmpty')}
     <Pager page={currentPage(visibleReports)} total={visibleReports.length} onChange={value=>{setPage(value);setSelected(null);}} t={t}/>
    </section>{report&&<Detail mobile={mobile} title={t('opsHandleReport')} onClose={()=>setSelected(null)} t={t}>
-    <h3 className="ops-detail-name">{report.placeName}</h3><div className="ops-report-meta"><span className={`report-state report-${report.status}`}>{t(`report_${report.status}`)}</span><small>{date(report.createdAt)}</small></div>
+    <h3 className="ops-detail-name">{report.placeName}</h3>{data.places.find(place=>place.id===report.placeId)&&<p className="ops-detail-muted">{data.places.find(place=>place.id===report.placeId).address}</p>}<div className="ops-report-meta"><span className={`report-state report-${report.status}`}>{t(`report_${report.status}`)}</span><small>{date(report.createdAt)}</small></div>
     <h4>{t('opsReceivedInfo')}</h4><strong className="ops-report-reason">{t(report.reason)}</strong><p className="ops-report-note">{report.note||t('noReportNote')}</p>
     {data.places.some(point=>point.id===report.placeId&&!point.deletedAt)?<button type="button" className="text-button ops-open-place" onClick={()=>onOpen(report.placeId)}>{t('inspect')}<Icon name="arrow" size={14}/></button>:<p className="ops-detail-muted">{t('reportPlaceUnavailable')}</p>}
     <label className="ops-resolution"><span>{t('resolution')}</span><textarea maxLength={500} rows={3} placeholder={t('resolutionPlaceholder')} value={notes[report.id]??report.resolution??''} onChange={e=>setNotes({...notes,[report.id]:e.target.value})}/></label>
