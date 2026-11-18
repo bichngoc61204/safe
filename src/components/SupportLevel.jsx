@@ -3,7 +3,7 @@ import {getSupportLevel,isCommunitySupport,supportLevels,supportLevelStyle} from
 export function SupportBadge({place,category,t,compact=false}){
  const level=getSupportLevel(place,category);
  if(!level)return null;
- return <span className={`support-badge ${compact?'is-compact':''}`} style={supportLevelStyle(level)} title={t(level.title)}><Icon name={level.icon} size={compact?13:15}/><span className="support-badge-label">{level.name}</span></span>;
+ return <span className={`support-badge ${compact?'is-compact':''}`} style={supportLevelStyle(level)} title={`${level.name} · ${t(level.title)}`}><Icon name={level.icon} size={compact?13:15}/><span className="support-badge-label">{level.name}</span></span>;
 }
 export default function SupportLevelInfo({place,category,t,showBadge=true}){
  if(!isCommunitySupport(category))return null;
@@ -13,5 +13,5 @@ export default function SupportLevelInfo({place,category,t,showBadge=true}){
 }
 
 export function SupportLevelFilter({value,onChange,t,className=''}){
- return <div className={`support-level-filter ${className}`}><span>{t('supportFilterLabel')}</span><div className="category-chips" role="group" aria-label={t('supportLevel')}><button type="button" aria-pressed={value==='all'} onClick={()=>onChange('all')}>{t('all')}</button>{supportLevels.map(level=><button type="button" className="support-level-chip" style={supportLevelStyle(level)} key={level.id} aria-pressed={value===level.id} onClick={()=>onChange(level.id)}><Icon name={level.icon} size={14}/>{level.name}</button>)}</div></div>;
+ return <div className={`support-level-filter ${className}`}><span>{t('supportFilterLabel')}</span><div className="category-chips" role="group" aria-label={t('supportLevel')}><button type="button" aria-pressed={value==='all'} onClick={()=>onChange('all')}>{t('all')}</button>{value==='unassigned'&&<button type="button" aria-pressed="true" onClick={()=>onChange('all')}>{t('supportLevelUnassigned')}<Icon name="x" size={13}/></button>}{supportLevels.map(level=><button type="button" className="support-level-chip" style={supportLevelStyle(level)} key={level.id} aria-pressed={value===level.id} onClick={()=>onChange(level.id)}><Icon name={level.icon} size={14}/>{level.name}</button>)}</div></div>;
 }

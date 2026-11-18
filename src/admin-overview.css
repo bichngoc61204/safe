@@ -95,3 +95,6 @@
  .ao-tools > header{margin-block:1px 11px;align-items:end}.ao-tools > header > span{display:none}.ao-tool-strip{gap:9px}.ao-tool{flex-basis:252px;min-height:85px;padding:13px;grid-template-columns:36px minmax(0,1fr) auto}.ao-tool-icon{width:36px;height:38px}.ao-tool strong{font-size:12px}.ao-tool small{font-size:10px}.ao-tool:hover{translate:none}
 }
 @media(prefers-reduced-motion:reduce){.ao-view,.ao-group,.ao-tool{animation:none}.ao-view-switch button,.ao-group-categories > button,.ao-point,.ao-tool{transition:none}}
+
+.ao-check:disabled { opacity:.68; cursor:default; }
+.ao-check:disabled:hover strong { color:#355345; }

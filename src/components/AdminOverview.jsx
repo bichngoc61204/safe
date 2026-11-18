@@ -39,19 +39,20 @@ export default function AdminOverview({data,t,lang,getIdToken,onNavigate,onCateg
    const found=issues.get(place.id),category=getCategory(data.categories,place.category);
    if(isCommunitySupport(category)&&!isSupportLevel(place.supportLevel))return {place,category,rank:0,reason:'Chưa chọn mức hỗ trợ',tone:'amber'};
    if(category?.kind==='green'&&isAlert(place))return {place,category,rank:1,reason:t(place.status),tone:'red'};
-   if(found.includes('qualityPhone'))return {place,category,rank:2,reason:'Cần kiểm tra số điện thoại',tone:'blue'};
-   if(found.includes('qualityHours'))return {place,category,rank:3,reason:'Cần bổ sung giờ hoạt động',tone:'blue'};
-   if(found.includes('qualityReview'))return {place,category,rank:4,reason:'Chưa xác minh thông tin',tone:'slate'};
+   if(found.includes('qualityPhone'))return {place,category,rank:category?.kind==='safe'?2:category?.kind==='partner'?4:6,reason:'Cần kiểm tra số điện thoại',tone:'blue'};
+   if(found.includes('qualityHours'))return {place,category,rank:category?.kind==='safe'?3:5,reason:'Cần bổ sung giờ hoạt động',tone:'blue'};
+   if(found.includes('qualityReview'))return {place,category,rank:category?.kind==='safe'?4:7,reason:'Chưa xác minh thông tin',tone:'slate'};
    return null;
   }).filter(Boolean).sort((a,b)=>a.rank-b.rank||a.place.name.localeCompare(b.place.name,'vi'));
   return ranked.slice(0,5);
  },[places,issues,data.categories,t]);
- const communityCategory=data.categories.find(category=>isCommunitySupport(category));
+ const communityCategories=data.categories.filter(category=>isCommunitySupport(category));
+ const communityCategory=communityCategories[0];
  const checks=[
-  {title:'Mức hỗ trợ chưa phân',hint:'Chỉ các điểm Hỗ trợ cộng đồng',value:unassigned.length,icon:'community',tone:'amber',action:()=>communityCategory?onCategory('safe',communityCategory.id):onTools('quality')},
-  {title:'Điểm xanh cần xử lý',hint:'Cần vệ sinh hoặc đang quá tải',value:greenAlerts.length,icon:'recycle',tone:'red',action:()=>onNavigate('green')},
-  {title:'Thông tin cần xác minh',hint:'Chưa xác minh hoặc đã quá 90 ngày',value:unchecked.length,icon:'check',tone:'blue',action:()=>onTools('quality')},
-  {title:'Liên hệ cần bổ sung',hint:'Số điện thoại thiếu hoặc chưa hợp lệ',value:missingContact.length,icon:'phone',tone:'slate',action:()=>onTools('quality')},
+  {title:'Mức hỗ trợ chưa phân',hint:'Chỉ các điểm Hỗ trợ cộng đồng',value:unassigned.length,icon:'community',tone:'amber',action:()=>communityCategories.length===1?onCategory('safe',communityCategory.id,{supportLevel:'unassigned'}):onNavigate('safe',{supportLevel:'unassigned'})},
+  {title:'Điểm xanh cần xử lý',hint:'Cần vệ sinh hoặc đang quá tải',value:greenAlerts.length,icon:'recycle',tone:'red',action:()=>onNavigate('green',{status:'alerts'})},
+  {title:'Thông tin cần xác minh',hint:'Chưa xác minh hoặc đã quá 90 ngày',value:unchecked.length,icon:'check',tone:'blue',action:()=>onTools('quality','qualityReview')},
+  {title:'Liên hệ cần bổ sung',hint:'Số điện thoại thiếu hoặc chưa hợp lệ',value:missingContact.length,icon:'phone',tone:'slate',action:()=>onTools('quality','qualityPhone')},
  ];
  const moveTab=event=>{
   if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
@@ -89,7 +90,7 @@ export default function AdminOverview({data,t,lang,getIdToken,onNavigate,onCateg
       </button>)}</div>:<div className="ao-all-clear"><Icon name="check" size={27}/><strong>{places.length?'Chưa có mục cần ưu tiên kiểm tra':'Danh bạ chưa có địa điểm'}</strong><p>{places.length?'Xem công cụ Chất lượng dữ liệu để rà soát các thông tin bổ sung.':'Chọn Thêm địa điểm để bắt đầu xây dựng danh bạ.'}</p></div>}
      </section>
      <section className="ao-panel ao-checks"><header><div><span className="ao-section-label">CHẤT LƯỢNG VẬN HÀNH</span><h2>Những việc cần chú ý</h2></div><Icon name="filter" size={18}/></header>
-      <div>{checks.map(item=><button type="button" key={item.title} className={`ao-check ao-tone-${item.tone}`} onClick={item.action}><span className="ao-check-icon"><Icon name={item.icon} size={18}/></span><span><strong>{item.title}</strong><small>{item.hint}</small></span><b>{item.value}</b></button>)}</div>
+      <div>{checks.map(item=><button type="button" key={item.title} className={`ao-check ao-tone-${item.tone}`} onClick={item.action} disabled={!item.value}><span className="ao-check-icon"><Icon name={item.icon} size={18}/></span><span><strong>{item.title}</strong><small>{item.hint}</small></span><b>{item.value}</b></button>)}</div>
       <p className="ao-check-note"><Icon name="clock" size={14}/>{missingHours.length} điểm chưa đủ thông tin giờ hoạt động. Bổ sung giờ để bộ lọc “Đang mở cửa” hoạt động chính xác.</p>
      </section>
     </div>

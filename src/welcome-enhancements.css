@@ -1,94 +1,86 @@
-/* These cards illustrate how to use SafeMap; they are not live search results. */
+/* The map remains the illustration; content and actions live below it. */
 .map-welcome .welcome-pin-support-safe { fill:#34658c; }
 .map-welcome .welcome-pin-support-family { fill:#a83569; }
 .map-welcome .welcome-pin-support-hub { fill:#176b47; }
-.map-welcome .welcome-illustration { position:absolute; inset:0; pointer-events:none; }
-.map-welcome .welcome-illustration :is(strong,small) { display:block; }
-.map-welcome .welcome-intro-note {
- position:absolute; inset:24px 22px auto auto; display:flex; align-items:center; gap:10px;
- max-width:calc(100% - 92px); padding:12px 14px; border:1px solid #fff; border-radius:15px;
- background:#fbfdf8ed; color:#244c3a; box-shadow:0 12px 35px #25463a18;
- backdrop-filter:blur(14px); animation:welcome-illustration-enter 720ms 300ms var(--motion-ease) both;
+.map-welcome .welcome-search-label {
+ position:absolute; right:18px; bottom:18px; display:flex; align-items:center; gap:6px;
+ padding:7px 10px; border:1px solid #ffffffbf; border-radius:20px; background:#fbfdf8d9;
+ color:#386451; font-size:11px; font-weight:600; backdrop-filter:blur(10px);
+ animation:welcome-copy-in 700ms 200ms var(--motion-ease) both;
 }
-.map-welcome .welcome-illustration-spark { display:grid; place-items:center; flex:none; width:33px; height:33px; border-radius:10px; background:#e8f3ec; color:#24754e; }
-.map-welcome .welcome-intro-note strong { font-size:12px; line-height:1.5; }
-.map-welcome .welcome-intro-note small { margin-top:3px; font-size:10px; line-height:1.4; color:#61756b; }
-.map-welcome .welcome-illustration-groups {
- position:absolute; inset:auto 22px 24px auto; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px;
- width:min(340px,calc(100% - 44px));
-}
-.map-welcome .welcome-illustration-groups > div {
- display:flex; flex-direction:column; justify-content:center; align-items:center; gap:7px;
- min-height:80px; padding:10px 7px; background:#fffef9f5; border:1px solid #fff; border-radius:14px;
- color:var(--illustration-color); box-shadow:0 8px 25px #25463a15; backdrop-filter:blur(12px);
- animation:welcome-illustration-enter 700ms calc(470ms + 100ms * var(--illustration-order)) var(--motion-ease) both;
-}
-.map-welcome [data-kind=safe] { --illustration-color:#a65117; --illustration-wash:#fff0e2; }
-.map-welcome [data-kind=green] { --illustration-color:#467333; --illustration-wash:#f0f8e9; }
-.map-welcome [data-kind=partner] { --illustration-color:#176044; --illustration-wash:#e5f2ea; }
-.map-welcome .welcome-illustration-groups > div > span { display:grid; place-items:center; width:34px; height:32px; border-radius:10px; background:var(--illustration-wash); }
-.map-welcome .welcome-illustration-groups strong { font-size:11px; line-height:1.4; text-align:center; }
-.map-welcome .welcome-illustrated-search {
- position:absolute; inset:30px 24px auto auto; display:flex; align-items:center; gap:9px; width:min(330px,calc(100% - 105px));
- padding:14px 15px; border:1px solid white; background:#fffffff2; border-radius:15px; box-shadow:0 12px 35px #25463a1c;
- color:#4d7160; backdrop-filter:blur(14px); font-size:12px;
- animation:welcome-illustration-enter 740ms 180ms var(--motion-ease) both;
-}
-.map-welcome .welcome-illustrated-search > span { min-width:0; }
-.map-welcome .welcome-illustrated-search > i { width:2px; height:15px; border-radius:2px; background:#599377; animation:welcome-search-caret 1100ms 700ms ease-in-out 2; }
-.map-welcome .welcome-illustrated-results { position:absolute; inset:auto 24px 35px auto; width:min(340px,calc(100% - 48px)); display:grid; gap:8px; }
-.map-welcome .welcome-illustrated-results > div {
- display:grid; grid-template-columns:36px minmax(0,1fr) auto; align-items:center; gap:9px;
- padding:12px; border:1px solid #fff; border-radius:14px; background:#fffffff0; color:#2d503e;
- box-shadow:0 10px 28px #25463a18; backdrop-filter:blur(15px);
- animation:welcome-illustration-row 740ms calc(420ms + 150ms * var(--illustration-order)) var(--motion-ease) both;
-}
-.map-welcome .welcome-result-symbol { display:grid; place-items:center; width:36px; height:36px; border-radius:11px; background:var(--illustration-wash); color:var(--illustration-color); }
-.map-welcome .welcome-illustrated-results strong { font-size:12px; line-height:1.4; }
-.map-welcome .welcome-illustrated-results small { margin-top:4px; color:#60766a; font-size:10px; line-height:1.4; }
-.map-welcome .welcome-illustrated-results > div > svg { color:#8aa293; }
 .map-welcome .welcome-support-key { position:absolute; inset:auto 16px 20px; display:flex; justify-content:center; gap:5px; }
 .map-welcome .welcome-support-key > span {
  display:inline-flex; align-items:center; justify-content:center; gap:4px; padding:8px 9px;
  border-radius:9px; border:1px solid color-mix(in srgb,var(--support-ink) 18%,white);
  background:var(--support-wash); color:var(--support-ink); font-size:10px; font-weight:650; white-space:nowrap;
- animation:welcome-illustration-enter 710ms calc(470ms + 110ms * var(--illustration-order)) var(--motion-ease) both;
+ animation:welcome-copy-in 710ms calc(470ms + 110ms * var(--illustration-order)) var(--motion-ease) both;
 }
-.map-welcome[data-slide=intro] .welcome-coordinate,.map-welcome[data-slide=search] .welcome-coordinate,.map-welcome[data-slide=support] .welcome-coordinate { display:none; }
-@keyframes welcome-illustration-enter { from { opacity:0; translate:0 14px; scale:.97; } to { opacity:1; translate:none; scale:1; } }
-@keyframes welcome-illustration-row { from { opacity:0; translate:18px 0; } to { opacity:1; translate:none; } }
-@keyframes welcome-search-caret { 50% { opacity:0; } }
+.map-welcome .welcome-coordinate { display:none; }
+.map-welcome .welcome-copy { padding:52px clamp(25px,4vw,48px) 30px; }
+.map-welcome .welcome-language { position:absolute; right:16px; top:14px; z-index:3; background:#fffffff0; box-shadow:0 2px 8px #234f3810; }
+.map-welcome .welcome-heading { font-size:clamp(34px,4.5vw,54px); line-height:1.08; }
+.map-welcome .welcome-description { font-size:14px; line-height:1.65; }
+.map-welcome .welcome-context { display:flex; align-items:flex-start; gap:7px; margin:18px 0 0; padding-top:13px; border-top:1px solid #e0e8e1; color:#667f70; font-size:11px; line-height:1.55; }
+.map-welcome .welcome-context > svg { flex:none; margin-top:2px; }
+.map-welcome .welcome-context > span { min-width:0; }
+.map-welcome .welcome-features { gap:9px 14px; margin:20px 0 8px; }
+.map-welcome .welcome-features li { min-width:0; color:var(--feature-ink,#365449); gap:6px; }
+.map-welcome .welcome-features [data-kind=safe] { --feature-ink:#a65117; }
+.map-welcome .welcome-features [data-kind=green] { --feature-ink:#467333; }
+.map-welcome .welcome-features [data-kind=partner] { --feature-ink:#176044; }
+.map-welcome .welcome-feature-icon { display:inline-flex; align-items:center; justify-content:center; flex:none; }
+.map-welcome [data-features=intro] { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.map-welcome [data-features=intro] li { display:grid; grid-template-columns:auto 1fr; gap:6px 5px; align-items:center; }
+.map-welcome [data-features=intro] small { grid-column:1/-1; color:#61796b; font-size:10px; font-weight:400; line-height:1.45; }
+.map-welcome [data-features=search] { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.map-welcome [data-features=search] li { display:grid; grid-template-columns:auto 1fr; align-items:center; gap:7px 5px; padding-top:11px; border-top:1px solid #dbe6de; }
+.map-welcome [data-features=search] .welcome-step-number { color:#789387; font-size:9px; letter-spacing:.04em; }
+.map-welcome [data-features=search] li > span:last-child { grid-column:1/-1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; }
+.map-welcome .welcome-gesture { justify-content:center; gap:5px; border:0; padding:0; margin:10px 0 0; color:#47715b; font-size:11px; font-weight:600; }
 @media(max-width:600px){
- .map-welcome .welcome-art { height:clamp(184px,31dvh,260px); }
- .map-welcome .welcome-intro-note { inset:12px 12px auto auto; padding:9px 10px; gap:7px; border-radius:12px; }
- .map-welcome .welcome-intro-note strong { font-size:10px; }
- .map-welcome .welcome-intro-note small { font-size:8px; }
- .map-welcome .welcome-illustration-spark { width:26px; height:28px; border-radius:8px; }
- .map-welcome .welcome-illustration-spark svg { width:16px; height:16px; }
- .map-welcome .welcome-illustration-groups { inset:auto 12px 12px auto; width:calc(100% - 24px); gap:6px; }
- .map-welcome .welcome-illustration-groups > div { min-height:58px; padding:8px 5px; gap:4px; border-radius:11px; }
- .map-welcome .welcome-illustration-groups > div > span { width:26px; height:25px; border-radius:8px; }
- .map-welcome .welcome-illustration-groups strong { font-size:9px; }
- .map-welcome .welcome-illustration-groups svg { width:16px; height:16px; }
- .map-welcome .welcome-illustrated-search { inset:13px 12px auto auto; width:calc(100% - 75px); padding:10px 11px; border-radius:12px; font-size:10px; }
- .map-welcome .welcome-illustrated-results { inset:auto 12px 12px auto; width:calc(100% - 24px); gap:5px; }
- .map-welcome .welcome-illustrated-results > div { grid-template-columns:29px minmax(0,1fr) auto; padding:8px 10px; gap:7px; border-radius:11px; }
- .map-welcome .welcome-result-symbol { width:29px; height:29px; border-radius:9px; }
- .map-welcome .welcome-illustrated-results strong { font-size:10px; }
- .map-welcome .welcome-illustrated-results small { margin-top:2px; font-size:8px; }
+ .map-welcome .welcome-art { height:clamp(194px,29dvh,248px); }
+ .map-welcome .welcome-copy { padding:22px 22px 17px; }
+ .map-welcome .welcome-language { right:12px; top:10px; }
+ .map-welcome .welcome-heading { font-size:clamp(29px,8vw,37px); margin:10px 0 12px; }
+ .map-welcome .welcome-description { font-size:13px; line-height:1.6; }
+ .map-welcome .welcome-kicker { font-size:10px; letter-spacing:.06em; }
+ .map-welcome .welcome-features { font-size:10px; gap:8px 12px; margin:16px 0 4px; }
+ .map-welcome [data-features=intro] small { font-size:9px; }
+ .map-welcome .welcome-pagination { margin:16px 0 12px; }
+ .map-welcome .welcome-search-label { right:13px; bottom:13px; padding:6px 9px; font-size:10px; }
  .map-welcome .welcome-support-key { inset:auto 8px 12px; gap:4px; }
  .map-welcome .welcome-support-key > span { font-size:9px; padding:6px; gap:3px; }
+ .map-welcome .welcome-context { margin-top:14px; padding-top:11px; font-size:11px; }
 }
 @media(max-width:360px){
- .map-welcome .welcome-copy { padding:20px 18px 18px; }
- .map-welcome .welcome-art { height:clamp(172px,28dvh,196px); }
+ .map-welcome .welcome-copy { padding:19px 18px 15px; }
+ .map-welcome .welcome-art { height:clamp(168px,26dvh,194px); }
+ .map-welcome .welcome-features { gap:8px; font-size:9px; }
  .map-welcome .welcome-support-key > span { padding:5px; font-size:8px; }
  .map-welcome .welcome-support-key svg { width:11px; height:11px; }
+ .map-welcome [data-features=search] li > span:last-child { font-size:10px; }
 }
-@media(max-height:680px) and (min-width:601px){
- .map-welcome .welcome-illustration-groups > div { min-height:66px; }
- .map-welcome .welcome-illustrated-results > div { padding:8px 10px; }
+@media(max-width:600px) and (max-height:680px){
+ .map-welcome .welcome-art { height:clamp(124px,24dvh,163px); }
+ .map-welcome .welcome-copy { padding:16px 18px 13px; }
+ .map-welcome .welcome-heading { font-size:28px; margin:8px 0 10px; }
+ .map-welcome .welcome-description { font-size:12px; line-height:1.55; }
+ .map-welcome .welcome-features { margin-top:12px; }
+ .map-welcome .welcome-pagination { margin:10px 0 8px; }
+ .map-welcome .welcome-gesture { margin-top:7px; }
+ .map-welcome .welcome-context { margin-top:10px; padding-top:9px; font-size:10px; }
+}
+@media(min-width:601px) and (max-height:500px){
+ .map-welcome .welcome-copy { padding:42px 24px 16px; }
+ .map-welcome .welcome-heading { font-size:28px; margin:8px 0 10px; }
+ .map-welcome .welcome-kicker { font-size:9px; }
+ .map-welcome .welcome-description { font-size:11px; line-height:1.55; }
+ .map-welcome .welcome-features { display:none; }
+ .map-welcome .welcome-pagination { margin:8px 0; }
+ .map-welcome .welcome-pagination button { min-height:30px; }
+ .map-welcome .welcome-context { margin-top:10px; padding-top:8px; font-size:10px; }
+ .map-welcome .welcome-gesture { margin-top:6px; font-size:9px; }
 }
 @media(prefers-reduced-motion:reduce){
- .map-welcome .welcome-illustration *, .map-welcome .welcome-support-key > span { animation:none; }
+ .map-welcome .welcome-search-label,.map-welcome .welcome-support-key > span { animation:none; }
 }

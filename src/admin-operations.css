@@ -125,3 +125,6 @@
 @media(prefers-reduced-motion:reduce){
  .admin-operations.ops-simple :is(.operations-tabs button,.ops-row-open,.ops-filters button) { transition:none; }
 }
+
+.admin-operations.ops-simple .ops-context-filter { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 18px; border-top:1px solid #d8e4ee; background:#edf4fa; color:#315f88; font-size:11px; line-height:1.55; }
+.ops-context-filter > button { display:flex; align-items:center; gap:4px; flex:none; min-height:32px; font-size:10px; font-weight:600; }

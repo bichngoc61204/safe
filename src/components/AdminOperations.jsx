@@ -49,14 +49,16 @@ function displayValue(field,value,categories,t,lang){
  if(value==null||value==='')return t('opsNotSet');
  return String(value);
 }
-export default function AdminOperations({data,currentRevision,backend,t,lang,mobile=false,onOpen,onApply,busy,initialTab='quality',onTabChange}){
+export default function AdminOperations({data,currentRevision,backend,t,lang,mobile=false,onOpen,onApply,busy,initialTab='quality',initialQualityIssue='',onQualityIssueChange,onTabChange}){
  const [tab,setTab]=useState(tabs.some(([id])=>id===initialTab)?initialTab:'quality');
  const [filter,setFilter]=useState(initialTab==='reports'?'new':'all'),[query,setQuery]=useState(''),[page,setPage]=useState(0),[selected,setSelected]=useState(null);
+ const [qualityIssue,setQualityIssue]=useState(issueOrder.includes(initialQualityIssue)?initialQualityIssue:'');
+ const clearIssue=()=>{setQualityIssue('');onQualityIssueChange?.('');};
  const [history,setHistory]=useState([]),[reports,setReports]=useState([]),[error,setError]=useState(''),[loading,setLoading]=useState(false),[reportBusy,setReportBusy]=useState(false),[restore,setRestore]=useState(null),[notes,setNotes]=useState({});
  const [historyQuery,setHistoryQuery]=useState(''),[changeIndex,setChangeIndex]=useState(0);
  const loaded=useRef(new Set());
- const selectTab=id=>{setTab(id);onTabChange?.(id);setFilter(id==='reports'?'new':'all');setQuery('');setPage(0);setSelected(null);setError('');setLoading(['history','reports'].includes(id)&&!loaded.current.has(id));};
- const changeFilter=value=>{setFilter(value);setPage(0);setSelected(null);};
+ const selectTab=id=>{clearIssue();setTab(id);onTabChange?.(id);setFilter(id==='reports'?'new':'all');setQuery('');setPage(0);setSelected(null);setError('');setLoading(['history','reports'].includes(id)&&!loaded.current.has(id));};
+ const changeFilter=value=>{clearIssue();setFilter(value);setPage(0);setSelected(null);};
  const select=id=>{setSelected(id);setHistoryQuery('');setChangeIndex(0);};
  useEffect(()=>{
   setError('');
@@ -68,7 +70,7 @@ export default function AdminOperations({data,currentRevision,backend,t,lang,mob
  const quality=useMemo(()=>newestFirst(data.places.filter(place=>!place.deletedAt),placeActivityTime).map(place=>{const issues=qualityIssues(place,data);return {place,issues:issueOrder.filter(issue=>issues.includes(issue))};}).filter(item=>item.issues.length),[data]);
  const processedHistory=useMemo(()=>history.map(event=>readableHistory(event,history,data,currentRevision)),[history,data,currentRevision]);
  const searchText=normalize(query).trim();
- const visibleQuality=quality.filter(item=>(filter==='all'||item.issues.some(issue=>qualityGroups[filter]?.includes(issue)))&&normalize(`${item.place.name} ${item.place.nameEn||''} ${item.place.address}`).includes(searchText));
+ const visibleQuality=quality.filter(item=>(!qualityIssue||item.issues.includes(qualityIssue))&&(filter==='all'||item.issues.some(issue=>qualityGroups[filter]?.includes(issue)))&&normalize(`${item.place.name} ${item.place.nameEn||''} ${item.place.address}`).includes(searchText));
  const visibleHistory=processedHistory.filter(event=>!event.systemSync&&normalize(`${event.actorEmail||event.actor} ${event.changes.map(change=>`${change.name} ${historyPlace(event,change)?.address||''} ${change.fields.map(field=>fieldLabel(field,t)).join(' ')}`).join(' ')}`).includes(searchText));
  const syncHistory=processedHistory.filter(event=>event.systemSync);
  const sortedReports=useMemo(()=>newestFirst(reports,reportActivityTime),[reports]);
@@ -109,7 +111,7 @@ export default function AdminOperations({data,currentRevision,backend,t,lang,mob
  }
  const requestRestore=value=>{setSelected(null);setRestore(value);};
  async function resolve(item,status){if(reportBusy)return;setReportBusy(true);setError('');try{await backend.resolveReport(item.id,status,notes[item.id]??item.resolution??'');}catch{setError('operationError');}finally{setReportBusy(false);}}
- const empty=message=><div className="ops-empty"><Icon name="check" size={26}/><strong>{t(message)}</strong>{(query||filter!=='all')&&<button type="button" className="text-button" onClick={clearFilters}>{t('opsShowAll')}</button>}</div>;
+ const empty=message=><div className="ops-empty"><Icon name="check" size={26}/><strong>{t(message)}</strong>{(query||filter!=='all'||qualityIssue)&&<button type="button" className="text-button" onClick={clearFilters}>{t('opsShowAll')}</button>}</div>;
  return <section className="admin-operations ops-simple" data-tool={tab}>
   <nav className="operations-tabs" aria-label={t('adminTools')}>{tabs.map(([id,icon])=><button type="button" key={id} data-tool={id} aria-pressed={tab===id} onClick={()=>selectTab(id)}><Icon name={icon} size={17}/>{t(id)}</button>)}</nav>
   <div className="operations-view" key={tab} aria-busy={loading}>
@@ -119,6 +121,7 @@ export default function AdminOperations({data,currentRevision,backend,t,lang,mob
     <div className="ops-queue-tools">{search}<div className="ops-filters" role="group" aria-label={t('quality')}>
      {['all','contact','content','review'].map(id=><button type="button" key={id} aria-pressed={filter===id} onClick={()=>changeFilter(id)}>{t(`opsQuality_${id}`)}</button>)}
     </div></div>
+    {qualityIssue&&<div className="ops-context-filter" role="status"><span>{t(qualityIssue)}</span><button type="button" onClick={clearFilters} aria-label={t('clearFilters')}><Icon name="x" size={15}/>{t('clearFilters')}</button></div>}
     <div className="ops-list-caption">{visibleQuality.length} {t('results')}<span>{t('latestActivity')}</span>{query&&<button type="button" className="text-button" onClick={clearFilters}>{t('clearFilters')}</button>}</div>
     {visibleQuality.length?slice(visibleQuality).map(({place,issues})=><article className="operation-record ops-row quality-record" key={place.id}>
      <button type="button" className="ops-row-open" aria-expanded={selected===place.id} onClick={()=>select(place.id)}><PlaceThumb place={place} categories={data.categories}/><div className="ops-row-info"><h3>{placeText(place,'name',lang)}</h3><p className="ops-place-address">{placeText(place,'address',lang)}</p><PlaceStamp place={place} categories={data.categories} t={t} lang={lang}/><div className="ops-issue-summary">{issues.slice(0,2).map(issue=><span key={issue}>{t(issue)}</span>)}{issues.length>2&&<b>+{issues.length-2}</b>}</div><small className="ops-record-date"><Icon name="clock" size={11}/>{date(placeActivityTime(place))}</small></div><span className="ops-issue-total">{issues.length}<small>mục</small></span><Icon name="right" size={18}/></button>

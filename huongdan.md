@@ -33,10 +33,9 @@ Mở đường dẫn **`/admin`** trên cùng tên miền và đăng nhập bằ
 
 | Màn hình | Công việc |
 | --- | --- |
-| **Tổng quan → Phân bố** | Xem tổng số điểm, số điểm theo nhóm và biểu đồ trạng thái. Chọn nhóm hoặc trạng thái trên biểu đồ để mở danh sách tương ứng. |
-| **Tổng quan → Cập nhật** | Xem địa điểm vừa cập nhật và các Điểm xanh cần vệ sinh hoặc quá tải. |
+| **Tổng quan → Điều hành** | Xem số điểm đang quản lý, công khai/ẩn, ba nhóm và danh mục con. Mở điểm ưu tiên rà soát hoặc công cụ dữ liệu để xử lý thông tin còn thiếu. |
 | **Tổng quan → Lượt truy cập** | Xem lượt xem bản đồ, số người dùng và biểu đồ theo ngày trong 7 ngày đã kết thúc gần nhất. Cần cấu hình Google Analytics theo mục [Báo cáo lượt truy cập](README.md#báo-cáo-lượt-truy-cập). |
-| **Địa điểm** | Xem toàn bộ danh sách, tìm kiếm và lọc theo nhóm, danh mục. Có thể chọn trạng thái từ biểu đồ Tổng quan để xem các điểm tương ứng. Bấm tên một điểm để xem vị trí và thông tin. |
+| **Địa điểm** | Xem toàn bộ danh sách, tìm kiếm và lọc theo nhóm, danh mục. Bấm tên một điểm để xem vị trí và thông tin. |
 | **An toàn / Điểm xanh / Đối tác xanh** | Mở riêng danh sách của từng nhóm. |
 | **Danh mục** | Quản lý danh mục theo nhóm, sửa tên Việt/Anh, màu và biểu tượng. Muốn xóa danh mục đang có địa điểm, chuyển các địa điểm sang danh mục khác trước. |
 | **Công cụ dữ liệu** | Rà soát chất lượng, lịch sử/khôi phục, thùng rác và xử lý thông tin người dân gửi về. |

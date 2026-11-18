@@ -195,6 +195,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
  const mobile=useSyncExternalStore(subscribeMobileAdmin,isMobileAdmin);
  const [tab,setTab]=useState('overview');
  const [toolTab,setToolTab]=useState('quality');
+ const [toolIssue,setToolIssue]=useState('');
  const [importOpen,setImportOpen]=useState(false);
  const [query,setQuery]=useState('');
  const [groupFilter,setGroupFilter]=useState('all');
@@ -364,11 +365,11 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
      {managementStatus==='rules'&&<p className="admin-rules-notice" role="status"><Icon name="info"/>{t('rulesNeeded')}</p>}
      <div className="admin-content" key={tab}>
        {tab==='overview'?<AdminOverview data={data} t={t} lang={lang} getIdToken={getIdToken}
-         onNavigate={navigate}
-         onCategory={(kind,id)=>{navigate(kind);setCategory(id);}}
-         onTools={id=>{setToolTab(id);navigate('operations');}}
+         onNavigate={(id,filters={})=>{navigate(id);if(filters.status)setStatus(filters.status);if(filters.supportLevel)setLevelFilter(filters.supportLevel);}}
+         onCategory={(kind,id,filters={})=>{navigate(kind);setCategory(id);if(filters.supportLevel)setLevelFilter(filters.supportLevel);}}
+         onTools={(id,issue='')=>{setToolTab(id);setToolIssue(issue);navigate('operations');}}
          onPoint={id=>{navigate('places');selectPreview(id);}}/>
-       :tab==='operations'?<AdminOperations data={data} currentRevision={currentRevision} mobile={mobile} backend={backend} t={t} lang={lang} busy={busy} initialTab={toolTab} onTabChange={setToolTab} onOpen={id=>{navigate('places');selectPreview(id);}} onApply={commitTools}/>:tab==='categories'?<div className="admin-category-groups">
+       :tab==='operations'?<AdminOperations data={data} currentRevision={currentRevision} mobile={mobile} backend={backend} t={t} lang={lang} busy={busy} initialTab={toolTab} initialQualityIssue={toolIssue} onQualityIssueChange={setToolIssue} onTabChange={setToolTab} onOpen={id=>{navigate('places');selectPreview(id);}} onApply={commitTools}/>:tab==='categories'?<div className="admin-category-groups">
          {groups.map(item=><section className="panel category-group-panel" key={item.id} style={{'--group-color':item.color}}>
            <div className="panel-heading"><div><span className="section-kicker">{t('kind')}</span><h2>{t(item.label)} <span className="count-pill">{item.children.length}</span></h2></div>
              <button className="button secondary" onClick={()=>setEditCategory({initialKind:item.id})}><Icon name="plus" size={16}/>{t('addCategory')}</button>
@@ -410,7 +411,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
                  style={{'--chip-color':categoryColor(item)}} onClick={()=>changeCategory(item.id)}><Icon name={categoryVisualIcon(item)} size={14}/>{categoryName(item)}</button>)}
              </div>
            </div>
-           {isCommunitySupport(getCategory(categories,category))&&<SupportLevelFilter className="admin-filter-row" value={levelFilter} onChange={value=>{setLevelFilter(value);setPage(1);}} t={t}/>}
+           {(isCommunitySupport(getCategory(categories,category))||levelFilter!=='all')&&<SupportLevelFilter className="admin-filter-row" value={levelFilter} onChange={value=>{setLevelFilter(value);setPage(1);}} t={t}/>}
            {(query||groupFilter!=='all'||category!=='all'||status!=='all')&&
              <div className="admin-filter-footer">
                {status!=='all'&&<Status value={status==='alerts'?'alertStatus':status} t={t}/>}

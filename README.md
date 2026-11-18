@@ -6,6 +6,12 @@ Dự án **React + Vite + Leaflet + MapLibre** dùng Firebase Auth và Firestore
 
 Bản nâng cấp có lưu/chia sẻ địa điểm và QR, lịch theo ngày, bộ lọc đang mở/loại rác, phản ánh, ẩn/công khai, thùng rác, lịch sử khôi phục và nhập Excel. **Cần xuất bản `firestore.rules` mới để dùng đầy đủ phần quản trị mở rộng.** Xem [hướng dẫn kích hoạt và kiểm tra](docs/KICH_HOAT_TINH_NANG_MOI.md); chủ dự án tự xuất bản Rules từ Firebase Console.
 
+## Tài liệu bàn giao 18/11/2026
+
+- [Báo cáo chức năng](docs/ban-giao/BAO-CAO-CHUC-NANG.md)
+- [Ảnh các giao diện](docs/ban-giao/GIAO-DIEN.md)
+- [Hướng dẫn sử dụng và triển khai](docs/ban-giao/HUONG-DAN-SU-DUNG.md)
+
 ## Chạy dự án
 
 Cần Node.js 22 trở lên.
@@ -29,8 +35,8 @@ npm run preview
 ## Các màn hình đã có
 
 - **Khám phá bản đồ:** bản đồ An Thượng tại `[16.0505, 108.2435]`, zoom 15; tìm kiếm không dấu theo tên, địa chỉ, đơn vị, vật liệu; lọc danh mục; danh sách và chi tiết địa điểm; hình ảnh tùy chọn; liên hệ; GPS; khoảng cách Haversine; chỉ đường Google Maps; SOS.
-- **SafePoint:** nhóm an toàn, hành chính, y tế và giáo dục.
-- **GreenPoint:** vật liệu tiếp nhận, đơn vị phụ trách, trạng thái sạch/cần vệ sinh/quá tải/tạm ngưng; lọc theo vật liệu và trạng thái.
+- **An toàn:** nhóm an toàn, hành chính, y tế và giáo dục.
+- **Điểm xanh:** vật liệu tiếp nhận, đơn vị phụ trách, trạng thái sạch/cần vệ sinh/quá tải/tạm ngưng; lọc theo vật liệu và trạng thái.
 - **Đối tác xanh:** các cửa hàng/đơn vị hợp tác, thông tin liên hệ và vật liệu tiếp nhận.
 - **Quản trị tại `/admin`:** đăng nhập bằng tài khoản Firebase được cấp.
 - **Tổng quan quản trị:** biểu đồ nhóm, trạng thái, điểm cần xử lý và địa điểm mới cập nhật. Tab lượt truy cập đọc báo cáo GA4 khi đã cấu hình API phía server.

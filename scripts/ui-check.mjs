@@ -42,7 +42,7 @@ dom.window.HTMLDialogElement.prototype.close=function(){this.removeAttribute('op
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;
 const output=new URL('../.ui-check-generated.mjs',import.meta.url);
 const result=await build({
- entryPoints:['src/App.jsx'],bundle:true,format:'esm',platform:'node',packages:'external',jsx:'automatic',write:false,loader:{'.css':'empty'},
+ entryPoints:['src/App.jsx'],bundle:true,format:'esm',platform:'node',packages:'external',jsx:'automatic',write:false,loader:{'.css':'empty','.png':'dataurl'},
  define:{'import.meta.env':JSON.stringify({
    VITE_FIREBASE_API_KEY:'fixture',VITE_FIREBASE_AUTH_DOMAIN:'example.invalid',
    VITE_FIREBASE_PROJECT_ID:'fixture',VITE_FIREBASE_APP_ID:'fixture',
@@ -101,6 +101,12 @@ try{
  check(!!document.querySelector('.map-welcome[open]'),'First-time visitors see an introduction');
  const welcome=document.querySelector('.map-welcome');
  check(welcome.querySelectorAll('.welcome-pagination button').length===3,'The introduction has three slides');
+ check(!welcome.querySelector('.welcome-enter')&&!!welcome.querySelector('.welcome-context'),'The introduction uses gestures and useful context instead of a map entry button');
+ const welcomeLanguage=welcome.querySelector('.welcome-language');
+ await click(welcomeLanguage.querySelector('[lang=en]'));
+ check(welcome.querySelector('h2').textContent.includes('at your fingertips')&&welcomeLanguage.querySelector('[lang=en]').getAttribute('aria-pressed')==='true','Language can be changed while the welcome dialog is open');
+ check(localStorage.getItem('safemap-language')==='en'&&document.querySelector('.site-header [lang=en]').getAttribute('aria-pressed')==='true','Welcome language uses the same persisted preference as the public header');
+ await click(welcomeLanguage.querySelector('[lang=vi]'));
  await click(welcome.querySelectorAll('.welcome-pagination button')[1]);
  check(welcome.dataset.slide==='search','The second slide explains search');
  await act(async()=>welcome.querySelector('h2').dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true})));
@@ -160,6 +166,7 @@ try{
  const dockButton=name=>[...discoveryDock.querySelectorAll('button')].find(item=>item.getAttribute('aria-label')===name);
  const mapBeforeDock=document.querySelector('.leaflet-map');
  check(discoveryDock.querySelectorAll('button').length===4&&!!dockButton('Khám phá')&&!dockButton('Đã lưu'),'The mobile dock exposes Explore and the three main groups without a saved shortcut');
+ check(dockButton('Khám phá').getAttribute('aria-pressed')==='true'&&discoveryDock.querySelectorAll('[aria-pressed=true]').length===1,'Only the current group is selected in the mobile dock');
  await input(document.querySelector('.public-toolbar input'),'khong-co-ket-qua');
  await click(button('Đang mở cửa',document.querySelector('.quick-place-filters')));
  await click(dockButton('Điểm xanh'));
@@ -168,6 +175,7 @@ try{
  await input(document.querySelector('.public-toolbar input'),'khong-co-ket-qua');
  await click(dockButton('An toàn'));
  check(document.querySelectorAll('.place-card').length===6&&document.querySelector('.map-workspace').dataset.scope==='safe','Opening another dock group clears the previous hygiene filter and search');
+ check(dockButton('An toàn').getAttribute('aria-pressed')==='true'&&dockButton('Khám phá').getAttribute('aria-pressed')==='false'&&discoveryDock.querySelectorAll('[aria-pressed=true]').length===1,'Safety selection moves the dock highlight off Explore');
  await click(dockButton('Đối tác xanh'));
  check(document.querySelectorAll('.place-card').length===3&&document.querySelector('.leaflet-map')===mapBeforeDock,'Group shortcuts keep the existing map renderer while changing results');
  await click(button('Khám phá',document.querySelector('.public-tabs')));
@@ -179,6 +187,7 @@ try{
  await act(async()=>searchPhoto.dispatchEvent(new dom.window.Event('error')));
  check(searchPhoto.hidden&&!searchPhoto.closest('.search-preview-thumbnail').querySelector('svg').hidden,'A broken cover returns to its category icon without losing the result');
  await click(button('An toàn',document.querySelector('.public-tabs')));
+ check(dockButton('An toàn').getAttribute('aria-pressed')==='true','Search tabs and the discovery dock share the selected group');
  check(document.querySelectorAll('.public-intro h1').length===1&&document.querySelector('.public-intro h1').textContent==='Điểm hỗ trợ cộng đồng','Changing groups replaces the hero heading');
  check(document.querySelectorAll('.place-card').length===6,'SafePoint screen groups all support categories');
  check(document.querySelectorAll('.mobile-search-preview li').length===6&&document.querySelector('.mobile-search-caption').textContent.includes('6'),'Filtered search previews six places and reports the full result count');
@@ -390,6 +399,18 @@ try{
  check(!!document.querySelector('.ao-total')&&document.querySelectorAll('.ao-group').length===3,'Firebase editor login opens an overview with three distinct groups');
  check([...document.querySelectorAll('.admin-sidebar nav [data-section]')].map(button=>button.dataset.section).join(',')==='overview,places,safe,green,partner,categories,operations','The admin sidebar exposes all three groups separately');
  check([...document.querySelectorAll('.ao-total strong,.ao-group-main > b')].map(x=>x.textContent).join(',')==='11,6,2,3','Dashboard uses shared data');
+ const overviewCheck=name=>[...document.querySelectorAll('.ao-checks button')].find(item=>item.querySelector('strong')?.textContent===name);
+ await click(overviewCheck('Điểm xanh cần xử lý'));
+ check(document.querySelectorAll('tbody tr').length===1&&document.querySelector('tbody tr').textContent.includes('Quá tải'),'The GreenPoint attention count opens only warning/overloaded places');
+ await click(document.querySelector('.admin-sidebar [data-section=overview]'));
+ await click(overviewCheck('Mức hỗ trợ chưa phân'));
+ check(document.querySelectorAll('tbody tr').length===1&&document.querySelector('.support-level-filter [aria-pressed=true]').textContent.includes('Chưa cập nhật'),'The unassigned support count opens its exact subset with a visible filter');
+ await click(document.querySelector('.admin-sidebar [data-section=overview]'));
+ await click(overviewCheck('Liên hệ cần bổ sung'));
+ check(!!document.querySelector('.ops-context-filter')&&document.querySelector('.ops-context-filter').textContent.includes('số điện thoại'),'The contact count opens the phone quality issue instead of all quality records');
+ await click(document.querySelector('.ops-context-filter button'));
+ check(!document.querySelector('.ops-context-filter'),'The dashboard quality issue can be cleared directly');
+ await click(document.querySelector('.admin-sidebar [data-section=overview]'));
  const overviewShortcut=name=>[...document.querySelectorAll('.ao-tool-strip button')].find(item=>item.querySelector('strong')?.textContent===name);
  check(document.querySelectorAll('.ao-tool-strip button').length===4,'Overview exposes the four data tools as labelled shortcuts');
  for(const name of ['Chất lượng dữ liệu','Thông tin cần kiểm tra','Lịch sử thay đổi','Thùng rác']){

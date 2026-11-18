@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from './components/Icon';
+import {BrandIdentity} from './components/BrandLogo';
+import LanguageSwitch from './components/LanguageSwitch';
 import Modal from './components/Modal';
 import MapWelcome from './components/MapWelcome';
 import PublicApp from './components/PublicApp';
@@ -17,7 +19,7 @@ function savedLanguage() {
  try { return localStorage.getItem(languageKey)==='en'?'en':'vi'; }
  catch { return 'vi'; }
 }
-function Brand({onClick,t}) {return <button className="brand" onClick={onClick}><span className="brand-mark"><Icon name="leaf" size={23}/></span><span><strong>SafeMap<span className="brand-separator">/</span><b>An Thượng</b></strong><small>{t('brandTagline')}</small></span></button>;}
+function Brand({onClick,t}) {return <button type="button" className="brand" onClick={onClick}><BrandIdentity t={t}/></button>;}
 export default function App(){
  const [welcomePhase,setWelcomePhase]=useState(()=>linkedPlace()?'closed':'open');
  const [mapStyle,setMapStyle]=useState('light');
@@ -123,10 +125,7 @@ export default function App(){
        event.preventDefault();openMap();
      }}><Icon name="map" size={17}/><span>{t('community')}</span></a>}
      {mode==='admin'&&session&&<button className="icon-button header-logout" aria-label={t('logout')} title={t('logout')} onClick={logout}><Icon name="logout" size={17}/></button>}
-     {mode==='public'&&<div className="header-segments language-switch" role="group" aria-label={t('language')}>
-       <button type="button" lang="vi" aria-label="Tiếng Việt" aria-pressed={lang==='vi'} onClick={()=>setLang('vi')}>VI</button>
-       <button type="button" lang="en" aria-label="English" aria-pressed={lang==='en'} onClick={()=>setLang('en')}>EN</button>
-     </div>}
+     {mode==='public'&&<LanguageSwitch lang={lang} onChange={setLang} t={t}/>}
      {mode==='public'&&<button type="button" className="map-theme-toggle" aria-label={t('mapDark')}
        aria-pressed={mapStyle==='dark'} title={t(mapStyle==='dark'?'mapLight':'mapDark')}
        onClick={()=>setMapStyle(style=>style==='dark'?'light':'dark')}>
@@ -135,5 +134,5 @@ export default function App(){
    </div>
  </header>{mode==='public'?<PublicApp mapStyle={mapStyle} setMapStyle={setMapStyle} welcomePhase={welcomePhase} data={data} scope={scope} setScope={setScope} selected={selected} setSelected={setSelected} t={t} lang={lang} position={position} onLocate={()=>locate()} onRouteLocate={()=>locate(false)} locating={locating} onSos={()=>setSos(true)} backend={firebase.backend}/>:session && firebase.catalog && (!firebase.backend?.observeManagement||['ready','legacy','rules'].includes(firebase.managementStatus)) ? <Admin data={adminData} currentRevision={adminCatalog?.revision} backend={firebase.backend} managementStatus={firebase.managementStatus} commit={commit} t={t} lang={uiLang} notify={notify} onLogout={logout} email={firebase.editor.email} getIdToken={firebase.backend?.getIdToken}/>
  : session || firebase.editor.status==='checking' ? <main className="admin-main"><p role="status">{t(session?catalogNotice:'editorChecking')}</p></main>
- : <Login onLogin={firebase.backend?.login} onBack={openMap} t={t} available={Boolean(firebase.backend)} editorStatus={firebase.editor.status}/>} {mode==='public'&&welcomePhase!=='closed'&&<MapWelcome t={t} onReveal={()=>setWelcomePhase('revealing')} onEnter={()=>setWelcomePhase('closed')}/>} {sos&&<Modal title={t('emergency')} onClose={()=>setSos(false)} t={t}><div className="sos-content"><div className="sos-intro"><span><Icon name="phone" size={25}/></span><p>{t('sosNote')}</p></div>{[['shield','police','113'],['heart','medical','115'],['fire','fire','114']].map(([icon,key,num])=><a className="emergency-row" href={`tel:${num}`} key={num}><span className="emergency-icon"><Icon name={icon} size={23}/></span><span><strong>{t(key)}</strong><small>{num}</small></span><span className="call-emergency"><Icon name="phone" size={17}/>{t('call')}</span></a>)}</div></Modal>}{catalogNotice && !toast && <div className="toast" role="status"><Icon name="info" size={18}/><span>{t(catalogNotice)}</span>{firebase.catalogStatus==='error'&&<button type="button" onClick={firebase.retry} aria-label={t('routeRetry')}>{t('routeRetry')}</button>}</div>}{toast&&<div className="toast" role="status"><Icon name="help" size={18}/><span>{t(toast)}</span><button onClick={()=>setToast('')} aria-label={t('close')}><Icon name="x" size={15}/></button></div>}</>;
+ : <Login onLogin={firebase.backend?.login} onBack={openMap} t={t} available={Boolean(firebase.backend)} editorStatus={firebase.editor.status}/>} {mode==='public'&&welcomePhase!=='closed'&&<MapWelcome t={t} lang={lang} onLanguageChange={setLang} onReveal={()=>setWelcomePhase('revealing')} onEnter={()=>setWelcomePhase('closed')}/>} {sos&&<Modal title={t('emergency')} onClose={()=>setSos(false)} t={t}><div className="sos-content"><div className="sos-intro"><span><Icon name="phone" size={25}/></span><p>{t('sosNote')}</p></div>{[['shield','police','113'],['heart','medical','115'],['fire','fire','114']].map(([icon,key,num])=><a className="emergency-row" href={`tel:${num}`} key={num}><span className="emergency-icon"><Icon name={icon} size={23}/></span><span><strong>{t(key)}</strong><small>{num}</small></span><span className="call-emergency"><Icon name="phone" size={17}/>{t('call')}</span></a>)}</div></Modal>}{catalogNotice && !toast && <div className="toast" role="status"><Icon name="info" size={18}/><span>{t(catalogNotice)}</span>{firebase.catalogStatus==='error'&&<button type="button" onClick={firebase.retry} aria-label={t('routeRetry')}>{t('routeRetry')}</button>}</div>}{toast&&<div className="toast" role="status"><Icon name="help" size={18}/><span>{t(toast)}</span><button onClick={()=>setToast('')} aria-label={t('close')}><Icon name="x" size={15}/></button></div>}</>;
 }

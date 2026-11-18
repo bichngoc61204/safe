@@ -343,7 +343,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
     <div className={`map-workspace ${expanded?'sheet-expanded':''} ${place?'has-detail':''}`}
       data-scope={scope} data-sidebar={sidebarCollapsed?'collapsed':'open'} data-search-open={searchOpen}>
       <nav className="mobile-discovery-dock" data-visible={discoveryVisible} aria-label={t('quickExplore')} aria-hidden={!discoveryVisible} inert={!discoveryVisible}>
-        {scopes.map(([id,label,icon])=><button type="button" key={id} onClick={()=>openMobileGroup(id)} aria-label={t(label)} style={{'--dock-accent':categoryColor({kind:id})}}><Icon name={icon} size={20}/><span>{t(id==='partner'?'partnerShort':label)}</span></button>)}
+        {scopes.map(([id,label,icon])=><button type="button" key={id} onClick={()=>openMobileGroup(id)} aria-label={t(label)} aria-pressed={scope===id} data-group={id} style={{'--dock-accent':id==='map'?'#235744':categoryPalette({kind:id}).ink,'--dock-wash':id==='map'?'#edf4f1':categoryPalette({kind:id}).wash}}><Icon name={icon} size={20}/><span>{t(id==='partner'?'partnerShort':label)}</span></button>)}
       </nav>
       <div className="mobile-map-actions">
         <button ref={searchToggle} className={`map-tool ${hasFilters?'has-filters':''}`} aria-label={t('search')} aria-expanded={searchOpen} aria-controls="map-search-panel" onClick={toggleSearch}><Icon name={searchOpen?'x':'search'} size={21}/></button>
@@ -429,7 +429,8 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
             {hasFilterOptions&&<button type="button" className="mobile-clear-filters" onClick={clearFilters}><Icon name="x" size={14}/>{t('clearFilters')}</button>}
           </div>
           {!searchPreview.length&&<p className="mobile-search-empty-hint">{t('emptyHint')}</p>}
-          {searchPreview.length>0&&<ul className="mobile-search-preview" aria-label={t('nearby')}>
+          {/* Filter changes replay the short list entrance; typing and GPS updates keep rows stable. */}
+          {searchPreview.length>0&&<ul key={[scope,category,supportLevel,status,savedOnly,openOnly,wasteType].join(':')} className="mobile-search-preview" aria-label={t('nearby')}>
             {searchPreview.map((p,index)=>{
               const c=getCategory(data.categories,p.category);
               const distance=formatDistance(haversine(position||areaCenter,p));

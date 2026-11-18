@@ -1,11 +1,13 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import Icon from './Icon';
+import {BrandIdentity} from './BrandLogo';
+import LanguageSwitch from './LanguageSwitch';
 import {supportLevels,supportLevelStyle} from '../lib/supportLevels';
 import '../welcome-enhancements.css';
 
 const slides = [
-  {id:'intro', icon:'pin', kicker:'welcomeArea', title:['SafeMap','An Thượng'], description:'welcomeDescription', features:[['safety','welcomeSafe'],['recycle','welcomeGreen'],['leaf','partner']]},
-  {id:'search', icon:'search', kicker:'welcomeSearchKicker', title:['welcomeSearchTitle','welcomeSearchAccent'], description:'welcomeSearchDescription', features:[['search','welcomeFindName'],['filter','welcomeFindGroup'],['locate','welcomeFindNearby']]},
+  {id:'intro', icon:'pin', kicker:'welcomeArea', title:['welcomeIntroTitle','welcomeIntroAccent'], description:'welcomeDescription', features:[['safety','welcomeSafe','safe'],['recycle','welcomeGreen','green'],['leaf','partner','partner']]},
+  {id:'search', icon:'search', kicker:'welcomeSearchKicker', title:['welcomeSearchTitle','welcomeSearchAccent'], description:'welcomeSearchDescription', features:[['search','welcomeFindName'],['filter','welcomeFindGroup'],['info','welcomeFindDetails']]},
   {id:'support', icon:'community', kicker:'welcomeHelpKicker', title:['welcomeHelpTitle','welcomeHelpAccent'], description:'welcomeHelpDescription', features:[['phone','welcomeHelpContact'],['community','welcomeHelpLevels'],['clock','welcomeHelpHours']]},
 ];
 
@@ -40,25 +42,19 @@ const mapScenes = [
     streets: 'M-10 76H555M-10 168H546M-10 232H466M-10 301H426M-10 365H384M64-10V430M139-10V430M207-10V430M313-10V430M390-10V330M471-10V211',
     water: 'M520 181v239H366c25-43 47-81 59-129 14-52 47-82 95-110Z',
     coast: 'M520 164c-61 29-95 64-109 121-12 49-34 88-63 135',
-    route: 'M145 160Q155 215 240 230M324 145Q258 165 240 230M325 300Q292 250 240 230',
+    route: 'M145 160Q155 215 240 230M324 145Q258 165 240 230M370 230Q305 190 240 230',
     pins: [
       { x: 240, y: 230, icon: 'community', tone: 'safe', delay: 120, ping: true },
       { x: 145, y: 160, icon: 'shield', tone: 'support-safe', delay: 380, ping: true },
       { x: 324, y: 145, icon: 'family', tone: 'support-family', delay: 620, ping: true },
-      { x: 325, y: 300, icon: 'hub', tone: 'support-hub', delay: 860, ping: true },
+      { x: 370, y: 230, icon: 'hub', tone: 'support-hub', delay: 860, ping: true },
     ],
   },
 ];
 
 function WelcomeIllustration({slide,t}) {
-  if(slide.id==='intro')return <div key="intro" className="welcome-illustration welcome-intro-illustration">
-    <div className="welcome-intro-note"><span className="welcome-illustration-spark"><Icon name="map" size={18}/></span><div><strong>{t('welcomeIntroNote')}</strong><small>{t('welcomeIntroHint')}</small></div></div>
-    <div className="welcome-illustration-groups">{[['safe','safety'],['green','recycle'],['partner','leaf']].map(([kind,icon],index)=><div key={kind} data-kind={kind} style={{'--illustration-order':index}}><span><Icon name={icon} size={19}/></span><strong>{t(kind)}</strong></div>)}</div>
-  </div>;
-  if(slide.id==='search')return <div key="search" className="welcome-illustration welcome-search-illustration">
-    <div className="welcome-illustrated-search"><Icon name="search" size={17}/><span>{t('welcomeSearchExample')}</span><i/></div>
-    <div className="welcome-illustrated-results">{[['community','welcomeSearchResultSupport','safe'],['recycle','welcomeSearchResultGreen','green']].map(([icon,label,kind],index)=><div key={label} data-kind={kind} style={{'--illustration-order':index}}><span className="welcome-result-symbol"><Icon name={icon} size={18}/></span><div><strong>{t(label)}</strong><small>{t('welcomeSearchResultInfo')}</small></div><Icon name="right" size={13}/></div>)}</div>
-  </div>;
+  if(slide.id==='intro')return <BrandIdentity className="welcome-brand" t={t}/>;
+  if(slide.id==='search')return <div key="search" className="welcome-search-label"><Icon name="locate" size={14}/>{t('welcomeFindNearby')}</div>;
   return <div key="support" className="welcome-support-key">{supportLevels.map((level,index)=><span key={level.id} style={{...supportLevelStyle(level),'--illustration-order':index}}><Icon name={level.icon} size={13}/>{level.name}</span>)}</div>;
 }
 
@@ -101,17 +97,13 @@ function WelcomeArtwork({ slide, t }) {
         })}
       </div>
       <WelcomeIllustration slide={slide} t={t}/>
-      {slide.id==='support'&&<div key={slide.id} className="welcome-art-note">
-        <Icon name={slide.icon} size={19}/>
-        <span><strong>{t(slide.kicker)}</strong><small>{t(slide.id==='search'?'welcomeFindNearby':'welcomeHelpNearby')}</small></span>
-      </div>}
       <span className="welcome-compass">N<Icon name="navigation" size={14}/></span>
       <span className="welcome-coordinate">16°03′ N · 108°15′ E</span>
     </div>
   );
 }
 
-export default function MapWelcome({t, onReveal, onEnter}) {
+export default function MapWelcome({t, lang, onLanguageChange, onReveal, onEnter}) {
   const [leaving, setLeaving] = useState(false);
   const [{index,direction}, setSlide] = useState({index:0,direction:1});
   const slide=slides[index];
@@ -202,6 +194,7 @@ export default function MapWelcome({t, onReveal, onEnter}) {
       }}
     >
       <WelcomeArtwork slide={slide} t={t}/>
+      <LanguageSwitch className="welcome-language" lang={lang} onChange={onLanguageChange} t={t}/>
       <div className="welcome-copy">
         <div className="welcome-slide-content" aria-live="polite">
           {slides.map(item=>{
@@ -213,7 +206,8 @@ export default function MapWelcome({t, onReveal, onEnter}) {
                 <span className="welcome-title-brand">{t(item.title[0])}</span>{' '}<span className="welcome-title-place">{t(item.title[1])}</span>
               </Heading>
               <p className="welcome-description">{t(item.description)}</p>
-              <ul className="welcome-features">{item.features.map(([icon,label])=><li key={label}><Icon name={icon} size={16}/>{t(label)}</li>)}</ul>
+              <ul className="welcome-features" data-features={item.id}>{item.features.map(([icon,label,kind],i)=><li key={label} data-kind={kind}><span className="welcome-feature-icon"><Icon name={icon} size={16}/></span>{item.id==='search'&&<span className="welcome-step-number" aria-hidden="true">0{i+1}</span>}<span>{t(label)}</span>{kind&&<small>{t(`welcomeGroup_${kind}`)}</small>}</li>)}</ul>
+              <p className="welcome-context"><Icon name={item.id==='search'?'locate':'info'} size={14}/><span>{t(`welcomeContext_${item.id}`)}</span></p>
             </div>;
           })}
         </div>
@@ -222,7 +216,7 @@ export default function MapWelcome({t, onReveal, onEnter}) {
             onClick={()=>changeSlide(i)}><span/></button>)}
           <span aria-hidden="true">{index+1} / {slides.length}</span>
         </nav>
-        <p className="welcome-gesture"><Icon name="down" size={14}/><span className="welcome-scroll">{t('welcomeScroll')}</span><span className="welcome-swipe">{t('welcomeSwipe')}</span></p>
+        <p className="welcome-gesture"><Icon name="down" size={12}/><span className="welcome-scroll">{t('welcomeScroll')}</span><span className="welcome-swipe">{t('welcomeSwipe')}</span></p>
       </div>
     </dialog>
   );
