@@ -12,7 +12,7 @@
 .map-welcome .welcome-support-key > span {
  display:inline-flex; align-items:center; justify-content:center; gap:4px; padding:8px 9px;
  border-radius:9px; border:1px solid color-mix(in srgb,var(--support-ink) 18%,white);
- background:var(--support-wash); color:var(--support-ink); font-size:10px; font-weight:650; white-space:nowrap;
+ background:var(--support-wash); color:var(--support-ink); font-size:11px; font-weight:600; white-space:nowrap;
  animation:welcome-copy-in 710ms calc(470ms + 110ms * var(--illustration-order)) var(--motion-ease) both;
 }
 .map-welcome .welcome-coordinate { display:none; }
@@ -31,10 +31,10 @@
 .map-welcome .welcome-feature-icon { display:inline-flex; align-items:center; justify-content:center; flex:none; }
 .map-welcome [data-features=intro] { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
 .map-welcome [data-features=intro] li { display:grid; grid-template-columns:auto 1fr; gap:6px 5px; align-items:center; }
-.map-welcome [data-features=intro] small { grid-column:1/-1; color:#61796b; font-size:10px; font-weight:400; line-height:1.45; }
+.map-welcome [data-features=intro] small { grid-column:1/-1; color:#61796b; font-size:11px; font-weight:400; line-height:1.45; }
 .map-welcome [data-features=search] { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
 .map-welcome [data-features=search] li { display:grid; grid-template-columns:auto 1fr; align-items:center; gap:7px 5px; padding-top:11px; border-top:1px solid #dbe6de; }
-.map-welcome [data-features=search] .welcome-step-number { color:#789387; font-size:9px; letter-spacing:.04em; }
+.map-welcome [data-features=search] .welcome-step-number { color:#789387; font-size:11px; letter-spacing:.04em; }
 .map-welcome [data-features=search] li > span:last-child { grid-column:1/-1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; }
 .map-welcome .welcome-gesture { justify-content:center; gap:5px; border:0; padding:0; margin:10px 0 0; color:#47715b; font-size:11px; font-weight:600; }
 @media(max-width:600px){
@@ -43,22 +43,22 @@
  .map-welcome .welcome-language { right:12px; top:10px; }
  .map-welcome .welcome-heading { font-size:clamp(29px,8vw,37px); margin:10px 0 12px; }
  .map-welcome .welcome-description { font-size:13px; line-height:1.6; }
- .map-welcome .welcome-kicker { font-size:10px; letter-spacing:.06em; }
- .map-welcome .welcome-features { font-size:10px; gap:8px 12px; margin:16px 0 4px; }
- .map-welcome [data-features=intro] small { font-size:9px; }
+ .map-welcome .welcome-kicker { font-size:11px; letter-spacing:.06em; }
+ .map-welcome .welcome-features { font-size:11px; gap:8px 12px; margin:16px 0 4px; }
+ .map-welcome [data-features=intro] small { font-size:11px; }
  .map-welcome .welcome-pagination { margin:16px 0 12px; }
- .map-welcome .welcome-search-label { right:13px; bottom:13px; padding:6px 9px; font-size:10px; }
+ .map-welcome .welcome-search-label { right:13px; bottom:13px; padding:6px 9px; font-size:11px; }
  .map-welcome .welcome-support-key { inset:auto 8px 12px; gap:4px; }
- .map-welcome .welcome-support-key > span { font-size:9px; padding:6px; gap:3px; }
+ .map-welcome .welcome-support-key > span { font-size:11px; padding:6px; gap:3px; }
  .map-welcome .welcome-context { margin-top:14px; padding-top:11px; font-size:11px; }
 }
 @media(max-width:360px){
  .map-welcome .welcome-copy { padding:19px 18px 15px; }
  .map-welcome .welcome-art { height:clamp(168px,26dvh,194px); }
- .map-welcome .welcome-features { gap:8px; font-size:9px; }
- .map-welcome .welcome-support-key > span { padding:5px; font-size:8px; }
+ .map-welcome .welcome-features { gap:8px; font-size:11px; }
+ .map-welcome .welcome-support-key > span { padding:5px; font-size:11px; }
  .map-welcome .welcome-support-key svg { width:11px; height:11px; }
- .map-welcome [data-features=search] li > span:last-child { font-size:10px; }
+ .map-welcome [data-features=search] li > span:last-child { font-size:11px; }
 }
 @media(max-width:600px) and (max-height:680px){
  .map-welcome .welcome-art { height:clamp(124px,24dvh,163px); }
@@ -68,19 +68,37 @@
  .map-welcome .welcome-features { margin-top:12px; }
  .map-welcome .welcome-pagination { margin:10px 0 8px; }
  .map-welcome .welcome-gesture { margin-top:7px; }
- .map-welcome .welcome-context { margin-top:10px; padding-top:9px; font-size:10px; }
+ .map-welcome .welcome-context { margin-top:10px; padding-top:9px; font-size:11px; }
 }
 @media(min-width:601px) and (max-height:500px){
  .map-welcome .welcome-copy { padding:42px 24px 16px; }
  .map-welcome .welcome-heading { font-size:28px; margin:8px 0 10px; }
- .map-welcome .welcome-kicker { font-size:9px; }
+ .map-welcome .welcome-kicker { font-size:11px; }
  .map-welcome .welcome-description { font-size:11px; line-height:1.55; }
  .map-welcome .welcome-features { display:none; }
  .map-welcome .welcome-pagination { margin:8px 0; }
  .map-welcome .welcome-pagination button { min-height:30px; }
- .map-welcome .welcome-context { margin-top:10px; padding-top:8px; font-size:10px; }
- .map-welcome .welcome-gesture { margin-top:6px; font-size:9px; }
+ .map-welcome .welcome-context { margin-top:10px; padding-top:8px; font-size:11px; }
+ .map-welcome .welcome-gesture { margin-top:6px; font-size:11px; }
 }
 @media(prefers-reduced-motion:reduce){
  .map-welcome .welcome-search-label,.map-welcome .welcome-support-key > span { animation:none; }
+}
+
+/* Unslop polish: the neighborhood map carries the illustration. */
+.map-welcome { background:#fff; border-radius:20px; box-shadow:0 16px 56px #14231b26; }
+.map-welcome .welcome-heading { font-weight:600; letter-spacing:-.025em; }
+.map-welcome .welcome-title-place { color:inherit; }
+.map-welcome .welcome-kicker { letter-spacing:0; font-weight:500; text-transform:none; color:#52655a; }
+.map-welcome .welcome-description { color:#384e42; }
+.map-welcome .welcome-context { color:#5e7065; }
+.map-welcome .welcome-pin-pulse { animation:none; }
+.map-welcome .welcome-features li { font-size:12px; }
+.map-welcome .welcome-step-number { font-variant-numeric:tabular-nums; }
+@media(max-width:600px){
+ .map-welcome .welcome-copy { padding:20px; }
+ .map-welcome .welcome-features { column-gap:8px; }
+ .map-welcome .welcome-features li { font-size:11px; }
+ .map-welcome .welcome-support-key { flex-wrap:wrap; }
+ .map-welcome .welcome-support-key > span { min-height:28px; }
 }

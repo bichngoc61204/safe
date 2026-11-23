@@ -66,7 +66,7 @@ export default function AdminOverview({data,t,lang,getIdToken,onNavigate,onCateg
   <div className="ao-view" key={tab} id="overview-panel" role="tabpanel" aria-labelledby={`overview-tab-${tab}`}>
    {tab==='traffic'?<TrafficDashboard t={t} lang={lang} getIdToken={getIdToken}/>:<>
     <section className="ao-catalog-summary" aria-label="Tình hình dữ liệu địa điểm">
-     <div className="ao-total"><span className="ao-section-label">DANH BẠ AN THƯỢNG</span><div><strong>{places.length}</strong><span>địa điểm <br/>đang quản lý</span></div><button type="button" onClick={()=>onNavigate('places')}>Mở danh sách địa điểm <Icon name="right" size={15}/></button></div>
+     <div className="ao-total"><span className="ao-section-label">Danh bạ An Thượng</span><div><strong>{places.length}</strong><span>địa điểm <br/>đang quản lý</span></div><button type="button" onClick={()=>onNavigate('places')}>Mở danh sách địa điểm <Icon name="right" size={15}/></button></div>
      <div className="ao-publication">
       <div><span className="ao-dot ao-dot-green"/><span><strong>{published}</strong> đang công khai</span><small>Hiển thị trên bản đồ cộng đồng</small></div>
       <div><span className="ao-dot ao-dot-slate"/><span><strong>{hidden}</strong> đang ẩn</span><small>Vẫn được giữ trong trang quản trị</small></div>
@@ -83,18 +83,18 @@ export default function AdminOverview({data,t,lang,getIdToken,onNavigate,onCateg
     </section>
     <div className="ao-workspace">
      <section className="ao-panel ao-priority">
-      <header><div><span className="ao-section-label">RÀ SOÁT ĐỊA ĐIỂM</span><h2>Ưu tiên kiểm tra</h2><p>Mở từng điểm để xem đầy đủ thông tin và chỉnh sửa.</p></div><button type="button" onClick={()=>onTools('quality')}>Xem tất cả <Icon name="right" size={14}/></button></header>
+      <header><div><span className="ao-section-label">Rà soát địa điểm</span><h2>Ưu tiên kiểm tra</h2><p>Mở từng điểm để xem đầy đủ thông tin và chỉnh sửa.</p></div><button type="button" onClick={()=>onTools('quality')}>Xem tất cả <Icon name="right" size={14}/></button></header>
       {priorities.length?<div className="ao-point-list">{priorities.map(({place,category,reason,tone})=><button type="button" key={place.id} className="ao-point" onClick={()=>onPoint(place.id)}>
        <span className="ao-point-icon" style={{color:categoryColor(category),background:groupPalette[category?.kind]?.wash||'#f0f4f2'}}><Icon name={categoryVisualIcon(category)} size={18}/></span>
        <span className="ao-point-copy"><strong>{placeText(place,'name',lang)}</strong><small>{category?.name} · {t(category?.kind)}</small><span><Icon name="pin" size={12}/>{placeText(place,'address',lang)}</span><em className={`ao-reason ao-tone-${tone}`}>{reason}</em></span><Icon name="right" size={15}/>
       </button>)}</div>:<div className="ao-all-clear"><Icon name="check" size={27}/><strong>{places.length?'Chưa có mục cần ưu tiên kiểm tra':'Danh bạ chưa có địa điểm'}</strong><p>{places.length?'Xem công cụ Chất lượng dữ liệu để rà soát các thông tin bổ sung.':'Chọn Thêm địa điểm để bắt đầu xây dựng danh bạ.'}</p></div>}
      </section>
-     <section className="ao-panel ao-checks"><header><div><span className="ao-section-label">CHẤT LƯỢNG VẬN HÀNH</span><h2>Những việc cần chú ý</h2></div><Icon name="filter" size={18}/></header>
+     <section className="ao-panel ao-checks"><header><div><span className="ao-section-label">Chất lượng vận hành</span><h2>Những việc cần chú ý</h2></div><Icon name="filter" size={18}/></header>
       <div>{checks.map(item=><button type="button" key={item.title} className={`ao-check ao-tone-${item.tone}`} onClick={item.action} disabled={!item.value}><span className="ao-check-icon"><Icon name={item.icon} size={18}/></span><span><strong>{item.title}</strong><small>{item.hint}</small></span><b>{item.value}</b></button>)}</div>
       <p className="ao-check-note"><Icon name="clock" size={14}/>{missingHours.length} điểm chưa đủ thông tin giờ hoạt động. Bổ sung giờ để bộ lọc “Đang mở cửa” hoạt động chính xác.</p>
      </section>
     </div>
-    <section className="ao-tools" aria-label="Công cụ dữ liệu"><header><div><span className="ao-section-label">QUẢN LÝ DỮ LIỆU</span><h2>Công cụ dữ liệu</h2></div><span>Kiểm tra, theo dõi và khôi phục</span></header><div className="ao-tool-strip">{tools.map((tool,index)=><button type="button" key={tool.id} className={`ao-tool ao-tone-${tool.tone}`} style={{'--ao-order':index}} onClick={()=>onTools(tool.id)}><span className="ao-tool-icon"><Icon name={tool.icon} size={20}/></span><span><strong>{tool.title}</strong><small>{tool.hint}</small></span>{tool.id==='quality'?<b>{qualityCount}</b>:tool.id==='trash'?<b>{trash}</b>:<Icon name="right" size={15}/>}</button>)}</div></section>
+    <section className="ao-tools" aria-label="Công cụ dữ liệu"><header><div><span className="ao-section-label">Quản lý dữ liệu</span><h2>Công cụ dữ liệu</h2></div><span>Kiểm tra, theo dõi và khôi phục</span></header><div className="ao-tool-strip">{tools.map((tool,index)=><button type="button" key={tool.id} className={`ao-tool ao-tone-${tool.tone}`} style={{'--ao-order':index}} onClick={()=>onTools(tool.id)}><span className="ao-tool-icon"><Icon name={tool.icon} size={20}/></span><span><strong>{tool.title}</strong><small>{tool.hint}</small></span>{tool.id==='quality'?<b>{qualityCount}</b>:tool.id==='trash'?<b>{trash}</b>:<Icon name="right" size={15}/>}</button>)}</div></section>
    </>}
   </div>
  </div>;

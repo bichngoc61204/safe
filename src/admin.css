@@ -34,6 +34,8 @@
 .admin-sidebar nav b { color: #804c17; background: #fff1dc; font-size: 10px; }
 .admin-profile strong { font-size: 13px; font-weight: 650; }
 .admin-profile small, .admin-sidebar-bottom > .text-button { font-size: 12px; color: var(--admin-muted); }
+.admin-sidebar-bottom > .text-button { display:flex; width:100%; align-items:center; gap:8px; padding:10px 8px; justify-content:flex-start; }
+.admin-sidebar-bottom > .admin-account-shortcut[aria-current=page] { color:var(--admin-green); background:var(--admin-soft); border-radius:8px; font-weight:700; }
 
 .admin-main { padding: clamp(24px, 3vw, 44px); max-width: 1440px; }
 .admin-heading { margin-bottom: 24px; align-items: center; }

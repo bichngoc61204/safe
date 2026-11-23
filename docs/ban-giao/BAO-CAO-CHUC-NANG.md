@@ -113,13 +113,13 @@ Lịch sử chỉ trình bày so sánh khi có bản dữ liệu phù hợp; kh�
 | `management/an-thuong` | Dữ liệu quản lý, gồm điểm ẩn/thùng rác và rà soát nội bộ |
 | `catalogHistory/{revision}` | Bản dữ liệu trước thay đổi, hành động, người cập nhật và thời điểm |
 | `placeReports/{id}` | Phản ánh, trạng thái và ghi chú xử lý |
-| `editors/{UID}` | Quyền cán bộ; trường `active: true` cho phép quản trị |
+| `editors/{UID}` | Quyền cán bộ; `active: true` cho phép quản trị, `role: "superadmin"` cấp quản lý tài khoản; thiếu `role` được hiểu là tài khoản con |
 
 - Giao dịch lưu đồng thời bản quản trị, bản công khai và lịch sử với số phiên bản. Trường hợp máy khác đã cập nhật, hệ thống yêu cầu kiểm tra dữ liệu mới trước khi lưu lại.
 - Thông tin rà soát nội bộ và thông tin xóa mềm không được đưa vào bản công khai. Mọi trường còn lại trong bản công khai phải được đơn vị quản lý cho phép công bố.
 - Khách gửi phản ánh bằng Firebase Anonymous Auth khi được cấu hình. Giới hạn hiện tại: một phản ánh cho mỗi địa điểm, mỗi danh tính trình duyệt, mỗi ngày UTC.
 - Ảnh lưu dưới dạng **URL**, không có luồng tải ảnh lên Firebase Storage trong bản này.
-- Lịch sử hiển thị tối đa 40 phiên bản gần nhất; phản ánh tải tối đa 100 bản gần nhất. Các bản cũ có thể còn trong Firestore.
+- Màn hình Lịch sử thay đổi hiển thị tối đa 40 phiên bản gần nhất; phản ánh tải tối đa 100 bản gần nhất. Thống kê theo tài khoản của admin tổng đọc metadata toàn bộ lịch sử theo từng trang, không bị giới hạn ở 40 phiên bản.
 
 ## 6. Điều kiện vận hành và giới hạn
 
@@ -149,7 +149,7 @@ Khi nghiệm thu trên tên miền chính thức, đối chiếu các nhóm sau:
 6. Excel hợp lệ được xem trước và nhập; tệp lỗi bị chặn trước khi ghi.
 7. Firestore Rules và quyền cán bộ đúng; không có bí mật server trong mã phía trình duyệt.
 
-Chức năng `/game` có trong mã nguồn nhưng không thuộc phạm vi nghiệp vụ và tài liệu bàn giao bản đồ cộng đồng này.
+Cập nhật ngày 22/11/2026: đã gỡ `/game` khỏi mã nguồn và bản build. Bản nâng cấp bổ sung admin tổng, tài khoản con và thống kê hoạt động theo người; tài khoản cán bộ cũ giữ nguyên quyền nghiệp vụ. Cần deploy mã mới, xuất bản Firestore Rules và cấp vai trò ban đầu theo [hướng dẫn kích hoạt](../QUAN_TRI_TAI_KHOAN.md).
 
 ## 8. Kiểm tra bản mã bàn giao ngày 18/11/2026
 

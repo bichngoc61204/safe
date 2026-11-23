@@ -195,3 +195,25 @@ Danh mục sắp theo ba nhóm; số điểm đang sử dụng, thao tác thêm 
 Các công cụ nằm trên một hàng kéo ngang; bộ lọc và thẻ thông tin phù hợp màn hình hẹp.
 
 ![Công cụ quản trị trên điện thoại](anh/18-admin-mobile-cong-cu.jpg)
+
+## Bổ sung ngày 22/11/2026: quản lý tài khoản
+
+Các ảnh dưới đây chụp từ bản xem thử riêng, sử dụng tài khoản và số liệu minh họa. Không phải thống kê hoạt động thật của phường.
+
+### Admin tổng trên desktop
+
+Thêm tài khoản con, chọn khoảng thời gian thống kê, xem hoạt động từng người và khóa/mở lại quyền.
+
+![Quản lý tài khoản trên desktop — dữ liệu minh họa](anh/22-admin-tai-khoan-desktop.jpg)
+
+### Danh sách tài khoản trên điện thoại
+
+Thẻ thống kê xếp dọc, bộ lọc thời gian và nút làm mới gọn trên một hàng.
+
+![Quản lý tài khoản trên mobile — dữ liệu minh họa](anh/20-admin-tai-khoan-mobile.jpg)
+
+### Form thêm tài khoản trên màn hình 320px
+
+Giữ bố cục form, tên hiển thị, email và mật khẩu; tạo tài khoản con không làm mất phiên đăng nhập của admin tổng.
+
+![Form thêm tài khoản con trên mobile — bản xem thử](anh/21-admin-tao-tai-khoan-mobile.jpg)

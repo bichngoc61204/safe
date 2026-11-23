@@ -129,8 +129,8 @@ Object.assign(messages.vi, {
   mapNorth: 'Đưa bản đồ về hướng Bắc',
   clearSearch: 'Xóa từ khóa',
   welcomeSearchKicker: 'Tìm địa điểm',
-  welcomeSearchTitle: 'Tìm đúng nơi.',
-  welcomeSearchAccent: 'Chỉ vài chạm.',
+  welcomeSearchTitle: 'Tìm địa điểm',
+  welcomeSearchAccent: 'Theo nhu cầu',
   welcomeSearchDescription: 'Nhập tên hoặc địa chỉ, rồi chọn nhóm bạn cần. Mỗi điểm có thông tin hỗ trợ, hình ảnh, giờ mở cửa và số liên hệ để bạn dễ lựa chọn.',
   welcomeFindName: 'Tìm theo tên',
   welcomeFindGroup: 'Lọc theo nhóm',
@@ -138,7 +138,7 @@ Object.assign(messages.vi, {
   welcomeFindDetails: 'Xem thông tin',
   welcomeHelpKicker:'Hỗ trợ cộng đồng',
   welcomeHelpTitle:'Cần giúp đỡ?',
-  welcomeHelpAccent:'Có nơi để tìm.',
+  welcomeHelpAccent:'Có nơi để tìm',
   welcomeHelpDescription:'Tìm hiểu từng mức hỗ trợ: Safe Point, Family Friendly và Safe Hub. Xem khả năng hỗ trợ, giờ hoạt động và gọi trực tiếp cho điểm phù hợp.',
   welcomeHelpContact:'Liên hệ trực tiếp', welcomeHelpLevels:'Ba mức hỗ trợ', welcomeHelpHours:'Giờ hoạt động', welcomeHelpNearby:'Tìm đúng nơi hỗ trợ',
 });
@@ -162,8 +162,8 @@ Object.assign(messages.en, {
   mapNorth: 'Reset map to north',
   clearSearch: 'Clear search text',
   welcomeSearchKicker: 'Find a place',
-  welcomeSearchTitle: 'Find your place.',
-  welcomeSearchAccent: 'In a few taps.',
+  welcomeSearchTitle: 'Find a place',
+  welcomeSearchAccent: 'For what you need',
   welcomeSearchDescription: 'Search by name or address, then choose the group you need. Check available support, photos, opening hours and contact details to choose a suitable place.',
   welcomeFindName: 'Search by name',
   welcomeFindGroup: 'Filter by group',
@@ -171,7 +171,7 @@ Object.assign(messages.en, {
   welcomeFindDetails: 'View details',
   welcomeHelpKicker:'Community support',
   welcomeHelpTitle:'Need a hand?',
-  welcomeHelpAccent:'Find support.',
+  welcomeHelpAccent:'Find support',
   welcomeHelpDescription:'Explore Safe Point, Family Friendly and Safe Hub. Check available support and opening hours, then call a suitable location directly.',
   welcomeHelpContact:'Call directly', welcomeHelpLevels:'Three support levels', welcomeHelpHours:'Opening hours', welcomeHelpNearby:'Find the right support',
 });
@@ -382,3 +382,10 @@ Object.assign(messages.en,{
 
 Object.assign(messages.vi,{welcomeIntroNote:'Một bản đồ, nhiều điểm tựa',welcomeIntroHint:'An toàn · Tiện ích · Môi trường',welcomeSearchExample:'Bạn cần tìm gì?',welcomeSearchResultSupport:'Điểm hỗ trợ quanh bạn',welcomeSearchResultGreen:'Nơi tiếp nhận tái chế',welcomeSearchResultInfo:'Địa chỉ · Giờ hoạt động · Liên hệ'});
 Object.assign(messages.en,{welcomeIntroNote:'One map, many ways to help',welcomeIntroHint:'Safety · Local services · Environment',welcomeSearchExample:'What do you need?',welcomeSearchResultSupport:'Support nearby',welcomeSearchResultGreen:'Local recycling',welcomeSearchResultInfo:'Address · Hours · Contact'});
+
+Object.assign(messages.vi,{accounts:'Tài khoản quản trị'});
+Object.assign(messages.en,{accounts:'Administrator accounts'});
+
+// Short interface labels use sentence case; descriptions retain their punctuation.
+Object.assign(messages.vi,{workspace:'Không gian quản trị',dataLabel:'Dữ liệu cộng đồng',localGuide:'Bản đồ cộng đồng',welcomeArea:'An Thượng · Đà Nẵng',welcomeIntroAccent:'trong tầm tay'});
+Object.assign(messages.en,{workspace:'Administration',dataLabel:'Community data',localGuide:'Community map',welcomeArea:'An Thuong · Da Nang',welcomeIntroAccent:'at your fingertips'});

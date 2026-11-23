@@ -119,6 +119,8 @@ Ba mức này không thay đổi màu cam của ghim An toàn. Xem giờ và li�
 
 Các số liệu rà soát trên Tổng quan có thể mở thẳng danh sách/bộ lọc tương ứng. Tab **Lượt truy cập** chỉ có dữ liệu khi chủ dự án đã cấu hình GA4 và API báo cáo.
 
+Cập nhật 22/11/2026: admin tổng có thêm nút **Tài khoản** ở đầu trang để thêm, khóa/mở quyền và xem thống kê cán bộ. Tài khoản con giữ đủ các chức năng nghiệp vụ trên, không quản lý tài khoản khác. Xem [hướng dẫn kích hoạt và vận hành](../QUAN_TRI_TAI_KHOAN.md).
+
 ### 3.2. Thêm địa điểm
 
 1. Chọn **Thêm địa điểm**.

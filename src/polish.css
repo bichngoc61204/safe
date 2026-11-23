@@ -1,6 +1,17 @@
 :root {
+  --surface-page: #f6f8f7;
+  --surface-raised: #ffffff;
+  --surface-subtle: #f2f5f3;
+  --text-primary: #26382f;
+  --text-secondary: #52655a;
+  --text-muted: #64736a;
+  --line-subtle: #dfe6e1;
+  --motion-ease: cubic-bezier(.22,1,.36,1);
+  --motion-feedback: 160ms;
+  --motion-slide: 320ms;
+  --motion-panel: 360ms;
   --ui-quick: 150ms;
-  --ui-enter: 340ms;
+  --ui-enter: 320ms;
   --ui-close: 175ms;
   --ui-ring: #28755b;
   --ui-hover: #edf5ef;
@@ -72,15 +83,8 @@ dialog.modal[open][data-state="closing"]::backdrop { animation: ui-backdrop-exit
 .modal-footer { background: #f8fbf9; }
 .modal-footer .button { min-height: 40px; }
 
-.modal :is(.modal-header,.delete-content,.sos-intro,.emergency-row,.form-section-heading),
-.place-details :is(.detail-category,h2,.detail-address,.detail-status,.detail-buttons,.detail-info,.detail-metadata),
-.admin-layout :is(.stat-card,.overview-grid > .panel,.category-group-panel,.category-card,.admin-places-list tbody tr),
-.login-form > :is(.login-lock,h2,p,label,.login-submit),
-.login-story > :is(.login-symbol,.eyebrow,h1,p,.login-pills),
-.admin-layout :is(.admin-filter-row,.pagination,.form-error),
-.map-stage :is(.route-request-status,.route-pick-notice),
-.toast {
-  animation: ui-rise var(--ui-enter) var(--motion-ease) var(--ui-delay,0ms) backwards;
+.login-form, .login-story, .admin-layout .admin-content, .toast {
+  animation: ui-rise var(--ui-enter) var(--motion-ease) backwards;
 }
 .sos-intro,.delete-content,.detail-address,.form-section-heading { --ui-delay: 28ms; }
 .emergency-row:nth-of-type(1),.detail-status { --ui-delay: 58ms; }
@@ -112,17 +116,6 @@ dialog.modal[open][data-state="closing"]::backdrop { animation: ui-backdrop-exit
 /* Keep native disclosure and modal semantics while animating their surfaces. */
 :is(.detail-metadata,.admin-preview-metadata,.admin-preview-photo-editor) > summary > svg:last-child {
   transition: rotate var(--ui-quick) var(--motion-ease);
-}
-@supports selector(details::details-content) and (interpolate-size: allow-keywords) {
-  :is(.detail-metadata,.admin-preview-metadata,.admin-preview-photo-editor)::details-content {
-    interpolate-size: allow-keywords;
-    block-size: 0;
-    overflow: clip;
-    opacity: 0;
-    transition: block-size 260ms var(--motion-ease), opacity var(--ui-quick), content-visibility 260ms allow-discrete;
-  }
-  :is(.detail-metadata,.admin-preview-metadata,.admin-preview-photo-editor)[open]::details-content { block-size: auto; opacity: 1; }
-  .detail-metadata dl { animation: none; }
 }
 
 .place-gallery-slide img[data-loaded="true"] { animation: ui-image-ready 250ms ease-out both; }
@@ -241,3 +234,109 @@ dialog.modal[open][data-state="closing"]::backdrop { animation: ui-backdrop-exit
 .place-gallery-slide[data-failed="true"] .gallery-image-fallback { display:grid; place-items:center; gap:8px; color:#52705f; font-size:12px; }
 .mobile-search-empty-hint { margin:0 0 12px; color:#587263; font-size:12px; line-height:1.6; }
 @media(max-width:700px){ .mobile-search-empty-hint { margin-inline:12px; } }
+
+/* Final craft pass using Unslop by Damir Sokolovsky (CC BY 4.0).
+   https://github.com/heydamir/unslop — existing SafeMap brand and semantic colors retained. */
+:root { --ink:var(--text-primary); --muted:var(--text-muted); --border:var(--line-subtle); }
+.admin-layout,.login-page {
+  --admin-ink:var(--text-primary);
+  --admin-muted:var(--text-secondary);
+  --admin-line:var(--line-subtle);
+  --admin-surface:var(--surface-page);
+}
+:is(.public-app,.admin-layout,.login-page,.modal,.site-header) :is(button,a,input,textarea,summary,[role="combobox"]):focus-visible {
+  outline:2px solid var(--ui-ring); outline-offset:3px;
+}
+:is(.public-app,.admin-layout,.login-page,.modal) :is(button,a,input,textarea,summary) {
+  -webkit-tap-highlight-color:transparent;
+}
+:is(.admin-heading,.panel-heading,.modal-header,.ops-queue-heading,.accounts-intro) :is(h1,h2),
+.admin-layout :is(.category-card h3,.account-card strong),.login-form h2 { font-weight:600; }
+.admin-layout .admin-heading h1 { letter-spacing:-.025em; line-height:1.25; }
+:is(.admin-sidebar-label,.admin-heading .eyebrow,.admin-layout .section-kicker,.ao-section-label) {
+  text-transform:none; letter-spacing:0; font-size:12px; font-weight:500; color:var(--text-secondary);
+}
+.admin-layout :is(.field-hint,.form-dropdown > span,.form-grid label > span,.admin-notice) { color:var(--text-secondary); }
+.admin-layout :is(.panel,.account-card,.category-card,.admin-preview-content) { border-color:var(--line-subtle); }
+.admin-layout :is(.panel-heading,.modal-footer,.pagination) { border-color:var(--line-subtle); }
+:is(.admin-layout,.login-page,.modal) :is(input:not([type="radio"]):not([type="checkbox"]):not([type="color"]),textarea) {
+  border-radius:8px; border-color:#cdd9d1; color:var(--text-primary);
+  transition:border-color var(--ui-quick) var(--motion-ease),box-shadow var(--ui-quick) var(--motion-ease);
+}
+:is(.public-app,.admin-layout,.login-page,.modal) input::placeholder,
+:is(.admin-layout,.login-page,.modal) textarea::placeholder { color:var(--text-muted); opacity:1; }
+.public-app .search-field:has(input:focus-visible) { outline:2px solid var(--ui-ring); outline-offset:2px; box-shadow:none; }
+.public-app .search-field input:focus-visible { outline:none; }
+:is(.admin-layout,.modal) .form-error { color:#963f33; font-size:13px; line-height:1.6; }
+:is(.public-app,.admin-layout,.modal) .button { font-weight:500; box-shadow:none; }
+:is(.public-app,.admin-layout,.modal) .button.secondary { color:var(--text-secondary); border-color:#d5e0d8; }
+:is(.public-app,.admin-layout,.modal) .button.primary { background:#176647; border-color:#176647; color:#fff; }
+:is(.public-app,.admin-layout,.modal) .button.primary:hover:not(:disabled) { background:#105538; border-color:#105538; }
+.admin-layout :is(th,.pagination,.count-pill,.account-card dd),
+.public-app :is(.card-distance,.search-preview-distance),.route-guide :is(strong,time) { font-variant-numeric:tabular-nums; }
+.admin-layout th { font-size:12px; font-weight:500; color:var(--text-secondary); }
+.admin-layout .admin-places-list tbody tr { animation:none; }
+.admin-layout .admin-places-list tbody tr:not(.selected):hover { background:var(--surface-subtle); }
+.admin-layout :is(.admin-mobile-place-address,.admin-mobile-place-meta,.admin-preview-facts dt) { font-size:12px; color:var(--text-secondary); }
+.admin-layout :is(.admin-mobile-place-copy > strong,.admin-preview-facts dd) { color:var(--text-primary); }
+.admin-layout .form-section-heading { margin-block:20px 12px; font-size:13px; color:var(--text-primary); }
+.admin-layout .admin-preview-body .form-section-heading { margin-block:16px 8px; }
+.admin-layout .admin-preview-facts { font-variant-numeric:tabular-nums; }
+.public-intro .scope-art-trace { display:none; }
+.public-intro .eyebrow { letter-spacing:0; text-transform:none; font-size:11px; font-weight:500; }
+.public-app :is(.public-intro p,.list-heading > span,.list-footer,.detail-address,.detail-status) { color:var(--text-secondary); }
+.public-app .place-card h3 { color:var(--text-primary); font-size:13px; font-weight:600; line-height:1.5; letter-spacing:0; }
+.public-app .place-card p { color:var(--text-secondary); font-size:12px; line-height:1.5; }
+.public-app .place-card .place-type { font-size:11px; line-height:1.5; }
+.public-app .place-card .card-distance { font-size:11px; color:var(--text-secondary); }
+.public-app .place-card .place-type-category > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.public-app .public-tabs button { min-height:40px; font-size:11px; font-weight:500; }
+.public-app :is(.quick-place-filters button,.category-chips button,.list-clear-filters,.detail-panel-header) { font-size:12px; }
+.public-app .place-details .detail-content h2 { font-size:23px; font-weight:600; line-height:1.35; letter-spacing:-.02em; }
+.public-app .place-details :is(.detail-info dt,.detail-metadata dt) { font-size:12px; color:var(--text-secondary); }
+.public-app .place-details .detail-address { font-size:13px; line-height:1.6; }
+.public-app :is(.detail-metadata,.place-report-link,.empty-state p) { color:var(--text-secondary); font-size:12px; line-height:1.6; }
+.public-app .support-level-info { border-radius:12px; }
+.public-app .support-level-info :is(h4,li) { font-size:12px; }
+.public-app :is(.map-tool,.map-fabs,.map-style-control,.mobile-discovery-dock) { box-shadow:0 4px 16px #152d2014; }
+.public-app .empty-state { gap:12px; padding:24px 16px; }
+.public-app .empty-state .text-button { min-height:44px; font-size:13px; }
+.public-app .place-details .detail-info > div { padding-block:12px; }
+.public-app .place-details .detail-phone { flex-wrap:wrap; }
+.public-app .place-details .detail-phone > span { flex:1 1 140px; }
+.public-app .place-details .detail-phone > a { flex-shrink:0; }
+@media(hover:hover) and (pointer:fine){
+  .admin-layout .admin-sidebar nav > button { min-height:40px; }
+  :is(.admin-layout,.login-page,.modal) input:not(:disabled):hover { border-color:#a9bdb0; }
+}
+@media(min-width:1100px){
+  .admin-layout[data-section="overview"] .admin-heading-actions { flex-shrink:0; }
+}
+@media(max-width:700px){
+  .admin-layout .admin-heading { gap:16px; margin-bottom:20px; }
+  .admin-layout .admin-heading h1 { font-size:28px; }
+  .admin-layout .admin-heading p { font-size:13px; line-height:1.6; }
+  .admin-layout .admin-heading-actions { gap:8px; }
+  .admin-layout .admin-heading-actions > .button { min-height:44px; }
+  .admin-layout .admin-sidebar nav > button { min-height:56px; }
+  .admin-layout .admin-sidebar nav > button.active > svg { transform:translateY(-11px); }
+  .admin-layout .admin-sidebar nav > button .admin-dock-active-label {
+    bottom:2px; font-size:11px; line-height:1.1; letter-spacing:0;
+    white-space:normal; text-overflow:clip; padding-inline:1px;
+  }
+  .admin-layout .form-grid { column-gap:12px; row-gap:16px; }
+  .modal .form-grid > label:has(input[type="tel"]) { grid-column:1 / -1; }
+  .admin-layout :is(.admin-filter-row,.category-chips) button { min-height:40px; }
+  :is(.admin-layout,.login-page,.modal) label > span { font-size:12px; line-height:1.5; }
+  .public-app .quick-place-filters > button { min-height:36px; }
+  .public-app .category-chips button { min-height:36px; }
+  .public-app .sheet-detail-bar { min-height:44px; }
+  .public-app .place-card { padding-block:12px; }
+  .public-app .public-tabs button { min-height:44px; }
+  .public-app .place-details .detail-category { font-size:12px; }
+  .public-app .place-details .detail-info dd { font-size:14px; }
+  .public-app .place-details .detail-info .button { min-height:44px; }
+}
+@media(prefers-reduced-motion:reduce){
+  .login-form,.login-story,.admin-layout .admin-content,.toast { animation:none; }
+}

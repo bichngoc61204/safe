@@ -56,7 +56,13 @@ await writeFile(output,result.outputFiles[0].text);
 let cloudData=makeTestCatalog(),revision=1,publishCatalog,publishEditor,publishManagement,publishHistory,publishReports;
 let cloudHistory=[],cloudReports=[];
 let failSave=false;
+let accountObserver;
+let editorAccounts=[{uid:'owner',email:'owner@example.invalid',role:'superadmin',active:true},{uid:'fixture',email:'editor@example.invalid',role:'editor',active:true}];
 window.firebaseFixture={
+ observeEditors(receive){accountObserver=receive;receive(editorAccounts);return ()=>{accountObserver=null;};},
+ async loadEditorActivity(){return cloudHistory;},
+ async createEditorAccount(input){editorAccounts=[...editorAccounts,{uid:'new-child',email:input.email,displayName:input.displayName,active:true,role:'editor'}];accountObserver?.(editorAccounts);},
+ async setEditorActive(uid,active){editorAccounts=editorAccounts.map(account=>account.uid===uid?{...account,active}:account);accountObserver?.(editorAccounts);},
  observeCatalog(receive){publishCatalog=receive;receive({data:publicCatalog(cloudData),revision});return ()=>{};},
  observeManagement(receive){publishManagement=receive;receive({data:cloudData,revision});return ()=>{};},
  observeHistory(receive){publishHistory=receive;receive(cloudHistory);return ()=>{};},
@@ -631,7 +637,7 @@ try{
  await click(document.querySelector('.admin-sidebar [data-section=operations]'));
  check(document.querySelectorAll('.operation-record').length>0,'Data tools list actionable quality issues');
  await act(async()=>{
-  cloudData={...cloudData,places:cloudData.places.map(place=>place.name==='Điểm được đồng bộ'?{...place,updatedAt:'2026-11-20T00:00:00Z'}:place)};
+  cloudData={...cloudData,places:cloudData.places.map(place=>place.name==='Điểm được đồng bộ'?{...place,updatedAt:new Date(Date.now()+86400000).toISOString()}:place)};
   publishManagement({data:cloudData,revision});
  });
  check(document.querySelector('.quality-record h3').textContent==='Điểm được đồng bộ','Quality checks show the most recently updated place first, regardless of its alphabetical position');
@@ -678,6 +684,25 @@ try{
  await click(button('Nhập Excel',document.querySelector('.admin-heading-actions')));
  check(!!document.querySelector('.import-modal')&&document.querySelector('.import-modal input[type=file]'),'Excel import starts with an explicit file chooser and preview');
  await click(document.querySelector('.import-modal .modal-header button'));
+ check(!button('Tài khoản',document.querySelector('.admin-heading-actions')),'A child editor has no account management action');
+ await act(async()=>publishEditor({status:'editor',uid:'owner',email:'owner@example.invalid',role:'superadmin'}));
+ await click(button('Tài khoản',document.querySelector('.admin-heading-actions')));
+ check(document.querySelectorAll('.account-card').length===2,'Owner sees account list with separate owner and child roles');
+ check(document.querySelector('.accounts-scope').textContent.includes('lượt lưu trong nhật ký'),'Activity is based on loaded audit records');
+ await click(button('Thêm tài khoản',document.querySelector('.admin-accounts')));
+ const accountForm=[...document.querySelectorAll('dialog form')].find(form=>form.querySelector('[autocomplete=new-password]'));
+ await input(accountForm.querySelector('input[type=email]'),'child@example.invalid');
+ await input(accountForm.querySelector('input[type=password]'),'fixture-password');
+ await submit(accountForm);
+ check(document.querySelectorAll('.account-card').length===3&&!accountForm.isConnected,'Owner can add a child without leaving the admin session');
+ const childCard=[...document.querySelectorAll('.account-card')].find(card=>card.textContent.includes('editor@example.invalid'));
+ await click(button('Xem hoạt động',childCard));
+ check(!!document.querySelector('.account-activity'),'Per-account activity details are available');
+ await click(button('Khóa quyền',childCard));
+ await click(button('Xác nhận',document.querySelector('dialog')));
+ check(document.querySelectorAll('.account-card[data-disabled=true]').length===1,'Suspension updates access status without removing audit history');
+ await act(async()=>publishEditor({status:'editor',uid:'fixture',email:'editor@example.invalid',role:'editor'}));
+ check(!document.querySelector('.admin-accounts'),'Downgraded sessions immediately lose account-management content');
  await click(document.querySelector('.header-logout'));
  await click(document.querySelector('.login-form-area > button'));
  check([...document.querySelectorAll('.place-card h3')].some(heading=>heading.textContent==='Điểm được đồng bộ'),'The cloud update appears on the public map after sign-out');

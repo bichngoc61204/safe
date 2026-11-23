@@ -1,0 +1,51 @@
+.admin-accounts { display:grid; gap:20px; min-width:0; }
+.accounts-intro { display:flex; align-items:center; gap:16px; padding:24px; background:#fff; border:1px solid #d4e5de; border-radius:16px; }
+.accounts-intro h2 { margin:0 0 6px; font-size:20px; }
+.accounts-intro p,.accounts-scope,.account-activity header p { margin:0; color:#577063; font-size:12px; line-height:1.6; }
+.accounts-intro > div { flex:1; }
+.accounts-lead-icon,.account-avatar { display:grid; place-items:center; flex-shrink:0; width:44px; height:44px; border-radius:12px; background:#fff; color:#19664b; }
+.accounts-toolbar,.account-activity > header { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.accounts-period { display:flex; gap:4px; padding:4px; background:#eaf0ed; border-radius:10px; }
+.accounts-period button { border:0; background:transparent; padding:9px 12px; color:#577063; font-size:12px; border-radius:7px; white-space:nowrap; }
+.accounts-period button[aria-pressed=true] { background:#fff; color:#174e39; box-shadow:0 2px 5px #183d2010; font-weight:600; }
+.accounts-notice { display:flex; align-items:center; gap:8px; margin:0; padding:12px; color:#176346; background:#eaf6ee; border-radius:10px; font-size:13px; }
+.accounts-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr)); gap:16px; }
+.account-card { min-width:0; border:1px solid #dae5e0; border-radius:14px; background:#fff; overflow:hidden; }
+.account-card[data-disabled=true] { background:#f5f7f6; }
+.account-card > header { display:flex; gap:10px; align-items:center; padding:20px; flex-wrap:wrap; }
+.account-card header > div { display:grid; gap:3px; flex:1; min-width:100px; overflow-wrap:anywhere; }
+.account-card header strong { font-size:14px; }
+.account-card header small,.account-role { font-size:11px; color:#617869; }
+.account-state { font-size:11px; padding:4px 7px; border-radius:5px; background:#e7f5ed; color:#176346; }
+.account-state.is-locked { background:#f6e8e6; color:#9d453b; }
+.account-card dl { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); margin:0 16px; border-radius:10px; background:#f4f7fa; }
+.account-card dl > div { padding:12px 4px; text-align:center; }
+.account-card dt { font-size:11px; color:#5c7169; }
+.account-card dd { margin:5px 0 0; font-size:23px; font-weight:600; color:var(--text-primary); font-variant-numeric:tabular-nums; }
+.account-last { font-size:11px; color:#6c7d75; padding:0 18px; }
+.account-card footer { display:flex; justify-content:space-between; gap:8px; border-top:1px solid #eaf0ed; padding:10px 16px; }
+.account-card footer button { font-size:12px; }
+.account-activity { padding:20px; min-width:0; scroll-margin-top:90px; }
+.account-activity h2 { font-size:16px; margin:0 0 6px; overflow-wrap:anywhere; }
+.account-activity ol { margin:16px 0; padding:0; list-style:none; }
+.account-activity li { display:flex; gap:12px; align-items:center; border-top:1px solid #e8eeeb; padding:13px 0; }
+.account-activity li > div { flex:1; min-width:0; display:grid; gap:4px; }
+.account-activity li strong { overflow-wrap:anywhere; font-size:13px; }
+.account-activity li small,.account-activity time { color:#647a6e; font-size:11px; overflow-wrap:anywhere; }
+.account-action { width:100px; flex-shrink:0; font-size:11px; color:#256440; }
+.account-pagination { display:flex; justify-content:flex-end; gap:12px; align-items:center; font-size:12px; }
+.accounts-create { display:grid; gap:16px; }
+.accounts-create p,.accounts-create small { font-size:12px; line-height:1.6; color:#5c7265; margin:0; }
+@media(max-width:600px) {
+ .accounts-intro { flex-wrap:wrap; padding:16px; }
+ .accounts-intro > .button { width:100%; justify-content:center; }
+ .accounts-toolbar { align-items:center; gap:8px; }
+ .accounts-period { max-width:100%; overflow-x:auto; }
+ .accounts-period button { padding:9px 10px; }
+ .accounts-refresh { flex-shrink:0; width:40px; padding:10px; }
+ .accounts-refresh > span { display:none; }
+ .account-activity { padding:14px; }
+ .account-activity li { flex-wrap:wrap; gap:7px; }
+ .account-action { width:100%; }
+ .account-activity time { flex-basis:100%; }
+}

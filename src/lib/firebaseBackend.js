@@ -33,12 +33,16 @@ export function connectFirebase(config) {
         stopRole = onSnapshot(refs.editor(user.uid), { includeMetadataChanges: true }, snapshot => {
           if (snapshot.metadata.fromCache || snapshot.metadata.hasPendingWrites) return;
           receive(snapshot.data()?.active === true
-            ? { status: 'editor', email: user.email, uid:user.uid }
+            ? { status: 'editor', email: user.email, uid:user.uid, role:snapshot.data()?.role==='superadmin'?'superadmin':'editor' }
             : { status: 'denied' });
         }, () => receive({ status: 'error' }));
       }, () => receive({ status: 'error' }));
       return () => { stopAuth(); stopRole?.(); };
     },
+    observeEditors:(receive,fail)=>onSnapshot(collection(refs.db,'editors'),snapshot=>receive(snapshot.docs.map(item=>({uid:item.id,...item.data()}))),fail),
+    createEditorAccount:async input=>(await import('./editorAccounts.js')).createEditorAccount(refs,auth,config,input),
+    setEditorActive:async (uid,active)=>(await import('./editorAccounts.js')).setEditorActive(refs,auth,uid,active),
+    loadEditorActivity:async options=>(await import('./editorStats.js')).loadEditorActivity({projectId:config.projectId,getIdToken:()=>auth.currentUser?.getIdToken(),...options}),
     getIdToken: () => auth.currentUser?.getIdToken(),
     async enableTraffic(isPublic) {
       if (!config.measurementId || trafficStarted) return;

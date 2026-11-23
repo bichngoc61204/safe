@@ -150,12 +150,12 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
     const mobileListOpened=expanded&&!previous.expanded&&!selected&&window.matchMedia?.('(max-width: 700px)').matches;
     if((!scopeChanged&&!mobileListOpened)||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
     const direction=scopeChanged&&scopes.findIndex(([id])=>id===scope)>scopes.findIndex(([id])=>id===previous.scope)?1:-1;
-    const cards=Array.from(placesList.current?.querySelectorAll('.place-card')??[]).slice(0,8);
+    const cards=Array.from(placesList.current?.querySelectorAll('.place-card')??[]).slice(0,6);
     const elements=scopeChanged?[scopeCopy.current,...cards]:cards;
     const animations=elements.map((element,index)=>element?.animate?.([
-      {opacity:0,transform:`translateX(${direction*13}px)`},
+      {opacity:0,transform:`translateX(${direction*6}px)`},
       {opacity:1,transform:'translateX(0)'},
-    ],{duration:480,delay:Math.min(index*65,325),easing:'cubic-bezier(.2,.7,.25,1)',fill:'backwards'}));
+    ],{duration:300,delay:Math.min(index*40,160),easing:'cubic-bezier(.22,1,.36,1)',fill:'backwards'}));
     return ()=>animations.forEach(animation=>animation?.cancel());
   },[scope,expanded,selected]);
   const [origin,setOrigin]=useState(null);
@@ -382,7 +382,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
             aria-label={t('collapseSidebar')} title={t('collapseSidebar')} onClick={toggleSidebar}><Icon name="left" size={17}/></button>
           <div className="scope-copy" ref={scopeCopy}>
             <span className="eyebrow">{t(scope==='map'?'localGuide':scopeLabel)}</span>
-            <h1>{scope==='map'?<>{t('explore')} <span className="title-accent">An Thượng.</span></>:t(`${scope}Title`)}</h1>
+            <h1>{scope==='map'?<>{t('explore')} <span className="title-accent">An Thượng</span></>:t(`${scope}Title`)}</h1>
             <p>{t(scope==='map'?'subtitle':`${scope}Subtitle`)}</p>
           </div>
           <span className="scope-art" aria-hidden="true">

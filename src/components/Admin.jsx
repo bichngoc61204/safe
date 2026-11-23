@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import AdminAccounts from './AdminAccounts';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import Icon, { categoryIconOptions } from './Icon';
 import Modal from './Modal';
 import Dropdown from './Dropdown';
@@ -33,7 +34,7 @@ export function Login({onLogin,onBack,t,available,editorStatus}){
    }
  }
  const message = error || (editorStatus==='denied'?'editorDenied':editorStatus==='error'?'editorError':'');
- return <main className="login-page"><div className="login-story"><div className="login-symbol"><Icon name="map" size={86}/><span className="orbit one"><Icon name="safety" size={25}/></span><span className="orbit two"><Icon name="recycle" size={25}/></span><span className="orbit three"><Icon name="leaf" size={25}/></span></div><div className="eyebrow">SAFEMAP AN THƯỢNG</div><h1>{t('loginTitle')}</h1><p>{t('footer')}</p><div className="login-pills"><span><Icon name="safety" size={15}/>{t('safe')}</span><span><Icon name="recycle" size={15}/>{t('green')}</span></div></div><div className="login-form-area"><button className="text-button" onClick={onBack}><Icon name="back" size={16}/>{t('loginBack')}</button><form className="login-form" onSubmit={submit}><span className="login-lock"><Icon name="lock" size={23}/></span><h2>{t('login')}</h2><p>{t('editorLoginSubtitle')}</p><label><span>{t('email')}</span><input type="email" autoComplete="username" value={email} onChange={e=>{setEmail(e.target.value);setError('');}} required/></label><label><span>{t('password')}</span><div className="password-field"><input type={show?'text':'password'} autoComplete="current-password" value={password} onChange={e=>{setPassword(e.target.value);setError('');}} required/><button type="button" aria-label={t(show?'hidePassword':'showPassword')} onClick={()=>setShow(!show)}><Icon name={show?'eyeoff':'eye'} size={18}/></button></div></label>{message&&<p className="form-error" role="alert">{t(message)}</p>}<button className="button primary login-submit" disabled={pending||!available}>{t(pending?'editorChecking':'login')}<Icon name="right" size={17}/></button></form></div></main>;
+ return <main className="login-page"><div className="login-story"><div className="login-symbol"><Icon name="map" size={86}/><span className="orbit one"><Icon name="safety" size={25}/></span><span className="orbit two"><Icon name="recycle" size={25}/></span><span className="orbit three"><Icon name="leaf" size={25}/></span></div><div className="eyebrow">SafeMap An Thượng</div><h1>{t('loginTitle')}</h1><p>{t('footer')}</p><div className="login-pills"><span><Icon name="safety" size={15}/>{t('safe')}</span><span><Icon name="recycle" size={15}/>{t('green')}</span></div></div><div className="login-form-area"><button className="text-button" onClick={onBack}><Icon name="back" size={16}/>{t('loginBack')}</button><form className="login-form" onSubmit={submit}><span className="login-lock"><Icon name="lock" size={23}/></span><h2>{t('login')}</h2><p>{t('editorLoginSubtitle')}</p><label><span>{t('email')}</span><input type="email" autoComplete="username" value={email} onChange={e=>{setEmail(e.target.value);setError('');}} required/></label><label><span>{t('password')}</span><div className="password-field"><input type={show?'text':'password'} autoComplete="current-password" value={password} onChange={e=>{setPassword(e.target.value);setError('');}} required/><button type="button" aria-label={t(show?'hidePassword':'showPassword')} onClick={()=>setShow(!show)}><Icon name={show?'eyeoff':'eye'} size={18}/></button></div></label>{message&&<p className="form-error" role="alert">{t(message)}</p>}<button className="button primary login-submit" disabled={pending||!available}>{t(pending?'editorChecking':'login')}<Icon name="right" size={17}/></button></form></div></main>;
 }
 function CategoryForm({category,initialKind,onSave,onClose,t,busy,saveError}) {
  const [v,setV]=useState(category?{...category,...(isCommunitySupport(category)?{supportLevels:true}:{})}:{id:crypto.randomUUID(),name:'',nameEn:'',color:'#199569',icon:'store',kind:initialKind||'safe'});
@@ -191,9 +192,11 @@ function PlacePreview({place,categories,groupLabel,t,lang,editing,busy,saveError
   </form>{editor.imagePreview}</>;
 }
 
-export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdToken,backend,managementStatus,currentRevision}) {
+export default function Admin({data,commit,t,lang,notify,onLogout,email,editor,getIdToken,backend,managementStatus,currentRevision}) {
+ const isSuperAdmin=editor?.role==='superadmin';
  const mobile=useSyncExternalStore(subscribeMobileAdmin,isMobileAdmin);
  const [tab,setTab]=useState('overview');
+ useEffect(()=>{if(!isSuperAdmin&&tab==='accounts')setTab('overview');},[isSuperAdmin,tab]);
  const [toolTab,setToolTab]=useState('quality');
  const [toolIssue,setToolIssue]=useState('');
  const [importOpen,setImportOpen]=useState(false);
@@ -241,7 +244,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
    return [...filtered,preview];
  },[filtered,preview]);
  const mapHoverId=!inlineEdit&&visible.some(place=>place.id===hoveredPlaceId)?hoveredPlaceId:null;
- const title=tab==='overview'?'overview':tab==='categories'?'manageCategories':tab==='operations'?'adminTools':group?.label??'managePlaces';
+ const title=tab==='overview'?'overview':tab==='accounts'?'accounts':tab==='categories'?'manageCategories':tab==='operations'?'adminTools':group?.label??'managePlaces';
 
  function clearFilters(){
    setQuery('');setGroupFilter('all');setCategory('all');setLevelFilter('all');setStatus('all');setPage(1);
@@ -349,22 +352,24 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,getIdTok
        <Icon name={item.icon}/><span>{t(item.label)}</span>{mobile&&tab===item.id&&<small className="admin-dock-active-label" aria-hidden="true">{dockLabel(item)}</small>}{item.id==='green'&&alerts.length>0&&<b>{alerts.length}</b>}
      </button>)}</nav>
      <div className="admin-sidebar-bottom">
-       <div className="admin-profile"><span>AD</span><div><strong>SafeMap Admin</strong><small>{email}</small></div></div>
+       <div className="admin-profile"><span>AD</span><div><strong>{isSuperAdmin?'Admin tổng':'SafeMap Admin'}</strong><small>{email}</small></div></div>
+       {isSuperAdmin&&<button type="button" className="text-button admin-account-shortcut" aria-current={tab==='accounts'?'page':undefined} onClick={()=>navigate('accounts')}><Icon name="family" size={16}/>Tài khoản</button>}
        <button className="text-button" onClick={onLogout}><Icon name="logout" size={16}/>{t('logout')}</button>
      </div>
    </aside>
    <main className="admin-main">
      <div className="admin-heading">
        <div><div className="eyebrow">{t('dataLabel')}</div><h1>{t(title)}</h1>{tab==='overview'&&<p>{t('adminSubtitle')}</p>}</div>
-       <div className="admin-heading-actions">
+       {tab!=='accounts'&&<div className="admin-heading-actions">
+         {isSuperAdmin&&<button type="button" className="button secondary" aria-current={tab==='accounts'?'page':undefined} onClick={()=>navigate('accounts')} disabled={inlineEdit}><Icon name="family" size={16}/>Tài khoản</button>}
          <button className="button secondary" onClick={()=>setImportOpen(true)} disabled={inlineEdit}><Icon name="upload" size={16}/>{t('importExcel')}</button>
          <button className="button secondary" onClick={exportData} disabled={exporting}><Icon name="download" size={16}/>{t(exporting?'exportingExcel':'exportExcel')}</button>
-         {tab!=='categories'&&tab!=='operations'&&<button className="button primary" onClick={add} disabled={inlineEdit}><Icon name="plus" size={16}/>{t('add')}</button>}
-       </div>
+         {tab!=='accounts'&&tab!=='categories'&&tab!=='operations'&&<button className="button primary" onClick={add} disabled={inlineEdit}><Icon name="plus" size={16}/>{t('add')}</button>}
+       </div>}
      </div>
      {managementStatus==='rules'&&<p className="admin-rules-notice" role="status"><Icon name="info"/>{t('rulesNeeded')}</p>}
      <div className="admin-content" key={tab}>
-       {tab==='overview'?<AdminOverview data={data} t={t} lang={lang} getIdToken={getIdToken}
+       {tab==='accounts'&&isSuperAdmin?<AdminAccounts backend={backend} editor={editor} t={t} data={data} onOpen={id=>{navigate('places');selectPreview(id);}}/>:tab==='overview'?<AdminOverview data={data} t={t} lang={lang} getIdToken={getIdToken}
          onNavigate={(id,filters={})=>{navigate(id);if(filters.status)setStatus(filters.status);if(filters.supportLevel)setLevelFilter(filters.supportLevel);}}
          onCategory={(kind,id,filters={})=>{navigate(kind);setCategory(id);if(filters.supportLevel)setLevelFilter(filters.supportLevel);}}
          onTools={(id,issue='')=>{setToolTab(id);setToolIssue(issue);navigate('operations');}}

@@ -400,7 +400,7 @@ dialog.modal[open]:has(.community-modal-body) { display:flex; flex-direction:col
 .search-preview-thumbnail img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .search-preview-thumbnail img[hidden],.place-thumbnail img[hidden] { display:none; }
 .search-preview-copy { display:grid; gap:1px; min-width:0; }
-.mobile-search-preview .opening-badge { display:inline-flex; align-items:center; justify-self:start; margin:0 0 0 4px; padding:0; background:none; font-size:9px; line-height:1.4; }
+.mobile-search-preview .opening-badge { display:inline-flex; align-items:center; justify-self:start; margin:2px 0 0 2px; padding:0; background:none; font-size:11px; line-height:1.4; }
 @media(max-width:700px){
  .map-workspace .explore-panel .mobile-search-preview { max-height:min(340px,43dvh); min-height:58px; }
  .map-workspace .mobile-search-preview button { grid-template-columns:36px minmax(0,1fr) auto; min-height:54px; padding:7px 4px; gap:8px; }
@@ -427,4 +427,17 @@ dialog.modal[open]:has(.community-modal-body) { display:flex; flex-direction:col
 }
 @media(prefers-reduced-motion:reduce){
  .public-app :is(.mobile-discovery-dock button,.mobile-discovery-dock button > svg,.mobile-search-preview button,.mobile-clear-filters,.mobile-clear-filters::before) { transition:none; }
+}
+
+/* Keep search readable without expanding names or addresses onto a second line. */
+@media(max-width:700px){
+ .map-workspace .mobile-search-preview button { min-height:60px; padding:8px 4px; }
+ .map-workspace .mobile-search-preview strong { font-size:13px; font-weight:600; color:var(--text-primary); }
+ .map-workspace .mobile-search-preview small { font-size:11px; color:var(--text-secondary); }
+ .map-workspace .search-preview-distance { color:var(--text-secondary); }
+ .map-workspace .mobile-search-results { font-size:13px; font-weight:600; }
+ .map-workspace .mobile-clear-filters { font-size:11px; }
+ .map-workspace .mobile-search-caption > span { font-size:11px; }
+ .map-workspace .mobile-discovery-dock button > span { font-size:11px; }
+ .map-workspace .quick-place-filters button { min-height:36px; font-size:11px; }
 }

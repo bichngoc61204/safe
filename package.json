@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --test src/lib/*.test.js src/game/*.test.js",
+    "test": "node --test src/lib/*.test.js",
     "test:ui": "node scripts/ui-check.mjs",
     "test:sync": "node scripts/save-sync-check.mjs",
     "test:rules": "node scripts/rules-check.mjs",

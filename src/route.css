@@ -6,7 +6,7 @@
 .route-trip-duration { color:#14734f; }
 .route-trip-duration > strong { font-size:21px; font-weight:750; letter-spacing:-.7px; }
 .route-trip-eta { display:flex; flex-direction:column; gap:2px; margin-left:auto; text-align:right; }
-.route-trip-eta small { font-size:9px; }
+.route-trip-eta small { font-size:11px; }
 .route-trip-eta time { color:#274b3b; font-size:13px; font-weight:650; }
 .route-trip-bottom { order:4; display:flex; align-items:center; gap:12px; padding:0 12px 10px; }
 .route-navigation .route-guide-step { order:2; border-radius:0; }
@@ -59,7 +59,7 @@
     color:#fff;
     box-shadow:0 8px 26px #102e2833,inset 0 1px #ffffff0c;
     pointer-events:auto;
-    animation:route-banner-arrive 560ms var(--motion-ease) both;
+    animation:route-banner-arrive 340ms var(--motion-ease) both;
   }
   .route-navigation .route-direction-icon { display:grid; place-items:center; width:40px; color:#e7f7ed; align-self:center; }
   .route-navigation .route-direction-icon svg { width:40px; height:40px; stroke-width:2.2; }
@@ -71,7 +71,7 @@
   .route-turn-road { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#f1faf4; font-size:16px; line-height:1.4; font-weight:600; }
   .route-navigation[data-pending='true'] .route-guide-step { background:#384739; }
   .route-navigation[data-pending='true'] .route-turn-label { color:#f5e3b8; }
-  .route-navigation .route-step-controls { grid-column:2 / -1; grid-row:2; justify-self:end; color:#c4dfd2; font-size:10px; }
+  .route-navigation .route-step-controls { grid-column:2 / -1; grid-row:2; justify-self:end; color:#c4dfd2; font-size:11px; }
   .route-navigation .route-step-controls button { min-width:40px; min-height:36px; background:#ffffff0f; color:#f0faf3; border:1px solid #ffffff18; }
   .route-navigation .route-step-controls > span { min-width:36px; text-align:center; font-variant-numeric:tabular-nums; }
   .route-navigation .route-trip-footer {
@@ -85,7 +85,7 @@
     background:#fcfefa;
     color:#214938;
     pointer-events:auto;
-    animation:route-dock-arrive 600ms 75ms var(--motion-ease) both;
+    animation:route-dock-arrive 340ms 40ms var(--motion-ease) both;
   }
   .route-navigation[data-active='true'] .route-trip-footer { min-height:170px; }
   .route-navigation .route-trip-metrics { display:grid; grid-template-columns:1fr 1fr 1fr; align-items:center; padding:0 0 8px; gap:6px; min-height:39px; border-bottom:1px solid #ecf2ed; font-size:13px; }
@@ -94,12 +94,12 @@
   .route-navigation .route-remaining-distance { color:#395a48; white-space:nowrap; font-weight:650; text-align:center; font-size:15px; }
   .route-navigation .route-trip-bottom { min-height:40px; padding:4px 0 0; }
   .route-navigation .route-trip-eta { gap:5px; flex-direction:row; align-items:baseline; white-space:nowrap; }
-  .route-navigation .route-trip-eta small { color:#536d5c; font-size:10px; }
+  .route-navigation .route-trip-eta small { color:#536d5c; font-size:11px; }
   .route-navigation .route-trip-eta time { color:#295a40; font-size:16px; }
   .route-navigation .route-guide-heading { gap:8px; padding:12px 0 7px; animation:none; }
   .route-navigation .route-guide-icon { flex-basis:29px; width:29px; height:32px; border-radius:9px; background:#edf6ef; color:#287754; }
   .route-navigation .route-guide-title strong { font-size:13px; font-weight:650; }
-  .route-navigation .route-guide-title > span { font-size:10px; margin-top:2px; }
+  .route-navigation .route-guide-title > span { font-size:11px; margin-top:2px; }
   .route-navigation .route-exit { position:absolute; top:12px; right:11px; width:40px; min-height:40px; padding:0; border-radius:50%; background:#f3f6f3; color:#64786a; }
   .route-navigation .route-exit > span { display:none; }
   .route-navigation .route-exit:hover { color:#a5433c; background:#fff0ed; }

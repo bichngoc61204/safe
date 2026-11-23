@@ -57,7 +57,7 @@ export default function RouteGuide({route, mode, destination, destinationCategor
     if(previous===null||previous===maneuverKey||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
     const animations=Array.from(mobileCopy.current?.querySelectorAll('.route-turn-label,.route-turn-road')||[]).map((element,index)=>
       element.animate?.([{opacity:0,transform:'translateX(6px)'},{opacity:1,transform:'translateX(0)'}],
-        {duration:380,delay:index*45,easing:'cubic-bezier(.22,.7,.25,1)',fill:'backwards'}));
+        {duration:300,delay:index*40,easing:'cubic-bezier(.22,1,.36,1)',fill:'backwards'}));
     return ()=>animations.forEach(animation=>animation?.cancel());
   },[maneuverKey]);
 

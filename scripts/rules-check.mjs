@@ -26,6 +26,38 @@ try {
     await setDoc(doc(db, 'editors/editor-test'), { active: true });
     await setDoc(doc(db, 'catalogs/an-thuong'), { ...initial, schemaVersion: 1, revision: 1, updatedAt: serverTimestamp() });
   });
+  const owner = modular(environment.authenticatedContext('owner-test', { email: 'owner@example.invalid' }));
+  const disabled = modular(environment.authenticatedContext('disabled-test', { email: 'disabled@example.invalid' }));
+  await environment.withSecurityRulesDisabled(async context => {
+    const db = modular(context);
+    await setDoc(doc(db, 'editors/owner-test'), { active: true, role: 'superadmin' });
+    await setDoc(doc(db, 'editors/disabled-test'), { active: false, role: 'editor' });
+  });
+  const child = { active:true,role:'editor',email:'child@example.invalid',displayName:'Child',createdBy:'owner-test',createdAt:serverTimestamp(),updatedBy:'owner-test',updatedAt:serverTimestamp() };
+  await pass('Only the owner can list accounts or grant an editor role', async () => {
+    await assertFails(getDocs(collection(editor, 'editors')));
+    await assertFails(getDocs(collection(guest, 'editors')));
+    await assertFails(setDoc(doc(editor, 'editors/child'), child));
+    await assertFails(setDoc(doc(visitor, 'editors/visitor-test'), {...child,role:'superadmin'}));
+    await assertSucceeds(getDocs(collection(owner, 'editors')));
+    await assertSucceeds(setDoc(doc(owner, 'editors/child'), child));
+  });
+  await pass('Owner can suspend and restore child access; child cannot promote or reactivate itself', async () => {
+    await assertSucceeds(updateDoc(doc(owner, 'editors/editor-test'), {active:false,updatedBy:'owner-test',updatedAt:serverTimestamp()}));
+    await assertFails(getDoc(refs.management));
+    await assertFails(updateDoc(doc(editor, 'editors/editor-test'), {active:true,role:'superadmin'}));
+    await assertSucceeds(updateDoc(doc(owner, 'editors/editor-test'), {active:true,updatedBy:'owner-test',updatedAt:serverTimestamp()}));
+    await assertFails(getDoc(doc(disabled, 'management/an-thuong')));
+  });
+  await pass('Owner cannot create more owners, alter existing owner, delete accounts, or store passwords', async () => {
+    await assertFails(setDoc(doc(owner,'editors/other-owner'), {...child,role:'superadmin'}));
+    await assertFails(updateDoc(doc(owner,'editors/owner-test'), {active:false,updatedBy:'owner-test',updatedAt:serverTimestamp()}));
+    await assertFails(setDoc(doc(owner,'editors/with-password'), {...child,password:'forbidden'}));
+    await assertFails(deleteDoc(doc(owner,'editors/child')));
+  });
+  await pass('Removed game rooms are inaccessible', async () => {
+    await assertFails(setDoc(doc(visitor,'gameQuanRooms/ABCDEFGH'), {host:'visitor-test',guest:null,moves:[],createdAt:serverTimestamp()}));
+  });
   await pass('Public catalog can be read without login', () => assertSucceeds(getDoc(doc(guest, 'catalogs/an-thuong'))));
   await pass('Private catalog, history and report list reject public reads', async () => {
     await assertFails(getDoc(doc(guest, 'management/an-thuong')));

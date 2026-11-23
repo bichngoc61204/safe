@@ -12,6 +12,12 @@ Bản nâng cấp có lưu/chia sẻ địa điểm và QR, lịch theo ngày, b
 - [Ảnh các giao diện](docs/ban-giao/GIAO-DIEN.md)
 - [Hướng dẫn sử dụng và triển khai](docs/ban-giao/HUONG-DAN-SU-DUNG.md)
 
+## Cập nhật quản trị 22/11/2026
+
+- Đã gỡ `/game` khỏi mã nguồn và bản build.
+- Bổ sung admin tổng, tài khoản cán bộ và thống kê hoạt động theo người. Tài khoản cán bộ cũ vẫn giữ quyền nghiệp vụ; cần xuất bản Rules mới và cấp vai trò admin tổng trong Console.
+- [Hướng dẫn kích hoạt tài khoản, kiểm tra, ảnh URL, tên miền và GA4](docs/QUAN_TRI_TAI_KHOAN.md).
+
 ## Chạy dự án
 
 Cần Node.js 22 trở lên.
@@ -55,14 +61,6 @@ npm run preview
 5. Bật **Authentication → Sign-in method → Anonymous** nếu muốn khách gửi phản ánh. Dữ liệu nằm trong `placeReports`; khách không đọc được phản ánh của người khác. Các bước kích hoạt, kiểm tra và giới hạn nằm trong [tài liệu nâng cấp](docs/KICH_HOAT_TINH_NANG_MOI.md).
 
 Danh mục và địa điểm được lưu cùng một document cho mỗi bản công khai/quản trị. Phiên bản hiện tại giới hạn 200 địa điểm (kể cả điểm ẩn/thùng rác), 40 danh mục và khoảng 800 KB dữ liệu JSON. Số phiên bản được kiểm tra khi lưu để phát hiện thay đổi từ máy khác. Mỗi thay đổi tạo lịch sử có bản trước sửa; cần theo dõi dung lượng Firestore khi sử dụng lâu dài. Dữ liệu công khai chỉ nên chứa thông tin địa điểm được phép công bố.
-
-### Ô Ăn Quan trên hai điện thoại
-
-1. Trong Firebase Console, mở **Authentication → Sign-in method → Anonymous** và bật đăng nhập ẩn danh. Người chơi nhận một danh tính tự động khi tạo hoặc vào phòng.
-2. Xuất bản bản cập nhật `firestore.rules` trong **Firestore Database → Rules**. Phần `gameQuanRooms` dùng mã phòng ngẫu nhiên, khóa hai ghế theo tài khoản và giới hạn lượt ghi. Phòng hết hạn sau 24 giờ.
-3. Deploy lại lên Vercel với cùng bốn biến cấu hình Firebase `VITE_FIREBASE_*` của dự án. Hai điện thoại mở cùng một tên miền tại `/game` và chọn **Ô Ăn Quan**. Máy đầu tạo phòng rồi gửi link hoặc mã 8 ký tự. Máy thứ hai mở link mời và bấm **Vào phòng**.
-
-Mỗi lượt được kiểm tra trong giao dịch Firestore rồi đồng bộ đến hai máy. Trình duyệt dựng lại bàn từ nhật ký nước đi. Ô Ăn Quan và ba trò arcade cũng có chế độ chơi chung máy.
 
 ### Báo cáo lượt truy cập
 
