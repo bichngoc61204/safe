@@ -18,6 +18,13 @@ Bản nâng cấp có lưu/chia sẻ địa điểm và QR, lịch theo ngày, b
 - Bổ sung admin tổng, tài khoản cán bộ và thống kê hoạt động theo người. Tài khoản cán bộ cũ vẫn giữ quyền nghiệp vụ; cần xuất bản Rules mới và cấp vai trò admin tổng trong Console.
 - [Hướng dẫn kích hoạt tài khoản, kiểm tra, ảnh URL, tên miền và GA4](docs/QUAN_TRI_TAI_KHOAN.md).
 
+## Tinh chỉnh UX/UI 24/11/2026
+
+Áp dụng Unslop cho giao diện người dùng và admin, giữ nhận diện và quy ước màu nghiệp vụ. Xem [báo cáo thay đổi, kiểm tra và ảnh](docs/UNSLOP_UXUI_2026-11-24.md). Chưa deploy lượt tinh chỉnh này lên Vercel.
+
+- [Rà soát mã nguồn trước bàn giao 24/11/2026](docs/RA_SOAT_BAN_GIAO_2026-11-24.md).
+- [Cách xem lượt truy cập bằng link Vercel hiện tại](docs/HUONG_DAN_LUOT_TRUY_CAP.md).
+
 ## Chạy dự án
 
 Cần Node.js 22 trở lên.
@@ -45,8 +52,8 @@ npm run preview
 - **Điểm xanh:** vật liệu tiếp nhận, đơn vị phụ trách, trạng thái sạch/cần vệ sinh/quá tải/tạm ngưng; lọc theo vật liệu và trạng thái.
 - **Đối tác xanh:** các cửa hàng/đơn vị hợp tác, thông tin liên hệ và vật liệu tiếp nhận.
 - **Quản trị tại `/admin`:** đăng nhập bằng tài khoản Firebase được cấp.
-- **Tổng quan quản trị:** biểu đồ nhóm, trạng thái, điểm cần xử lý và địa điểm mới cập nhật. Tab lượt truy cập đọc báo cáo GA4 khi đã cấu hình API phía server.
-- **Tất cả địa điểm và từng nhóm SafePoint, GreenPoint, Đối tác xanh:** tìm kiếm, lọc, phân trang, thêm/sửa, công khai/ẩn, chuyển vào thùng rác có xác nhận, chọn tọa độ bằng click bản đồ hoặc kéo ghim.
+- **Tổng quan quản trị:** số điểm công khai/ẩn, danh mục theo nhóm, điểm ưu tiên kiểm tra và công cụ dữ liệu. Tab lượt truy cập đọc báo cáo GA4 khi đã cấu hình API phía server.
+- **Tất cả địa điểm và từng nhóm An toàn, Điểm xanh, Đối tác xanh:** tìm kiếm, lọc, phân trang, thêm/sửa, công khai/ẩn, chuyển vào thùng rác có xác nhận, chọn tọa độ bằng click bản đồ, kéo ghim, nhập tọa độ hoặc Plus Code.
 - **Quản lý danh mục:** thêm, đổi tên Việt/Anh, biểu tượng, màu; ngăn xóa danh mục đang chứa địa điểm. Nhóm chức năng không đổi sau khi tạo để tránh thay đổi ý nghĩa dữ liệu hiện có.
 - **Công cụ dữ liệu:** cảnh báo chất lượng, xác minh thủ công, lịch sử thay đổi/khôi phục, thùng rác và xử lý phản ánh. Nhập Excel có xem trước, kiểm tra trùng và lỗi trước khi xác nhận.
 - **Tiện ích cộng đồng:** lưu điểm trên trình duyệt, liên kết chia sẻ mở thẳng điểm và QR, lịch tuần/ngày đặc biệt, lọc đang mở và gửi thông tin chưa đúng.

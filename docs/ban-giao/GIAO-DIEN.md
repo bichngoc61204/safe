@@ -217,3 +217,7 @@ Thẻ thống kê xếp dọc, bộ lọc thời gian và nút làm mới gọn 
 Giữ bố cục form, tên hiển thị, email và mật khẩu; tạo tài khoản con không làm mất phiên đăng nhập của admin tổng.
 
 ![Form thêm tài khoản con trên mobile — bản xem thử](anh/21-admin-tao-tai-khoan-mobile.jpg)
+
+## Tinh chỉnh Unslop ngày 24/11/2026
+
+Ảnh giao diện mới và phạm vi kiểm tra mobile/desktop nằm trong [báo cáo Unslop](../UNSLOP_UXUI_2026-11-24.md#ảnh-đối-chiếu). Các ảnh này dùng bản xem thử và số liệu minh họa.

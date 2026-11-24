@@ -342,7 +342,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,editor,g
    finally {setExporting(false);}
  }
  const nav=[{id:'overview',label:'overview',icon:'dashboard'},{id:'places',label:'places',icon:'pin'},...catalogGroups,{id:'categories',label:'categories',icon:'tags'},{id:'operations',label:'adminTools',icon:'settings'}];
- const dockLabel=item=>item.id==='operations'?(lang==='en'?'Tools':'Công cụ'):item.id==='categories'?(lang==='en'?'Categories':'Danh mục'):t(item.label);
+ const dockLabel=item=>item.id==='partner'?t('partnerShort'):item.id==='operations'?(lang==='en'?'Tools':'Công cụ'):item.id==='categories'?(lang==='en'?'Categories':'Danh mục'):t(item.label);
 
  return <div className="admin-layout" data-section={tab}>
    <aside className="admin-sidebar">

@@ -270,7 +270,7 @@ dialog.modal[open][data-state="closing"]::backdrop { animation: ui-backdrop-exit
 :is(.admin-layout,.modal) .form-error { color:#963f33; font-size:13px; line-height:1.6; }
 :is(.public-app,.admin-layout,.modal) .button { font-weight:500; box-shadow:none; }
 :is(.public-app,.admin-layout,.modal) .button.secondary { color:var(--text-secondary); border-color:#d5e0d8; }
-:is(.public-app,.admin-layout,.modal) .button.primary { background:#176647; border-color:#176647; color:#fff; }
+:is(.public-app,.admin-layout,.modal) .button.primary:not(:disabled) { background:#176647; border-color:#176647; color:#fff; }
 :is(.public-app,.admin-layout,.modal) .button.primary:hover:not(:disabled) { background:#105538; border-color:#105538; }
 .admin-layout :is(th,.pagination,.count-pill,.account-card dd),
 .public-app :is(.card-distance,.search-preview-distance),.route-guide :is(strong,time) { font-variant-numeric:tabular-nums; }
@@ -322,7 +322,7 @@ dialog.modal[open][data-state="closing"]::backdrop { animation: ui-backdrop-exit
   .admin-layout .admin-sidebar nav > button.active > svg { transform:translateY(-11px); }
   .admin-layout .admin-sidebar nav > button .admin-dock-active-label {
     bottom:2px; font-size:11px; line-height:1.1; letter-spacing:0;
-    white-space:normal; text-overflow:clip; padding-inline:1px;
+    white-space:normal; text-overflow:clip; padding-inline:1px; max-height:2.2em;
   }
   .admin-layout .form-grid { column-gap:12px; row-gap:16px; }
   .modal .form-grid > label:has(input[type="tel"]) { grid-column:1 / -1; }
