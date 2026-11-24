@@ -725,9 +725,12 @@ try{
  await click(button('Nhập Excel',document.querySelector('.admin-heading-actions')));
  check(!!document.querySelector('.import-modal')&&document.querySelector('.import-modal input[type=file]'),'Excel import starts with an explicit file chooser and preview');
  await click(document.querySelector('.import-modal .modal-header button'));
- check(!button('Tài khoản',document.querySelector('.admin-heading-actions')),'A child editor has no account management action');
+ check(!document.querySelector('.admin-sidebar nav [data-section=accounts]')&&!button('Tài khoản',document.querySelector('.admin-heading-actions')),'A child editor has no account management navigation');
  await act(async()=>publishEditor({status:'editor',uid:'owner',email:'owner@example.invalid',role:'superadmin'}));
- await click(button('Tài khoản',document.querySelector('.admin-heading-actions')));
+ check(document.querySelectorAll('.admin-sidebar nav > button').length===8&&!!document.querySelector('.admin-sidebar nav [data-section=accounts]'),'Owner account management is a regular sidebar/dock entry');
+ check(!button('Tài khoản',document.querySelector('.admin-heading-actions'))&&!document.querySelector('.admin-dock-active-label'),'Account shortcut is not duplicated in the header and mobile active labels are removed');
+ await click(document.querySelector('.admin-sidebar nav [data-section=accounts]'));
+ check(document.querySelector('.admin-sidebar nav [data-section=accounts]').getAttribute('aria-current')==='page','Account navigation gets the correct active state');
  check(document.querySelectorAll('.account-card').length===2,'Owner sees account list with separate owner and child roles');
  check(document.querySelector('.accounts-scope').textContent.includes('lượt lưu trong nhật ký'),'Activity is based on loaded audit records');
  await click(button('Thêm tài khoản',document.querySelector('.admin-accounts')));
@@ -743,7 +746,7 @@ try{
  await click(button('Xác nhận',document.querySelector('dialog')));
  check(document.querySelectorAll('.account-card[data-disabled=true]').length===1,'Suspension updates access status without removing audit history');
  await act(async()=>publishEditor({status:'editor',uid:'fixture',email:'editor@example.invalid',role:'editor'}));
- check(!document.querySelector('.admin-accounts'),'Downgraded sessions immediately lose account-management content');
+ check(!document.querySelector('.admin-accounts')&&!document.querySelector('.admin-sidebar nav [data-section=accounts]')&&document.querySelectorAll('.admin-sidebar nav > button').length===7,'Downgraded sessions immediately lose account management and its navigation');
  await click(document.querySelector('.header-logout'));
  await click(document.querySelector('.login-form-area > button'));
  check([...document.querySelectorAll('.place-card h3')].some(heading=>heading.textContent==='Điểm được đồng bộ'),'The cloud update appears on the public map after sign-out');

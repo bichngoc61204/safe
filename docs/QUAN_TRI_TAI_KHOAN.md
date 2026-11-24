@@ -6,8 +6,10 @@ Cập nhật ngày 22/11/2026. Hướng dẫn áp dụng cho mã nguồn mới; 
 
 | Tài khoản | Trạng thái | Quyền sau kích hoạt |
 | --- | --- | --- |
-| `safemap@gmail.com` | Đã tạo trong Firebase Authentication; chưa cấp vai trò trong Firestore | Admin tổng: quản lý địa điểm, danh mục, công cụ dữ liệu và tài khoản con |
+| `safemap@gmail.com` | Đã thấy phiên admin tổng trong kiểm tra 24/11/2026; kiểm tra lại tài khoản khi bàn giao | Admin tổng: quản lý địa điểm, danh mục, công cụ dữ liệu và tài khoản con |
 | `hung@gmail.com` | Tài khoản đang dùng; giữ nguyên đăng nhập và dữ liệu | Tài khoản con: đầy đủ chức năng quản lý địa điểm, danh mục và công cụ dữ liệu |
+
+Cập nhật điều hướng 24/11/2026: **Tài khoản** nằm trong sidebar/dock của admin tổng, không còn nút trùng ở đầu trang. Dock mobile chỉ hiện icon, giữ nhãn hỗ trợ truy cập.
 
 Admin tổng và tài khoản con có cùng quyền nghiệp vụ bản đồ. Chỉ admin tổng nhìn thấy mục **Tài khoản**, được thêm tài khoản con, khóa/mở lại quyền và xem thống kê hoạt động theo người. Không ghi mật khẩu vào tài liệu, mã nguồn, Firestore hoặc lịch sử.
 

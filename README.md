@@ -6,6 +6,11 @@ Dự án **React + Vite + Leaflet + MapLibre** dùng Firebase Auth và Firestore
 
 Bản nâng cấp có lưu/chia sẻ địa điểm và QR, lịch theo ngày, bộ lọc đang mở/loại rác, phản ánh, ẩn/công khai, thùng rác, lịch sử khôi phục và nhập Excel. **Cần xuất bản `firestore.rules` mới để dùng đầy đủ phần quản trị mở rộng.** Xem [hướng dẫn kích hoạt và kiểm tra](docs/KICH_HOAT_TINH_NANG_MOI.md); chủ dự án tự xuất bản Rules từ Firebase Console.
 
+## Bàn giao và vận hành 24/11/2026
+
+- [Các bước bàn giao source, Firebase, backup, Vercel, GA4 và tên miền P.A](docs/BAN_GIAO_VAN_HANH_2026-11-24.md).
+- Mục **Tài khoản** của admin tổng nằm trong sidebar/dock. Dock mobile dùng icon và nhãn hỗ trợ truy cập, không có tên mục bên dưới.
+
 ## Tài liệu bàn giao 18/11/2026
 
 - [Báo cáo chức năng](docs/ban-giao/BAO-CAO-CHUC-NANG.md)

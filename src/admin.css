@@ -35,7 +35,6 @@
 .admin-profile strong { font-size: 13px; font-weight: 650; }
 .admin-profile small, .admin-sidebar-bottom > .text-button { font-size: 12px; color: var(--admin-muted); }
 .admin-sidebar-bottom > .text-button { display:flex; width:100%; align-items:center; gap:8px; padding:10px 8px; justify-content:flex-start; }
-.admin-sidebar-bottom > .admin-account-shortcut[aria-current=page] { color:var(--admin-green); background:var(--admin-soft); border-radius:8px; font-weight:700; }
 
 .admin-main { padding: clamp(24px, 3vw, 44px); max-width: 1440px; }
 .admin-heading { margin-bottom: 24px; align-items: center; }
@@ -635,17 +634,17 @@
     background:#fffffff5; box-shadow:0 8px 27px #193b2c30;
   }
   .admin-layout .admin-sidebar nav {
-    position:relative; isolation:isolate; grid-template-columns:repeat(6,minmax(0,1fr)); gap:0;
+    position:relative; isolation:isolate; display:grid; grid-template-columns:repeat(var(--dock-count,7),minmax(0,1fr)); gap:0;
   }
   .admin-layout .admin-sidebar nav::before {
-    content:''; position:absolute; z-index:-1; inset:0 auto 0 0; width:calc(100% / 6);
+    content:''; position:absolute; z-index:-1; inset:0 auto 0 0; width:calc(100% / var(--dock-count,7));
     transform:translateX(calc(var(--dock-index) * 100%)); border-radius:12px;
     background:#e5f2ea; transition:transform 320ms cubic-bezier(.2,.7,.25,1);
   }
-  .admin-layout .admin-sidebar nav > button { min-height:44px; border:0; background:transparent; box-shadow:none; }
+  .admin-layout .admin-sidebar nav > button { display:flex; align-items:center; justify-content:center; min-width:0; min-height:44px; padding:0; gap:0; border:0; background:transparent; box-shadow:none; }
   .admin-layout .admin-sidebar nav > button > span { display:none; }
   .admin-layout .admin-sidebar nav > button > svg { width:19px; height:19px; }
-  .admin-layout .admin-sidebar nav > button.active > svg { transform:translateY(-2px); }
+  .admin-layout .admin-sidebar nav > button.active > svg { transform:none; }
   .admin-layout .admin-sidebar nav > button > svg { transition:transform 250ms ease; }
   .admin-layout .admin-main { padding-bottom:calc(80px + env(safe-area-inset-bottom,0px)); }
   .admin-places-toolbar .panel-heading { padding-bottom:10px; }
@@ -769,9 +768,7 @@
  .admin-tool-shortcut-icon { flex-basis:28px; height:28px; border-radius:8px; }
  .admin-tool-shortcuts > button > svg { display:none; }
  .admin-tool-shortcuts > button > b { min-width:19px; height:19px; padding-inline:4px; font-size:10px; }
- .admin-layout .admin-sidebar nav > button { position:relative; min-height:51px; }
- .admin-layout .admin-sidebar nav > button.active > svg { transform:translateY(-7px); }
- .admin-layout .admin-sidebar nav > button .admin-dock-active-label { position:absolute; bottom:3px; left:0; right:0; display:block; font-size:8px; line-height:1.2; color:currentColor; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+ .admin-layout .admin-sidebar nav > button { position:relative; min-height:44px; }
  .admin-mobile-place-meta > .admin-publication-badge { font-size:9px; padding:2px 4px; }
  .admin-mobile-place-meta:has(.admin-publication-badge) { gap:4px; }
  .admin-mobile-place-meta:has(.admin-publication-badge) > small { display:none; }

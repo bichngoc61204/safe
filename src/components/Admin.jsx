@@ -341,19 +341,17 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,editor,g
    } catch {notify('excelError');}
    finally {setExporting(false);}
  }
- const nav=[{id:'overview',label:'overview',icon:'dashboard'},{id:'places',label:'places',icon:'pin'},...catalogGroups,{id:'categories',label:'categories',icon:'tags'},{id:'operations',label:'adminTools',icon:'settings'}];
- const dockLabel=item=>item.id==='partner'?t('partnerShort'):item.id==='operations'?(lang==='en'?'Tools':'Công cụ'):item.id==='categories'?(lang==='en'?'Categories':'Danh mục'):t(item.label);
+ const nav=[{id:'overview',label:'overview',icon:'dashboard'},{id:'places',label:'places',icon:'pin'},...catalogGroups,{id:'categories',label:'categories',icon:'tags'},{id:'operations',label:'adminTools',icon:'settings'},...(isSuperAdmin?[{id:'accounts',label:'accounts',icon:'family'}]:[])];
 
  return <div className="admin-layout" data-section={tab}>
    <aside className="admin-sidebar">
      <div className="admin-sidebar-label">{t('workspace')}</div>
-     <nav aria-label={t('workspace')} style={{'--dock-index':nav.findIndex(item=>item.id===tab),'--dock-count':nav.length}}>{nav.map(item=><button key={item.id} data-section={item.id}
+     <nav aria-label={t('workspace')} style={{'--dock-index':Math.max(0,nav.findIndex(item=>item.id===tab)),'--dock-count':nav.length}}>{nav.map(item=><button key={item.id} data-section={item.id}
        className={tab===item.id?'active':''} aria-label={t(item.label)} title={t(item.label)} aria-current={tab===item.id?'page':undefined} onClick={()=>navigate(item.id)}>
-       <Icon name={item.icon}/><span>{t(item.label)}</span>{mobile&&tab===item.id&&<small className="admin-dock-active-label" aria-hidden="true">{dockLabel(item)}</small>}{item.id==='green'&&alerts.length>0&&<b>{alerts.length}</b>}
+       <Icon name={item.icon}/><span>{t(item.label)}</span>{item.id==='green'&&alerts.length>0&&<b>{alerts.length}</b>}
      </button>)}</nav>
      <div className="admin-sidebar-bottom">
        <div className="admin-profile"><span>AD</span><div><strong>{isSuperAdmin?'Admin tổng':'SafeMap Admin'}</strong><small>{email}</small></div></div>
-       {isSuperAdmin&&<button type="button" className="text-button admin-account-shortcut" aria-current={tab==='accounts'?'page':undefined} onClick={()=>navigate('accounts')}><Icon name="family" size={16}/>Tài khoản</button>}
        <button className="text-button" onClick={onLogout}><Icon name="logout" size={16}/>{t('logout')}</button>
      </div>
    </aside>
@@ -361,7 +359,6 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,editor,g
      <div className="admin-heading">
        <div><div className="eyebrow">{t('dataLabel')}</div><h1>{t(title)}</h1>{tab==='overview'&&<p>{t('adminSubtitle')}</p>}</div>
        {tab!=='accounts'&&<div className="admin-heading-actions">
-         {isSuperAdmin&&<button type="button" className="button secondary" aria-current={tab==='accounts'?'page':undefined} onClick={()=>navigate('accounts')} disabled={inlineEdit}><Icon name="family" size={16}/>Tài khoản</button>}
          <button className="button secondary" onClick={()=>setImportOpen(true)} disabled={inlineEdit}><Icon name="upload" size={16}/>{t('importExcel')}</button>
          <button className="button secondary" onClick={exportData} disabled={exporting}><Icon name="download" size={16}/>{t(exporting?'exportingExcel':'exportExcel')}</button>
          {tab!=='accounts'&&tab!=='categories'&&tab!=='operations'&&<button className="button primary" onClick={add} disabled={inlineEdit}><Icon name="plus" size={16}/>{t('add')}</button>}

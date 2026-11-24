@@ -82,9 +82,6 @@
  .community-modal-body { padding:18px; max-height:70dvh; }.community-modal-body :is(input,textarea) { font-size:16px; }
  .place-utility-actions button { min-height:42px; }
  .admin-heading-actions { flex-wrap:wrap; }.admin-heading-actions > .button { flex:1 1 40%; }
- .admin-sidebar nav { display:flex!important; gap:2px!important; overflow-x:auto; scrollbar-width:none; justify-content:center; }
- .admin-sidebar nav::before { display:none!important; }.admin-sidebar nav > button { flex:1 0 38px; max-width:48px; min-width:38px; min-height:46px; padding:9px 4px; }
- .admin-sidebar nav > button.active { background:#e4f2e9; color:#11764e; border-radius:12px; box-shadow:0 2px 8px #2468430d; }
  .operations-tabs { width:100%; }.operations-tabs button { font-size:11px; padding:9px; gap:5px; }
  .operation-record { align-items:flex-start; flex-direction:column; gap:12px; padding:16px; }.operation-record .operation-actions { width:100%; }
  .history-record,.report-record { padding:16px; }.quality-filter { margin-inline:14px; }.history-record li { align-items:flex-start; flex-direction:column; gap:7px; }

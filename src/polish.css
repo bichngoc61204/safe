@@ -318,12 +318,8 @@ dialog.modal[open][data-state="closing"]::backdrop { animation: ui-backdrop-exit
   .admin-layout .admin-heading p { font-size:13px; line-height:1.6; }
   .admin-layout .admin-heading-actions { gap:8px; }
   .admin-layout .admin-heading-actions > .button { min-height:44px; }
-  .admin-layout .admin-sidebar nav > button { min-height:56px; }
-  .admin-layout .admin-sidebar nav > button.active > svg { transform:translateY(-11px); }
-  .admin-layout .admin-sidebar nav > button .admin-dock-active-label {
-    bottom:2px; font-size:11px; line-height:1.1; letter-spacing:0;
-    white-space:normal; text-overflow:clip; padding-inline:1px; max-height:2.2em;
-  }
+  .admin-layout .admin-sidebar nav > button { min-height:44px; }
+  .admin-layout .admin-sidebar nav > button.active > svg { transform:none; }
   .admin-layout .form-grid { column-gap:12px; row-gap:16px; }
   .modal .form-grid > label:has(input[type="tel"]) { grid-column:1 / -1; }
   .admin-layout :is(.admin-filter-row,.category-chips) button { min-height:40px; }
