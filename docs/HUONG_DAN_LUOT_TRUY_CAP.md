@@ -88,3 +88,18 @@ GA4 có thể bị chặn bởi trình duyệt/tiện ích hoặc áp dụng ng�
 Dấu “—” là chưa đọc được số người dùng Realtime; không phải cần đợi báo cáo ngày. Bản vá đã kiểm tra trên GA4 thật ngày 24/11/2026: truy vấn tổng người dùng cũ có bộ lọc sự kiện bị Google trả 400 `INVALID_ARGUMENT`; truy vấn mới chỉ dùng `activeUsers` trả 200. Cần deploy source có bản vá này.
 
 Nếu chỉ truy vấn số người lỗi, biểu đồ phút vẫn hiện khi có dữ liệu hợp lệ. Thông báo phía dưới phân biệt lỗi yêu cầu, quyền tài khoản dịch vụ, hạn mức, phản hồi chậm hoặc dịch vụ không khả dụng. ID tài sản hiển thị giúp đối chiếu đúng tài sản đang mở trong GA4. Không cần tạo tài khoản khách hoặc nhập GPS để xử lý lỗi API này.
+
+## 8. Realtime có lượt nhưng các thẻ theo ngày chưa có số
+
+Đây là hai tập dữ liệu có tốc độ cập nhật khác nhau. Với tài sản GA4 chuẩn, dữ liệu trong ngày thường được xử lý sau 2–6 giờ; xử lý đầy đủ có thể mất 24–48 giờ. Đây là khoảng thời gian thông thường, không phải cam kết mỗi lượt sẽ xuất hiện đúng sau từng ấy giờ. Xem [độ mới của dữ liệu GA4](https://support.google.com/analytics/answer/11198161?hl=vi).
+
+Trong source cập nhật ngày 24/11/2026:
+
+- API đánh dấu riêng việc báo cáo ngày đã có hàng dữ liệu hay còn rỗng.
+- Khi báo cáo ngày rỗng nhưng Realtime đã có người dùng/lượt xem, admin hiện “Đã có lượt dùng mới. Báo cáo ngày chưa sẵn sàng”.
+- Các chỉ số theo ngày và thao tác hiện “— · Chưa có dữ liệu ngày”, không diễn giải thành 0 người truy cập.
+- Chưa có hàng báo cáo thì không vẽ cột ngày với giá trị 0. Nếu báo cáo thực sự có hàng giá trị 0, số 0 vẫn được hiển thị bình thường.
+- Realtime và báo cáo ngày được giữ riêng; không cộng lượt của cửa sổ 30 phút vào tổng ngày để làm số liệu trông đầy hơn.
+- Thời gian “Kiểm tra lúc” là lúc truy vấn báo cáo, không phải thời điểm Google xử lý xong dữ liệu.
+
+Thay đổi trạng thái cần deploy source mới. Không cần tạo thêm phương diện hoặc thay thông tin xác thực chỉ để xử lý độ trễ báo cáo ngày.

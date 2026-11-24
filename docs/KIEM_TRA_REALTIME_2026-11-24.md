@@ -79,3 +79,11 @@ Bản sửa bỏ bộ lọc này và dùng `screenPageViews` cho biểu đồ ph
 Số 0 ở báo cáo ngày không phải do bộ lọc `/` trong lần thử này: Google cũng chưa trả hàng dữ liệu khi bỏ lọc. Không dùng số Realtime để điền giả vào tổng theo ngày. 30 lượt xem là số liệu tổng trong cửa sổ thử, không khẳng định tất cả do 15 lượt kiểm thử tạo ra.
 
 Sau khi deploy bản vá, kiểm tra ô Realtime và mã tài sản. Kiểm tra mã lỗi cụ thể nếu truy vấn tiếp tục thất bại vì quyền, hạn mức hoặc mạng.
+
+## Bổ sung sau khi Realtime đã hoạt động
+
+Ảnh người dùng gửi lúc 22:34 cho thấy biểu đồ 30 phút đã có lượt, còn báo cáo ngày vẫn rỗng. Đã chỉnh UI phân biệt trạng thái báo cáo ngày chưa có dữ liệu với một báo cáo có số 0 thật; không thay thế số liệu theo ngày bằng Realtime.
+
+Bổ sung cờ `dailyDataAvailable`, thông báo chờ báo cáo ngày, ký hiệu “—” cho chỉ số chưa có dữ liệu và trạng thái biểu đồ rỗng. Giữ nguyên số 0 khi báo cáo đã có hàng dữ liệu. Thời điểm truy vấn được ghi là “Kiểm tra lúc” để không tạo cảm giác dữ liệu GA4 đã được tổng hợp đến phút đó.
+
+Kiểm tra sau thay đổi: 74 test nghiệp vụ/API, 226 kiểm tra React DOM và build production đạt. Bổ sung này chưa được deploy trong lượt làm việc.

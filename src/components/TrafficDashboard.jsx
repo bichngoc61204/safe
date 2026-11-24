@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import Icon from './Icon';
 import { getCategory } from '../lib/domain';
 import { groupPalette } from '../lib/catalogGroups';
-import { trafficCalendar, validateTrafficReport } from '../lib/trafficReport';
+import { dailyTrafficState, trafficCalendar, validateTrafficReport } from '../lib/trafficReport';
 import '../traffic.css';
 
 const TrafficPlaceMap = lazy(() => import('./TrafficPlaceMap'));
@@ -65,6 +65,8 @@ export default function TrafficDashboard({ t, lang = 'vi', getIdToken, data = { 
 
   const { state, report } = result;
   const hasLiveUsers = Number.isSafeInteger(report?.realtime?.users);
+  const dailyState = dailyTrafficState(report);
+  const hasDailyData = dailyState === 'ready';
   const realtimeIssue = report && (!hasLiveUsers ? report.realtimeIssue : report.minuteIssue);
   const number = new Intl.NumberFormat(lang);
   const format = value => number.format(value);
@@ -95,11 +97,11 @@ export default function TrafficDashboard({ t, lang = 'vi', getIdToken, data = { 
     {report && <>
       <div className="traffic-live"><div className="traffic-live-total"><span className="traffic-live-label"><i/>Hoạt động gần đây</span><div><strong>{hasLiveUsers ? format(report.realtime.users) : '—'}</strong><span>người dùng<br/>trong 30 phút qua</span></div><small>Toàn thuộc tính GA4 · không phải số người đang mở ngay lúc này</small></div><div className="traffic-live-chart"><div><strong>Lượt xem trong 30 phút</strong><span>{report.realtime ? 'Tự cập nhật mỗi phút khi đang xem' : 'Chưa tải được dữ liệu thời gian thực'}</span></div>{report.realtime?.minutesAvailable ? <ol aria-label="Lượt xem bản đồ theo phút">{Array.from({ length: 30 }, (_, index) => { const minute = 29 - index, views = report.realtime.minutes.find(row => row.minute === minute)?.views || 0; const max = Math.max(1, ...report.realtime.minutes.map(row => row.views)); return <li key={minute} title={`${minute} phút trước: ${format(views)} lượt xem`}><i style={{ height: `${Math.max(3, views / max * 100)}%` }} data-empty={!views}/><span className="sr-only">{minute} phút trước: {format(views)} lượt xem</span></li>; })}</ol> : <p>Phần này sẽ được thử lại khi làm mới báo cáo.</p>}<footer><span>30 phút trước</span><span>Hiện tại</span></footer></div></div>
       {realtimeIssue && <p className="traffic-api-notice" role="status"><Icon name="info" size={17}/><span>{realtimeMessages[realtimeIssue.code]}<small>Mã: {realtimeIssue.code}{realtimeIssue.status ? ` · HTTP ${realtimeIssue.status}` : ''}{report.propertyId ? ` · Tài sản ${report.propertyId}` : ''}</small></span></p>}
-      <div className="traffic-report-meta"><span><Icon name="clock" size={13}/>{periodText} · {zoneLabel}</span><span role="status">{state === 'loading' ? 'Đang làm mới…' : `Cập nhật ${new Intl.DateTimeFormat(lang, { hour: '2-digit', minute: '2-digit' }).format(new Date(report.generatedAt))}`}</span></div>
-      <div className="traffic-metrics">{metricCards.map(([title, value, note, icon, tone]) => <article className={`traffic-metric traffic-tone-${tone}`} key={title}><div><span>{title}</span><Icon name={icon} size={19}/></div><strong>{format(value)}</strong><small>{note}</small></article>)}</div>
+      <div className="traffic-report-meta"><span><Icon name="clock" size={13}/>Báo cáo theo ngày · {periodText} · {zoneLabel}</span><span role="status">{state === 'loading' ? 'Đang làm mới…' : `Kiểm tra lúc ${new Intl.DateTimeFormat(lang, { hour: '2-digit', minute: '2-digit' }).format(new Date(report.generatedAt))}`}</span></div>
+      {!hasDailyData && <div className="traffic-daily-notice" role="status"><Icon name="clock" size={20}/><div><strong>{dailyState === 'pending' ? 'Đã có lượt dùng mới. Báo cáo ngày chưa sẵn sàng.' : 'Chưa có dữ liệu báo cáo ngày trong kỳ này.'}</strong><p>{dailyState === 'pending' ? 'Xem ô 30 phút phía trên để theo dõi lượt thử mới. Các chỉ số bên dưới sẽ tự hiển thị khi GA4 có báo cáo ngày.' : 'Có thể chưa có lượt dùng trong kỳ hoặc GA4 chưa xử lý xong. Trang sẽ tiếp tục kiểm tra khi đang mở.'} Báo cáo trong ngày thường có độ trễ 2–6 giờ; xử lý đầy đủ có thể mất 24–48 giờ.</p><a href="https://support.google.com/analytics/answer/11198161?hl=vi" target="_blank" rel="noopener noreferrer">Về thời gian cập nhật của GA4<Icon name="arrow" size={12}/></a></div></div>}
+      <div className="traffic-metrics">{metricCards.map(([title, value, note, icon, tone]) => <article className={`traffic-metric traffic-tone-${tone}`} key={title}><div><span>{title}</span><Icon name={icon} size={19}/></div><strong>{hasDailyData ? format(value) : '—'}</strong><small>{hasDailyData ? note : 'Chưa có dữ liệu ngày'}</small></article>)}</div>
       <Panel title="Nhịp truy cập" subtitle={`${periodText} · số lượt mở bản đồ theo ngày`} icon="chart" className="traffic-trend">
-        <ol className={`traffic-bars ${range === '30d' ? 'is-month' : ''}`} aria-label={t('trafficDaily')}>{calendar.map((day, index) => <li key={day.date} title={`${dateLabel(day.date)}: ${format(day.views)} lượt xem, ${format(day.users)} người dùng`}><span>{range !== '30d' || day.views === highest ? format(day.views) : ''}</span><i aria-hidden="true"><b style={{ height: `${day.views / highest * 100}%` }}/></i><time dateTime={`${day.date.slice(0, 4)}-${day.date.slice(4, 6)}-${day.date.slice(6)}`}>{range !== '30d' || index % 5 === 0 || index === calendar.length - 1 ? dateLabel(day.date) : ''}</time><span className="sr-only">{format(day.views)} lượt xem</span></li>)}</ol>
-        {!report.views && <p className="traffic-empty">Chưa có lượt xem trong kỳ. Báo cáo theo ngày có độ trễ; kiểm tra phần 30 phút để xem lượt thử mới.</p>}
+        {hasDailyData ? <ol className={`traffic-bars ${range === '30d' ? 'is-month' : ''}`} aria-label={t('trafficDaily')}>{calendar.map((day, index) => <li key={day.date} title={`${dateLabel(day.date)}: ${format(day.views)} lượt xem, ${format(day.users)} người dùng`}><span>{range !== '30d' || day.views === highest ? format(day.views) : ''}</span><i aria-hidden="true"><b style={{ height: `${day.views / highest * 100}%` }}/></i><time dateTime={`${day.date.slice(0, 4)}-${day.date.slice(4, 6)}-${day.date.slice(6)}`}>{range !== '30d' || index % 5 === 0 || index === calendar.length - 1 ? dateLabel(day.date) : ''}</time><span className="sr-only">{format(day.views)} lượt xem</span></li>)}</ol> : <div className="traffic-daily-empty"><Icon name="chart" size={25}/><strong>Chưa có biểu đồ theo ngày</strong><span>{dailyState === 'pending' ? 'Lượt dùng mới đã hiện trong ô 30 phút. Biểu đồ này chờ báo cáo ngày của GA4.' : 'Biểu đồ sẽ xuất hiện khi có dữ liệu trong kỳ đã chọn.'}</span></div>}
       </Panel>
       <div className="traffic-two-columns">
         <Panel title="Khách truy cập từ đâu?" subtitle="Thành phố / khu vực theo vị trí gần đúng của GA4" icon="globe">
@@ -107,7 +109,7 @@ export default function TrafficDashboard({ t, lang = 'vi', getIdToken, data = { 
           <p className="traffic-footnote">Không phải GPS của khách. Không xác định được từng người hoặc khu phố chính xác; một người có thể xuất hiện ở nhiều khu vực trong kỳ.</p>
         </Panel>
         <Panel title="Khách dùng SafeMap thế nào?" subtitle="Các thao tác tại địa điểm trên bản đồ công cộng" icon="navigation">
-          <div className="traffic-actions">{actions.map(([event, title, icon]) => <div key={event}><span><Icon name={icon} size={17}/>{title}</span><strong>{format(events.get(event) || 0)}</strong></div>)}</div>
+          <div className="traffic-actions">{actions.map(([event, title, icon]) => <div key={event}><span><Icon name={icon} size={17}/>{title}</span><strong>{hasDailyData ? format(events.get(event) || 0) : '—'}</strong></div>)}</div>
           <p className="traffic-footnote">Bắt đầu ghi từ bản nâng cấp này. Bấm gọi hoặc chỉ đường phản ánh thao tác yêu cầu, không xác nhận đã gọi hay đã đến nơi.</p>
         </Panel>
       </div>

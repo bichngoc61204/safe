@@ -625,6 +625,15 @@ try{
    await click(button('Làm mới'));
    check([...document.querySelectorAll('.traffic-bars li time')].at(-1).dateTime==='2026-11-08'&&document.querySelector('.traffic-metrics strong').textContent==='12','Traffic retry renders the reporting response');
    check(document.querySelector('.traffic-live-total strong').textContent==='1'&&document.querySelector('.traffic-setup code').textContent==='place_id','Realtime works while place custom dimension is missing');
+   const emptyDaily={...trafficFixture,views:0,users:0,sessions:0,newUsers:0,days:[],cities:[],devices:[],events:[],dailyDataAvailable:false};
+   trafficResponse=Response.json(emptyDaily);
+   await click(button('Làm mới'));
+   check(document.querySelector('.traffic-daily-notice').textContent.includes('Đã có lượt dùng mới')&&[...document.querySelectorAll('.traffic-metrics strong')].every(item=>item.textContent==='—'),'Fresh realtime traffic with an empty daily report is shown as pending, not zero visitors');
+   check(!document.querySelector('.traffic-bars')&&document.querySelectorAll('.traffic-live-chart li').length===30&&[...document.querySelectorAll('.traffic-actions strong')].every(item=>item.textContent==='—'),'An empty daily report does not fabricate chart bars or zero interaction counts');
+   trafficResponse=Response.json({...emptyDaily,dailyDataAvailable:true,realtime:{users:0,minutes:[],minutesAvailable:true},days:[{date:'20261108',views:0,users:0}]});
+   await click(button('Làm mới'));
+   check(!document.querySelector('.traffic-daily-notice')&&document.querySelector('.traffic-metrics strong').textContent==='0'&&!!document.querySelector('.traffic-bars'),'A confirmed zero-day report still renders genuine zeros');
+
    trafficResponse=Response.json({...trafficFixture,realtime:null,realtimeIssue:{code:'PERMISSION_DENIED',status:403},propertyId:'123456789'});
    await click(button('Làm mới'));
    check(document.querySelector('.traffic-api-notice').textContent.includes('chưa được phép')&&document.querySelector('.traffic-api-notice').textContent.includes('HTTP 403')&&document.querySelector('.traffic-metrics strong').textContent==='12','Realtime permission errors have an actionable explanation without replacing core metrics with zeros');

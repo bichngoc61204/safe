@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { trafficRequests, parseTrafficReports, parsePlaceTraffic, trafficCalendar, validateTrafficReport, realtimeRequests, trafficApiIssue } from './trafficReport.js';
+import { trafficRequests, parseTrafficReports, parsePlaceTraffic, trafficCalendar, validateTrafficReport, dailyTrafficState, realtimeRequests, trafficApiIssue } from './trafficReport.js';
 import { createTrafficTracker, trafficPayload } from './trafficEvents.js';
 
 const row = (dimensions, metrics) => ({ dimensionValues: dimensions.map(value => ({ value })), metricValues: metrics.map(value => ({ value: String(value) })) });
@@ -95,4 +95,17 @@ test('realtime uses native 30-minute reporting and classifies provider failures 
   assert.deepEqual(trafficApiIssue({apiCode:'INVALID_ARGUMENT',httpStatus:400,message:'private details'}), {code:'INVALID_ARGUMENT',status:400});
   assert.deepEqual(trafficApiIssue({name:'TimeoutError'}), {code:'DEADLINE_EXCEEDED',status:0});
   assert.deepEqual(trafficApiIssue({apiCode:'a secret'}), {code:'UNAVAILABLE',status:0});
+});
+
+
+test('empty daily reports are distinct from confirmed zero counts and recent realtime traffic', () => {
+  const empty={views:0,users:0,sessions:0,newUsers:0,days:[],cities:[],devices:[],events:[],dailyDataAvailable:false,realtime:null};
+  assert.equal(dailyTrafficState(empty),'empty');
+  assert.equal(dailyTrafficState({...empty,realtime:{users:2,minutes:[]}}),'pending');
+  assert.equal(dailyTrafficState({...empty,realtime:{users:null,minutes:[{minute:0,views:1}]}}),'pending');
+  assert.equal(dailyTrafficState({...empty,dailyDataAvailable:true}),'ready');
+  assert.equal(dailyTrafficState({...empty,dailyDataAvailable:undefined,views:1}),'ready');
+  assert.equal(parseTrafficReports([{}, {}, {}, {}, {}]).dailyDataAvailable,false);
+  assert.equal(parseTrafficReports(reports()).dailyDataAvailable,true);
+  assert.equal(validateTrafficReport({...complete(),dailyDataAvailable:'false'}),false);
 });

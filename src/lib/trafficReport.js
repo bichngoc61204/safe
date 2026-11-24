@@ -46,6 +46,7 @@ export function parseTrafficReports(reports) {
   const total = rows(reports[0])[0];
   return {
     views: metric(total), users: metric(total, 1), sessions: metric(total, 2), newUsers: metric(total, 3),
+    dailyDataAvailable: reports.some(report => rows(report).length > 0),
     days: rows(reports[1]).map(row => ({ date: dimension(row), views: metric(row), users: metric(row, 1) })),
     cities: rows(reports[2]).map(row => ({ city: dimension(row), region: dimension(row, 1), country: dimension(row, 2), users: metric(row) })),
     devices: rows(reports[3]).map(row => ({ device: dimension(row), users: metric(row) })),
@@ -53,6 +54,13 @@ export function parseTrafficReports(reports) {
     timeZone: reports[0].metadata?.timeZone || 'UTC',
     thresholded: reports.some(report => report.metadata?.subjectToThresholding || report.metadata?.dataLossFromOtherRow),
   };
+}
+
+export function dailyTrafficState(report) {
+  if (!report) return 'empty';
+  const hasDailyData = report.dailyDataAvailable ?? (report.views > 0 || report.users > 0 || report.sessions > 0 || report.days?.length > 0 || report.events?.length > 0 || report.cities?.length > 0 || report.devices?.length > 0);
+  if (hasDailyData) return 'ready';
+  return report.realtime?.users > 0 || report.realtime?.minutes?.some(row => row.views > 0) ? 'pending' : 'empty';
 }
 
 export function parsePlaceTraffic(report) {
@@ -85,6 +93,7 @@ export function validateTrafficReport(report) {
   let validZone = false;
   try { new Intl.DateTimeFormat('en', { timeZone: report?.timeZone }).format(); validZone = typeof report?.timeZone === 'string'; } catch { /* Invalid server response. */ }
   return !!report && validZone && validIssue(report.realtimeIssue) && validIssue(report.minuteIssue)
+    && (report.dailyDataAvailable === undefined || typeof report.dailyDataAvailable === 'boolean')
     && (report.propertyId === undefined || typeof report.propertyId === 'string' && /^\d+$/.test(report.propertyId))
     && ['views', 'users', 'sessions', 'newUsers'].every(key => validCount(report[key]))
     && validRows(report.days, row => row && validDate(row.date) && validCount(row.views) && validCount(row.users), 31)
