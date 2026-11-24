@@ -1,5 +1,5 @@
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, signInAnonymously } from 'firebase/auth';
-import { onSnapshot, collection, query, orderBy, limit, doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { onSnapshot, collection, query, where, orderBy, limit, doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { catalogRefs, observeCatalog, observeManagement, writeManagedCatalog } from './firebaseCatalog.js';
 import { createTrafficTracker } from './trafficEvents.js';
 
@@ -16,6 +16,7 @@ export function connectFirebase(config) {
     observeManagement:(receive,fail)=>observeManagement(refs.management,receive,fail),
     observeHistory:(receive,fail)=>onSnapshot(query(collection(refs.db,'catalogHistory'),orderBy('revision','desc'),limit(40)),snapshot=>receive(snapshot.docs.map(item=>({id:item.id,...item.data(),createdAt:item.data().createdAt?.toDate?.().toISOString()||''}))),fail),
     observeReports:(receive,fail)=>onSnapshot(query(collection(refs.db,'placeReports'),orderBy('createdAt','desc'),limit(100)),snapshot=>receive(snapshot.docs.map(item=>({id:item.id,...item.data(),createdAt:item.data().createdAt?.toDate?.().toISOString()||''}))),fail),
+    observePendingReports:(receive,fail)=>onSnapshot(query(collection(refs.db,'placeReports'),where('status','==','new')),snapshot=>receive(snapshot.docs.map(item=>({id:item.id,...item.data(),createdAt:item.data().createdAt?.toDate?.().toISOString()||''}))),fail),
     async submitReport({placeId,placeName,reason,note}){
       if(!auth.currentUser)await signInAnonymously(auth);
       const uid=auth.currentUser.uid;

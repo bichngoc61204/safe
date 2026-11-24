@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import Icon from './Icon';
 import TrafficDashboard from './TrafficDashboard';
+import {AttentionBadge} from './AdminAttention';
 import { catalogGroups, groupPalette } from '../lib/catalogGroups';
 import { getCategory, isAlert } from '../lib/domain';
 import { isPublished, qualityIssues } from '../lib/editorial';
@@ -15,7 +16,7 @@ const tools=[
  {id:'trash',icon:'restore',title:'Thùng rác',hint:'Khôi phục điểm đã xóa',tone:'slate'},
 ];
 
-export default function AdminOverview({data,t,lang,getIdToken,onNavigate,onCategory,onTools,onPoint}){
+export default function AdminOverview({data,t,lang,getIdToken,onNavigate,onCategory,onTools,onPoint,attention,reportStatus='ready'}){
  const [tab,setTab]=useState('summary');
  const places=useMemo(()=>data.places.filter(place=>!place.deletedAt),[data.places]);
  const groups=useMemo(()=>catalogGroups.map(group=>{
@@ -29,6 +30,8 @@ export default function AdminOverview({data,t,lang,getIdToken,onNavigate,onCateg
  const trash=data.places.length-places.length;
  const issues=useMemo(()=>new Map(places.map(place=>[place.id,qualityIssues(place,data)])),[places,data]);
  const qualityCount=places.filter(place=>issues.get(place.id).length).length;
+ const toolCounts=attention||{quality:qualityCount,trash,reports:0};
+ const toolCountLabel=tool=>tool.id==='reports'&&reportStatus!=='ready'?(reportStatus==='error'?'Chưa tải được số phản ánh đang chờ':'Đang tải số phản ánh đang chờ'):`${tool.title}: ${toolCounts[tool.id]} mục cần xử lý`;
  const unassigned=places.filter(place=>isCommunitySupport(getCategory(data.categories,place.category))&&!isSupportLevel(place.supportLevel));
  const greenAlerts=places.filter(place=>getCategory(data.categories,place.category)?.kind==='green'&&isAlert(place));
  const unchecked=places.filter(place=>issues.get(place.id).includes('qualityReview'));
@@ -94,7 +97,7 @@ export default function AdminOverview({data,t,lang,getIdToken,onNavigate,onCateg
       <p className="ao-check-note"><Icon name="clock" size={14}/>{missingHours.length} điểm chưa đủ thông tin giờ hoạt động. Bổ sung giờ để bộ lọc “Đang mở cửa” hoạt động chính xác.</p>
      </section>
     </div>
-    <section className="ao-tools" aria-label="Công cụ dữ liệu"><header><div><span className="ao-section-label">Quản lý dữ liệu</span><h2>Công cụ dữ liệu</h2></div><span>Kiểm tra, theo dõi và khôi phục</span></header><div className="ao-tool-strip">{tools.map((tool,index)=><button type="button" key={tool.id} className={`ao-tool ao-tone-${tool.tone}`} style={{'--ao-order':index}} onClick={()=>onTools(tool.id)}><span className="ao-tool-icon"><Icon name={tool.icon} size={20}/></span><span><strong>{tool.title}</strong><small>{tool.hint}</small></span>{tool.id==='quality'?<b>{qualityCount}</b>:tool.id==='trash'?<b>{trash}</b>:<Icon name="right" size={15}/>}</button>)}</div></section>
+    <section className="ao-tools" aria-label="Công cụ dữ liệu"><header><div><span className="ao-section-label">Quản lý dữ liệu</span><h2>Công cụ dữ liệu</h2></div><span>Kiểm tra, theo dõi và khôi phục</span></header><div className="ao-tool-strip">{tools.map((tool,index)=><button type="button" key={tool.id} className={`ao-tool ao-tone-${tool.tone}`} style={{'--ao-order':index}} onClick={()=>onTools(tool.id)}><span className="ao-tool-icon"><Icon name={tool.icon} size={20}/></span><span><strong>{tool.title}</strong><small>{tool.hint}</small></span>{tool.id==='history'?<Icon name="right" size={15}/>:<AttentionBadge count={toolCounts[tool.id]} label={toolCountLabel(tool)} tone={tool.id==='reports'?'red':tool.id==='trash'?'slate':'amber'} status={tool.id==='reports'?reportStatus:'ready'}/>}</button>)}</div></section>
    </>}
   </div>
  </div>;

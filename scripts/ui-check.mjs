@@ -1,4 +1,5 @@
 // Component integration checks in a simulated DOM, not a visual browser test.
+import {adminAttention} from '../src/lib/adminAttention.js';
 import {publicCatalog,catalogChanges} from '../src/lib/editorial.js';
 import { makeTestCatalog } from './catalog.fixture.mjs';
 import { JSDOM } from 'jsdom';
@@ -53,7 +54,7 @@ const result=await build({
  }}],
 });
 await writeFile(output,result.outputFiles[0].text);
-let cloudData=makeTestCatalog(),revision=1,publishCatalog,publishEditor,publishManagement,publishHistory,publishReports;
+let cloudData=makeTestCatalog(),revision=1,publishCatalog,publishEditor,publishManagement,publishHistory,publishReports,publishPendingReports,pendingReportsFailure;
 let cloudHistory=[],cloudReports=[];
 let failSave=false;
 let accountObserver;
@@ -69,8 +70,9 @@ window.firebaseFixture={
  observeManagement(receive){publishManagement=receive;receive({data:cloudData,revision});return ()=>{};},
  observeHistory(receive){publishHistory=receive;receive(cloudHistory);return ()=>{};},
  observeReports(receive){publishReports=receive;receive(cloudReports);return ()=>{};},
- async submitReport(report){cloudReports=[{...report,id:'report-fixture',status:'new',createdAt:new Date().toISOString()},...cloudReports];publishReports?.(cloudReports);},
- async resolveReport(id,status,resolution){cloudReports=cloudReports.map(report=>report.id===id?{...report,status,resolution}:report);publishReports?.(cloudReports);},
+ observePendingReports(receive,fail){publishPendingReports=receive;pendingReportsFailure=fail;receive(cloudReports.filter(report=>report.status==='new'));return ()=>{publishPendingReports=null;};},
+ async submitReport(report){cloudReports=[{...report,id:'report-fixture',status:'new',createdAt:new Date().toISOString()},...cloudReports];publishReports?.(cloudReports);publishPendingReports?.(cloudReports.filter(report=>report.status==='new'));},
+ async resolveReport(id,status,resolution){cloudReports=cloudReports.map(report=>report.id===id?{...report,status,resolution}:report);publishReports?.(cloudReports);publishPendingReports?.(cloudReports.filter(report=>report.status==='new'));},
  observeEditor(receive){publishEditor=receive;receive({status:'signedOut'});return ()=>{};},
  async login(email,password){
    if(password!=='fixture')throw Error('invalid credentials');
@@ -93,7 +95,7 @@ try{
  const React=await import('react'),{act}=React,{createRoot}=await import('react-dom/client'),{default:App}=await import(output.href);
  root=createRoot(document.getElementById('root'));
  const render=()=>act(async()=>root.render(React.createElement(App)));
- const button=(text,scope=document)=>[...scope.querySelectorAll('button')].find(b=>b.textContent.trim()===text);
+ const button=(text,scope=document)=>[...scope.querySelectorAll('button')].find(b=>b.getAttribute('aria-label')===text||b.textContent.trim()===text);
  const click=async el=>{assert.ok(el,'Clickable element exists');await act(async()=>el.click());};
  const input=async(el,value)=>{assert.ok(el,'Input exists');await act(async()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event('input',{bubbles:true}));});};
  const select=async(el,value)=>{
@@ -408,6 +410,23 @@ try{
  await submit(document.querySelector('.login-form'));
  check(!!document.querySelector('.ao-total')&&document.querySelectorAll('.ao-group').length===3,'Firebase editor login opens an overview with three distinct groups');
  check([...document.querySelectorAll('.admin-sidebar nav [data-section]')].map(button=>button.dataset.section).join(',')==='overview,places,safe,green,partner,categories,operations','The admin sidebar exposes all three groups separately');
+ const toolsBadge=()=>document.querySelector('.admin-sidebar [data-section=operations] .admin-attention-badge');
+ check(Number(toolsBadge().textContent)===adminAttention(cloudData,cloudReports).total,'Tools sidebar aggregates quality places, pending reports and trash before the tools page is opened');
+ const originalReports=cloudReports;
+ await act(async()=>{cloudReports=[...cloudReports,{id:'incoming',placeId:cloudData.places[0].id,placeName:'Phản ánh mới từ khách',status:'new',createdAt:new Date().toISOString()}];publishPendingReports(cloudReports.filter(report=>report.status==='new'));});
+ check(document.querySelector('.admin-attention-notice')?.textContent.includes('Phản ánh mới từ khách'),'A new report raises a compact notice while outside the tools page');
+ check(document.querySelector('.admin-sidebar [data-section=safe] .admin-attention-badge')?.textContent==='1','A report pings its affected sidebar group');
+ await click(button('Xem',document.querySelector('.admin-attention-notice')));
+ check(document.querySelector('.admin-operations')?.dataset.tool==='reports','Notification action opens the report inbox');
+ await act(async()=>{cloudReports=originalReports;publishPendingReports(cloudReports.filter(report=>report.status==='new'));publishReports?.(cloudReports);});
+ await click(document.querySelector('.admin-sidebar [data-section=overview]'));
+ await act(async()=>pendingReportsFailure({code:'permission-denied'}));
+ check(toolsBadge()?.textContent.endsWith('+'),'A failed report subscription never presents the known partial total as a complete total');
+ await click(document.querySelector('.admin-sidebar [data-section=operations]'));
+ check(!!document.querySelector('.ops-notification-status'),'The tools show report-count failures with a retry action');
+ await click(button('Thử lại',document.querySelector('.ops-notification-status')));
+ check(!document.querySelector('.ops-notification-status')&&!toolsBadge().textContent.endsWith('+'),'Retry restores the current complete badge total');
+ await click(document.querySelector('.admin-sidebar [data-section=overview]'));
  check([...document.querySelectorAll('.ao-total strong,.ao-group-main > b')].map(x=>x.textContent).join(',')==='11,6,2,3','Dashboard uses shared data');
  const overviewCheck=name=>[...document.querySelectorAll('.ao-checks button')].find(item=>item.querySelector('strong')?.textContent===name);
  await click(overviewCheck('Điểm xanh cần xử lý'));
@@ -425,14 +444,14 @@ try{
  check(document.querySelectorAll('.ao-tool-strip button').length===4,'Overview exposes the four data tools as labelled shortcuts');
  for(const name of ['Chất lượng dữ liệu','Thông tin cần kiểm tra','Lịch sử thay đổi','Thùng rác']){
    await click(overviewShortcut(name));
-   check(document.querySelector('.admin-sidebar [data-section=operations]').getAttribute('aria-current')==='page'&&document.querySelector('.operations-tabs button[aria-pressed=true]')?.textContent===name,'Overview shortcut opens its exact data-tool tab: '+name);
+   check(document.querySelector('.admin-sidebar [data-section=operations]').getAttribute('aria-current')==='page'&&document.querySelector('.operations-tabs button[aria-pressed=true]')?.getAttribute('aria-label')===name,'Overview shortcut opens its exact data-tool tab: '+name);
    await click(document.querySelector('.admin-sidebar [data-section=overview]'));
  }
  await click(overviewShortcut('Thông tin cần kiểm tra'));
  await click(button('Lịch sử thay đổi',document.querySelector('.operations-tabs')));
  await click(document.querySelector('.admin-sidebar [data-section=places]'));
  await click(document.querySelector('.admin-sidebar [data-section=operations]'));
- check(document.querySelector('.operations-tabs button[aria-pressed=true]')?.textContent==='Lịch sử thay đổi','Returning to data tools preserves the last selected subtab');
+ check(document.querySelector('.operations-tabs button[aria-pressed=true]')?.getAttribute('aria-label')==='Lịch sử thay đổi','Returning to data tools preserves the last selected subtab');
  await click(document.querySelector('.admin-sidebar [data-section=overview]'));
  await click(document.querySelector('.ao-group-main'));
  check(document.querySelectorAll('tbody tr').length===6,'The SafePoint metric opens only SafePoint places');
@@ -694,6 +713,21 @@ try{
  check(document.querySelector('.operation-record').textContent.includes('Điểm test đã sửa'),'Soft-deleted points remain in the private trash');
  await click(button('Khôi phục ở trạng thái ẩn',document.querySelector('.operation-record')));
  check(cloudData.places.some(point=>point.name==='Điểm test đã sửa'&&!point.deletedAt&&point.visibility==='hidden'),'Restoring trash keeps a place hidden for review');
+ const preservedIds=cloudData.places.map(place=>place.id);
+ await act(async()=>{cloudData={...cloudData,places:[...cloudData.places,{...cloudData.places[0],id:'cleanup-fixture',name:'Điểm dọn rác thử',deletedAt:new Date().toISOString(),visibility:'hidden'}]};publishManagement({data:cloudData,revision});});
+ await click(button('Dọn sạch thùng rác',document.querySelector('.ops-clean-trash')));
+ check(document.querySelector('.trash-cleanup-dialog')?.textContent.includes('Điểm dọn rác thử')&&document.querySelector('.trash-cleanup-dialog .button.danger').disabled,'Cleanup previews the exact records and requires explicit agreement');
+ await click(document.querySelector('.trash-cleanup-dialog [data-dialog-dismiss]'));
+ check(cloudData.places.some(p=>p.id==='cleanup-fixture'),'Cancelling cleanup does not mutate the catalog');
+ await click(button('Dọn sạch thùng rác',document.querySelector('.ops-clean-trash')));
+ await click(document.querySelector('.trash-cleanup-confirm input'));
+ failSave=true;
+ await click(document.querySelector('.trash-cleanup-dialog .button.danger'));
+ check(!!document.querySelector('.trash-cleanup-dialog [role=alert]')&&cloudData.places.some(p=>p.id==='cleanup-fixture'),'A failed cleanup keeps the confirmation and every catalog record');
+ failSave=false;
+ await click(document.querySelector('.trash-cleanup-dialog .button.danger'));
+ check(!document.querySelector('.trash-cleanup-dialog')&&preservedIds.every(id=>cloudData.places.some(p=>p.id===id))&&!cloudData.places.some(p=>p.id==='cleanup-fixture'),'Confirmed cleanup removes only trashed fixture records and preserves all other points');
+ check(!!document.querySelector('.trash-cleanup-result')&&!document.querySelector('.operations-tabs [data-tool=trash] .admin-attention-badge'),'Successful cleanup shows its result and clears the trash badge');
  await click(button('Lịch sử thay đổi',document.querySelector('.operations-tabs')));
  check(document.querySelectorAll('.history-record').length<=8&&cloudHistory.length>0,'History shows a paginated summary rather than expanding every revision');
  const latestHistoryRevision=Math.max(...cloudHistory.map(event=>event.revision));
@@ -708,9 +742,15 @@ try{
  await click(document.querySelector('dialog .modal-header button'));
  await click(button('Thông tin cần kiểm tra',document.querySelector('.operations-tabs')));
  check(document.querySelectorAll('.report-record').length===1,'Visitor reports reach the editor inbox');
+ await act(async()=>publishPendingReports([...cloudReports.filter(report=>report.status==='new'),{id:'older-pending',placeId:cloudData.places[0].id,placeName:'Phản ánh cũ còn chờ',status:'new',createdAt:'2026-01-01T00:00:00Z'}]));
+ check(document.querySelectorAll('.report-record').length===2,'Pending reports outside the latest historical report window remain visible in the review inbox');
+ await act(async()=>publishPendingReports(cloudReports.filter(report=>report.status==='new')));
+ check(document.querySelectorAll('.report-record').length===1,'An older pending item disappears when the live pending subscription removes it');
+
  await click(document.querySelector('.report-record .ops-row-open'));
  await click(button('Đánh dấu đã xử lý',document.querySelector('.ops-detail-content')));
  check(cloudReports[0].status==='resolved','Editors can resolve a report independently of catalog edits');
+ check(!document.querySelector('.operations-tabs [data-tool=reports] .admin-attention-badge')&&Number(toolsBadge().textContent)===adminAttention(cloudData,cloudReports).total,'Resolving the last report clears its badge and updates the sidebar total');
  await click([...document.querySelectorAll('.report-filters button')].find(button=>button.textContent.startsWith('Chờ kiểm tra')));
  check(!document.querySelector('.report-record')&&!!document.querySelector('.ops-empty'),'Report status filters separate completed items from the pending queue');
  await click(button('Hiển thị tất cả',document.querySelector('.ops-empty')));

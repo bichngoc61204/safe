@@ -7,6 +7,8 @@ import {normalize,safeImage,categoryColor,categoryPalette} from '../lib/domain';
 import '../admin-operations.css';
 import {supportLevels,isCommunitySupport,categoryVisualIcon} from '../lib/supportLevels';
 import {placeText} from '../lib/locale';
+import {AttentionBadge} from './AdminAttention';
+import {cleanTrash} from '../lib/adminAttention';
 
 const fieldLabel=(field,t)=>field.endsWith('En')?`${t(field.slice(0,-2))} (EN)`:t({created:'add',removed:'delete',schedule:'weeklyHours',review:'verification',visibility:'publication',wasteTypes:'materials',lat:'latitude',lng:'longitude',images:'placeImages',deletedAt:'deletionState',categories:'categories'}[field]||field);
 const tabs=[['quality','check'],['history','history'],['trash','delete'],['reports','alert']];
@@ -49,13 +51,21 @@ function displayValue(field,value,categories,t,lang){
  if(value==null||value==='')return t('opsNotSet');
  return String(value);
 }
-export default function AdminOperations({data,currentRevision,backend,t,lang,mobile=false,onOpen,onApply,busy,initialTab='quality',initialQualityIssue='',onQualityIssueChange,onTabChange}){
+export default function AdminOperations({data,currentRevision,backend,t,lang,mobile=false,onOpen,onApply,busy,initialTab='quality',initialQualityIssue='',onQualityIssueChange,onTabChange,attention,pendingReports}){
  const [tab,setTab]=useState(tabs.some(([id])=>id===initialTab)?initialTab:'quality');
  const [filter,setFilter]=useState(initialTab==='reports'?'new':'all'),[query,setQuery]=useState(''),[page,setPage]=useState(0),[selected,setSelected]=useState(null);
  const [qualityIssue,setQualityIssue]=useState(issueOrder.includes(initialQualityIssue)?initialQualityIssue:'');
  const clearIssue=()=>{setQualityIssue('');onQualityIssueChange?.('');};
  const [history,setHistory]=useState([]),[reports,setReports]=useState([]),[error,setError]=useState(''),[loading,setLoading]=useState(false),[reportBusy,setReportBusy]=useState(false),[restore,setRestore]=useState(null),[notes,setNotes]=useState({});
  const [historyQuery,setHistoryQuery]=useState(''),[changeIndex,setChangeIndex]=useState(0);
+ const [cleanup,setCleanup]=useState(null),[cleanupAgreed,setCleanupAgreed]=useState(false),[cleanupError,setCleanupError]=useState(''),[cleaning,setCleaning]=useState(false),[cleaned,setCleaned]=useState(0);
+ const cleaningRef=useRef(false);
+ const tabBar=useRef(null);
+ useEffect(()=>{
+  const nav=tabBar.current,active=nav?.querySelector('[aria-pressed="true"]');
+  if(!mobile||!active)return;
+  nav.scrollTo?.({left:Math.max(0,active.offsetLeft-(nav.clientWidth-active.offsetWidth)/2),behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+ },[tab,mobile]);
  const loaded=useRef(new Set());
  const selectTab=id=>{clearIssue();setTab(id);onTabChange?.(id);setFilter(id==='reports'?'new':'all');setQuery('');setPage(0);setSelected(null);setError('');setLoading(['history','reports'].includes(id)&&!loaded.current.has(id));};
  const changeFilter=value=>{clearIssue();setFilter(value);setPage(0);setSelected(null);};
@@ -73,7 +83,8 @@ export default function AdminOperations({data,currentRevision,backend,t,lang,mob
  const visibleQuality=quality.filter(item=>(!qualityIssue||item.issues.includes(qualityIssue))&&(filter==='all'||item.issues.some(issue=>qualityGroups[filter]?.includes(issue)))&&normalize(`${item.place.name} ${item.place.nameEn||''} ${item.place.address}`).includes(searchText));
  const visibleHistory=processedHistory.filter(event=>!event.systemSync&&normalize(`${event.actorEmail||event.actor} ${event.changes.map(change=>`${change.name} ${historyPlace(event,change)?.address||''} ${change.fields.map(field=>fieldLabel(field,t)).join(' ')}`).join(' ')}`).includes(searchText));
  const syncHistory=processedHistory.filter(event=>event.systemSync);
- const sortedReports=useMemo(()=>newestFirst(reports,reportActivityTime),[reports]);
+ const reportItems=useMemo(()=>[...new Map([...reports,...(pendingReports?.items||[])].map(item=>[item.id,item])).values()],[reports,pendingReports?.items]);
+ const sortedReports=useMemo(()=>newestFirst(reportItems,reportActivityTime),[reportItems]);
  const visibleReports=sortedReports.filter(report=>(filter==='all'||report.status===filter)&&normalize(`${report.placeName} ${report.note||''} ${t(report.reason)}`).includes(searchText));
  const trash=newestFirst(data.places.filter(place=>place.deletedAt),place=>activityTime(place.deletedAt));
  const date=(value,timeOnly=false)=>{const time=activityTime(value);return time?new Intl.DateTimeFormat(lang,{...(timeOnly?{timeStyle:'short'}:{dateStyle:'medium',timeStyle:'short'}),timeZone:'Asia/Ho_Chi_Minh'}).format(time):t('noActivityDate');};
@@ -83,7 +94,7 @@ export default function AdminOperations({data,currentRevision,backend,t,lang,mob
  const clearFilters=()=>{setQuery('');changeFilter('all');};
  const search=<div className="search-field operations-search"><Icon name="search" size={17}/><input aria-label={t('search')} placeholder={tab==='history'?t('opsHistorySearch'):t('search')} value={query} onChange={event=>{setQuery(event.target.value);setPage(0);setSelected(null);}}/>{query&&<button type="button" aria-label={t('clearSearch')} onClick={()=>{setQuery('');setPage(0);}}><Icon name="x" size={15}/></button>}</div>;
  const qualityItem=quality.find(item=>item.place.id===selected);
- const report=reports.find(item=>item.id===selected);
+ const report=reportItems.find(item=>item.id===selected);
  const event=processedHistory.find(item=>item.id===selected);
  const matchingChanges=event?.changes.filter(change=>normalize(change.id==='categories'?t('categories'):change.name).includes(normalize(historyQuery)))||[];
  const activeChange=matchingChanges[Math.min(changeIndex,Math.max(0,matchingChanges.length-1))];
@@ -110,10 +121,24 @@ export default function AdminOperations({data,currentRevision,backend,t,lang,mob
   }catch(error){setError(error.message||'operationError');}
  }
  const requestRestore=value=>{setSelected(null);setRestore(value);};
+ function requestCleanup(){setCleanup(trash.map(place=>structuredClone(place)));setCleanupAgreed(false);setCleanupError('');setCleaned(0);}
+ async function emptyTrash(){
+  if(!cleanupAgreed||!cleanup?.length||busy||cleaningRef.current)return;
+  cleaningRef.current=true;setCleaning(true);setCleanupError('');
+  try{await onApply(cleanTrash(data,cleanup));setCleaned(cleanup.length);setCleanup(null);}
+  catch(error){setCleanupError(error.message||'operationError');}
+  finally{cleaningRef.current=false;setCleaning(false);}
+ }
  async function resolve(item,status){if(reportBusy)return;setReportBusy(true);setError('');try{await backend.resolveReport(item.id,status,notes[item.id]??item.resolution??'');}catch{setError('operationError');}finally{setReportBusy(false);}}
+ const toolCounts=attention||{quality:quality.length,reports:reportItems.filter(item=>item.status==='new').length,trash:trash.length};
+ const reportCountStatus=pendingReports?.status||'ready';
+ const toolCountLabel=id=>id==='reports'&&reportCountStatus!=='ready'
+  ? reportCountStatus==='error'?'Chưa tải được số phản ánh đang chờ':'Đang tải số phản ánh đang chờ'
+  : `${t(id)}: ${toolCounts[id]} ${id==='quality'?'điểm cần rà soát':id==='reports'?'phản ánh chờ':'điểm trong thùng rác'}`;
  const empty=message=><div className="ops-empty"><Icon name="check" size={26}/><strong>{t(message)}</strong>{(query||filter!=='all'||qualityIssue)&&<button type="button" className="text-button" onClick={clearFilters}>{t('opsShowAll')}</button>}</div>;
  return <section className="admin-operations ops-simple" data-tool={tab}>
-  <nav className="operations-tabs" aria-label={t('adminTools')}>{tabs.map(([id,icon])=><button type="button" key={id} data-tool={id} aria-pressed={tab===id} onClick={()=>selectTab(id)}><Icon name={icon} size={17}/>{t(id)}</button>)}</nav>
+  <nav ref={tabBar} className="operations-tabs" aria-label={t('adminTools')}>{tabs.map(([id,icon])=><button type="button" key={id} data-tool={id} aria-label={t(id)} aria-pressed={tab===id} onClick={()=>selectTab(id)}><Icon name={icon} size={17}/><span>{t(id)}</span>{id!=='history'&&<AttentionBadge count={toolCounts[id]} label={toolCountLabel(id)} tone={id==='reports'?'red':id==='trash'?'slate':'amber'} status={id==='reports'?reportCountStatus:'ready'}/>}</button>)}</nav>
+  {pendingReports?.status==='error'&&<p className="ops-notification-status" role="status"><Icon name="alert" size={16}/>Chưa tải được số phản ánh đang chờ. Tổng thông báo chưa đầy đủ.<button type="button" onClick={pendingReports.retry}>Thử lại</button></p>}
   <div className="operations-view" key={tab} aria-busy={loading}>
    {error&&<p className="form-error" role="alert">{t(error)}</p>}{loading&&<div className="operations-loading" role="status"><span className="operations-spinner"/>{t('opsLoading')}<div/><div/><div/></div>}
    {tab==='quality'&&<div className={`ops-workspace ${qualityItem?'has-selection':''}`}><section className="panel ops-queue quality-workspace">
@@ -149,9 +174,9 @@ export default function AdminOperations({data,currentRevision,backend,t,lang,mob
     </>:<p className="ops-detail-muted">{t('noResults')}</p>}
     <details className="ops-advanced"><summary>{t('opsAdvancedRestore')}</summary><p>{t('restoreVersionHint')}</p><button type="button" className="text-button" onClick={()=>requestRestore({event})}>{t('restoreVersion')}</button></details>
    </Detail>}</div>}
-   {tab==='trash'&&<div className="panel operations-panel"><div className="panel-heading"><div><h2>{t('trash')} <span className="count-pill">{trash.length}</span></h2><p>{t('trashHint')}</p></div></div>{trash.length?trash.map(place=><article className="operation-record" key={place.id}><div><h3>{place.name}</h3><p>{place.address}</p><small>{t('deletedAt')}: {date(place.deletedAt)}</small></div><button className="button secondary" disabled={busy} onClick={()=>patch(place,{deletedAt:null,deletedBy:null,visibility:'hidden',review:{status:'pending'}})}><Icon name="restore" size={16}/>{t('restorePlace')}</button></article>):<div className="empty-state">{t('trashEmpty')}</div>}</div>}
+   {tab==='trash'&&<div className="panel operations-panel"><div className="panel-heading"><div><h2>{t('trash')} <span className="count-pill">{trash.length}</span></h2><p>{t('trashHint')}</p></div></div>{!!trash.length&&<div className="ops-clean-trash"><div><strong>Dọn sạch thùng rác</strong><p>Kiểm tra các điểm trước khi xóa khỏi danh bạ quản trị.</p></div><button type="button" className="button secondary" disabled={busy||cleaning} onClick={requestCleanup}><Icon name="delete" size={16}/>Dọn sạch thùng rác</button></div>}{cleaned>0&&<p className="trash-cleanup-result" role="status">Đã dọn {cleaned} địa điểm khỏi thùng rác.</p>}{trash.length?trash.map(place=><article className="operation-record" key={place.id}><div><h3>{place.name}</h3><p>{place.address}</p><small>{t('deletedAt')}: {date(place.deletedAt)}</small></div><button className="button secondary" disabled={busy} onClick={()=>patch(place,{deletedAt:null,deletedBy:null,visibility:'hidden',review:{status:'pending'}})}><Icon name="restore" size={16}/>{t('restorePlace')}</button></article>):<div className="empty-state">{t('trashEmpty')}</div>}</div>}
    {tab==='reports'&&!loading&&!error&&<div className={`ops-workspace ${report?'has-selection':''}`}><section className="panel ops-queue reports-workspace">
-    <header className="ops-queue-heading"><div><h2>{t('reports')}</h2><p>{reports.filter(item=>item.status==='new').length} {t('awaitingReview')}</p></div></header><div className="ops-queue-tools">{search}<div className="ops-filters report-filters" role="group" aria-label={t('status')}>{['new','resolved','dismissed','all'].map(status=><button type="button" key={status} aria-pressed={filter===status} onClick={()=>changeFilter(status)}>{t(status==='all'?'all':`report_${status}`)}</button>)}</div></div>
+    <header className="ops-queue-heading"><div><h2>{t('reports')}</h2><p>{reportItems.filter(item=>item.status==='new').length} {t('awaitingReview')}</p></div></header><div className="ops-queue-tools">{search}<div className="ops-filters report-filters" role="group" aria-label={t('status')}>{['new','resolved','dismissed','all'].map(status=><button type="button" key={status} aria-pressed={filter===status} onClick={()=>changeFilter(status)}>{t(status==='all'?'all':`report_${status}`)}</button>)}</div></div>
     <div className="ops-list-caption">{visibleReports.length} {t('reportItems')}<span>{t('latestActivity')}</span></div>
     {visibleReports.length?slice(visibleReports).map(item=><article className="report-record ops-row" key={item.id}><button type="button" className="ops-row-open" aria-expanded={selected===item.id} onClick={()=>select(item.id)}><div className="ops-row-info"><h3>{item.placeName}</h3>{data.places.find(place=>place.id===item.placeId)&&<p className="ops-place-address">{data.places.find(place=>place.id===item.placeId).address}</p>}<p className="ops-report-category"><Icon name="alert" size={12}/>{t(item.reason)}</p>{item.note&&<p className="ops-report-excerpt">{item.note}</p>}<small className="ops-record-date"><Icon name="clock" size={11}/>{date(reportActivityTime(item))}</small></div><span className={`report-state report-${item.status}`}>{t(`report_${item.status}`)}</span><Icon name="right" size={18}/></button></article>):empty(filter==='new'?'opsNoPending':'reportsEmpty')}
     <Pager page={currentPage(visibleReports)} total={visibleReports.length} onChange={value=>{setPage(value);setSelected(null);}} t={t}/>
@@ -163,6 +188,13 @@ export default function AdminOperations({data,currentRevision,backend,t,lang,mob
     <div className="ops-detail-actions">{report.status==='new'?<><button type="button" className="button primary" disabled={reportBusy} onClick={()=>resolve(report,'resolved')}><Icon name="check" size={15}/>{t('resolve')}</button><button type="button" className="button secondary" disabled={reportBusy} onClick={()=>resolve(report,'dismissed')}>{t('dismiss')}</button></>:<button type="button" className="button secondary" disabled={reportBusy} onClick={()=>resolve(report,'new')}>{t('reopen')}</button>}</div>
    </Detail>}</div>}
   </div>
+  {cleanup&&<Modal title="Dọn sạch thùng rác" className="trash-cleanup-dialog" onClose={()=>{if(!cleaningRef.current)setCleanup(null);}} t={t} dismissible={!busy&&!cleaning}>
+   <div className="community-modal-body"><p>Xóa {cleanup.length} địa điểm dưới đây khỏi danh bạ quản trị. Không thể khôi phục các điểm này từ thùng rác; lịch sử thay đổi vẫn được giữ theo cơ chế hiện tại.</p>
+    <ul className="trash-cleanup-list">{cleanup.map(place=><li key={place.id}><strong>{place.name}</strong><small>{place.address}</small></li>)}</ul>
+    <label className="trash-cleanup-confirm"><input type="checkbox" checked={cleanupAgreed} disabled={busy||cleaning} onChange={event=>setCleanupAgreed(event.target.checked)}/><span>Tôi đã kiểm tra danh sách và đồng ý xóa các địa điểm này.</span></label>
+    {cleanupError&&<p className="form-error" role="alert">{t(cleanupError)}</p>}
+   </div><div className="modal-footer"><button type="button" className="button secondary" data-dialog-dismiss disabled={busy||cleaning}>{t('cancel')}</button><button type="button" className="button danger" disabled={!cleanupAgreed||busy||cleaning} onClick={emptyTrash}>{busy||cleaning?'Đang dọn…':`Xóa ${cleanup.length} địa điểm`}</button></div>
+  </Modal>}
   {restore&&<Modal title={t('restoreConfirm')} onClose={()=>setRestore(null)} t={t} dismissible={!busy}><div className="community-modal-body"><strong>{restore.place?.name||`${t('revision')} ${restore.event.revision}`}</strong><p>{t('restoreVersionHint')}</p>{error&&<p className="form-error" role="alert">{t(error)}</p>}</div><div className="modal-footer"><button className="button secondary" type="button" data-dialog-dismiss disabled={busy}>{t('cancel')}</button><button className="button primary" disabled={busy} onClick={restoreSnapshot}>{t(busy?'saving':'restorePlace')}</button></div></Modal>}
  </section>;
 }

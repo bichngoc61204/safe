@@ -210,6 +210,10 @@ Màu bản đồ thống nhất theo nhóm; màu mức hỗ trợ chỉ dùng ch
 
 Trên mobile, các tab công cụ có thể kéo ngang. Mỗi danh sách hỗ trợ tìm kiếm và phân trang khi có nhiều bản ghi; mở một dòng để đọc đủ thông tin trước khi thao tác.
 
+**Thông báo quản trị:** badge ở sidebar và từng tab cho biết việc còn cần xử lý. Chất lượng dữ liệu đếm số địa điểm có thông tin cần bổ sung, mỗi điểm chỉ đếm một lần; Thông tin cần kiểm tra đếm phản ánh đang chờ; Thùng rác đếm điểm đã xóa mềm. Tổng Công cụ dữ liệu cộng ba số này, không phải số địa điểm duy nhất. Mở xem không tự xóa badge; xử lý xong hoặc khôi phục/dọn rác thì số cập nhật theo dữ liệu.
+
+Khi vào admin hoặc có phản ánh mới, popup nhỏ có nút **Xem** để mở đúng công cụ, tự ẩn sau khoảng 7 giây. Đây là thông báo trong phiên admin đang mở, không phải thông báo đẩy khi đóng trình duyệt. Nhóm An toàn/Điểm xanh/Đối tác báo phản ánh của nhóm; Điểm xanh cộng thêm các điểm cần vệ sinh/quá tải. Nếu không tải được phản ánh, hệ thống báo lỗi và hiển thị tổng chưa đầy đủ thay vì coi là không có việc.
+
 ### 4.1. Chất lượng dữ liệu
 
 1. Chọn **Công cụ dữ liệu → Chất lượng dữ liệu**.
@@ -228,7 +232,7 @@ Trên mobile, các tab công cụ có thể kéo ngang. Mỗi danh sách hỗ tr
 4. Ghi kết quả xử lý; chọn **Đánh dấu đã xử lý** hoặc **Bỏ qua**.
 5. Dùng bộ lọc để xem việc đã hoàn tất. Chọn **Mở lại** khi cần xử lý tiếp.
 
-Danh sách sắp theo lần hoạt động gần nhất; giao diện tải tối đa 100 phản ánh gần nhất. Bản này chưa có trao đổi hai chiều hoặc gửi thông báo tự động cho người phản ánh.
+Danh sách sắp theo lần hoạt động gần nhất; giao diện tải 100 phản ánh gần nhất và bổ sung các phản ánh đang chờ nằm ngoài danh sách đó. Bản này chưa có trao đổi hai chiều hoặc gửi thông báo tự động cho người phản ánh.
 
 ### 4.3. Lịch sử thay đổi
 
@@ -246,7 +250,9 @@ Lịch sử tải tối đa 40 phiên bản gần nhất. Nếu không đủ b�
 2. Chọn **Khôi phục** ở đúng điểm.
 3. Điểm trở về **ẩn, chưa xác minh**. Mở kiểm tra thông tin rồi công khai lại nếu phù hợp.
 
-Bản này không có nút xóa vĩnh viễn hoặc tự dọn thùng rác. Điểm trong thùng rác vẫn tính vào giới hạn quản lý.
+Muốn dọn rác, chọn **Dọn sạch thùng rác**, kiểm tra danh sách tên/địa chỉ, tích xác nhận rồi chọn **Xóa N địa điểm**. Hủy sẽ giữ nguyên dữ liệu. Sau khi dọn, các điểm không còn trong danh bạ quản trị hoặc thùng rác; lịch sử thay đổi vẫn giữ theo cơ chế hiện tại, nên thao tác này không phải xóa toàn bộ dấu vết dữ liệu. Không có cơ chế tự dọn theo lịch.
+
+Chỉ những điểm đã xem trong hộp xác nhận được dọn. Nếu một điểm vừa được sửa hoặc khôi phục trên máy khác, hệ thống yêu cầu mở lại và kiểm tra; điểm mới chuyển vào thùng rác sau đó được giữ lại. Điểm trong thùng rác vẫn tính vào giới hạn quản lý cho đến khi dọn.
 
 ## 5. Dành cho người phụ trách triển khai
 

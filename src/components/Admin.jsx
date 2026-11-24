@@ -12,10 +12,12 @@ import AdminOperations from './AdminOperations';
 import ImportPlaces from './ImportPlaces';
 import { ScheduleDisplay } from './PlaceExtras';
 import AdminOverview from './AdminOverview';
+import {AttentionBadge,AttentionNotice,usePendingReports} from './AdminAttention';
+import {adminAttention} from '../lib/adminAttention';
 import { AdminPlacesMap } from './MapView';
 import { placeHourRows } from '../lib/placeHours';
 import { placeText } from '../lib/locale';
-import { categoryColor, categoryPalette, markerColor, directionsUrl, filterPlaces, getCategory, isAlert, isDemoPhone, phoneHref, placePhotoUrls } from '../lib/domain';
+import { categoryColor, categoryPalette, markerColor, directionsUrl, filterPlaces, getCategory, isDemoPhone, phoneHref, placePhotoUrls } from '../lib/domain';
 export function Status({value,t}) {return <span className={`status status-${value}`}><i/>{t(value)}</span>;}
 export function CategoryIcon({category,size=19}){return <span className="category-icon" style={{'--category-color':categoryColor(category),background:categoryPalette(category).wash,color:categoryColor(category)}}><Icon name={categoryVisualIcon(category)} size={size}/></span>;}
 export function Login({onLogin,onBack,t,available,editorStatus}){
@@ -217,6 +219,11 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,editor,g
  const [saveError,setSaveError]=useState('');
  const saving=useRef(false);
  const {categories}=data;
+ const pendingReports=usePendingReports(backend);
+ const attention=useMemo(()=>adminAttention(data,pendingReports.items),[data,pendingReports.items]);
+ const reportSummary=pendingReports.status==='ready'?`${attention.reports} phản ánh chờ`:pendingReports.status==='error'?'Chưa tải được số phản ánh':'Đang tải phản ánh';
+ const groupAttentionLabel=kind=>`${t(kind)} · ${pendingReports.status==='ready'?`${attention.groups[kind].reports} phản ánh chờ`:reportSummary}${kind==='green'?` · ${attention.groups.green.alerts} điểm cần xử lý`:''}`;
+ const toolsSummary=`${attention.quality} điểm cần rà soát · ${reportSummary} · ${attention.trash} điểm trong thùng rác`;
  const places=useMemo(()=>data.places.filter(place=>!place.deletedAt),[data.places]);
  const group=catalogGroups.find(item=>item.id===tab);
  const scope=group?.id ?? (groupFilter==='all'?'map':groupFilter);
@@ -227,7 +234,6 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,editor,g
    const ids=new Set(children.map(category=>category.id));
    return {...item,children,count:places.filter(place=>ids.has(place.category)).length};
  });
- const alerts=places.filter(place=>getCategory(categories,place.category)?.kind==='green'&&isAlert(place));
  const visibleCategories=categories.filter(item=>scope==='map'||item.kind===scope);
  const filtered=useMemo(()=>{
    const rank=new Map(catalogGroups.flatMap(group=>categories.filter(category=>category.kind===group.id)).map((item,index)=>[item.id,index]));
@@ -253,6 +259,9 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,editor,g
    if(inlineEdit){if(saving.current)return;closeDialog(setEdit);}
    setTab(next);setPreviewId(null);setHoveredPlaceId(null);clearFilters();
    if(window.scrollY>0)window.scrollTo({top:0,behavior:'instant'});
+ }
+ function openTool(id,issue=''){
+   setToolTab(id);setToolIssue(issue);navigate('operations');
  }
  function revealMap(){
    if(mobile||!window.matchMedia?.('(max-width: 1000px)').matches)return;
@@ -347,8 +356,10 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,editor,g
    <aside className="admin-sidebar">
      <div className="admin-sidebar-label">{t('workspace')}</div>
      <nav aria-label={t('workspace')} style={{'--dock-index':Math.max(0,nav.findIndex(item=>item.id===tab)),'--dock-count':nav.length}}>{nav.map(item=><button key={item.id} data-section={item.id}
-       className={tab===item.id?'active':''} aria-label={t(item.label)} title={t(item.label)} aria-current={tab===item.id?'page':undefined} onClick={()=>navigate(item.id)}>
-       <Icon name={item.icon}/><span>{t(item.label)}</span>{item.id==='green'&&alerts.length>0&&<b>{alerts.length}</b>}
+       className={tab===item.id?'active':''} aria-label={t(item.label)} title={item.id==='operations'?toolsSummary:attention.groups[item.id]?groupAttentionLabel(item.id):t(item.label)} aria-current={tab===item.id?'page':undefined} onClick={()=>navigate(item.id)}>
+       <Icon name={item.icon}/><span>{t(item.label)}</span>
+       {item.id==='operations'&&<AttentionBadge count={attention.total} label={toolsSummary} status={pendingReports.status}/>}
+       {attention.groups[item.id]&&<AttentionBadge count={attention.groups[item.id].total} label={groupAttentionLabel(item.id)} tone="red" status={attention.groups[item.id].total?pendingReports.status:'ready'}/>}
      </button>)}</nav>
      <div className="admin-sidebar-bottom">
        <div className="admin-profile"><span>AD</span><div><strong>{isSuperAdmin?'Admin tổng':'SafeMap Admin'}</strong><small>{email}</small></div></div>
@@ -366,12 +377,12 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,editor,g
      </div>
      {managementStatus==='rules'&&<p className="admin-rules-notice" role="status"><Icon name="info"/>{t('rulesNeeded')}</p>}
      <div className="admin-content" key={tab}>
-       {tab==='accounts'&&isSuperAdmin?<AdminAccounts backend={backend} editor={editor} t={t} data={data} onOpen={id=>{navigate('places');selectPreview(id);}}/>:tab==='overview'?<AdminOverview data={data} t={t} lang={lang} getIdToken={getIdToken}
+       {tab==='accounts'&&isSuperAdmin?<AdminAccounts backend={backend} editor={editor} t={t} data={data} onOpen={id=>{navigate('places');selectPreview(id);}}/>:tab==='overview'?<AdminOverview data={data} t={t} lang={lang} getIdToken={getIdToken} attention={attention} reportStatus={pendingReports.status}
          onNavigate={(id,filters={})=>{navigate(id);if(filters.status)setStatus(filters.status);if(filters.supportLevel)setLevelFilter(filters.supportLevel);}}
          onCategory={(kind,id,filters={})=>{navigate(kind);setCategory(id);if(filters.supportLevel)setLevelFilter(filters.supportLevel);}}
-         onTools={(id,issue='')=>{setToolTab(id);setToolIssue(issue);navigate('operations');}}
+         onTools={openTool}
          onPoint={id=>{navigate('places');selectPreview(id);}}/>
-       :tab==='operations'?<AdminOperations data={data} currentRevision={currentRevision} mobile={mobile} backend={backend} t={t} lang={lang} busy={busy} initialTab={toolTab} initialQualityIssue={toolIssue} onQualityIssueChange={setToolIssue} onTabChange={setToolTab} onOpen={id=>{navigate('places');selectPreview(id);}} onApply={commitTools}/>:tab==='categories'?<div className="admin-category-groups">
+       :tab==='operations'?<AdminOperations data={data} pendingReports={pendingReports} attention={attention} currentRevision={currentRevision} mobile={mobile} backend={backend} t={t} lang={lang} busy={busy} initialTab={toolTab} initialQualityIssue={toolIssue} onQualityIssueChange={setToolIssue} onTabChange={setToolTab} onOpen={id=>{navigate('places');selectPreview(id);}} onApply={commitTools}/>:tab==='categories'?<div className="admin-category-groups">
          {groups.map(item=><section className="panel category-group-panel" key={item.id} style={{'--group-color':item.color}}>
            <div className="panel-heading"><div><span className="section-kicker">{t('kind')}</span><h2>{t(item.label)} <span className="count-pill">{item.children.length}</span></h2></div>
              <button className="button secondary" onClick={()=>setEditCategory({initialKind:item.id})}><Icon name="plus" size={16}/>{t('addCategory')}</button>
@@ -466,6 +477,7 @@ export default function Admin({data,commit,t,lang,notify,onLogout,email,editor,g
      </div>
      <p className="admin-notice"><Icon name="help" size={16}/><span>{t('adminFirebase')}</span></p>
    </main>
+   <AttentionNotice attention={attention} pending={pendingReports} onOpen={openTool} paused={Boolean(edit||editCategory||deleting||importOpen)}/>
    {mobile&&preview&&<Modal title={t('details')} className="admin-place-dialog" onClose={closePreview} t={t} dismissible={!busy}>
      {placeCard}
    </Modal>}

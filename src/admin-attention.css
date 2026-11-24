@@ -1,0 +1,52 @@
+.admin-attention-badge,.ao-tool > .admin-attention-badge {
+ display:inline-flex; flex:none; align-items:center; justify-content:center;
+ min-width:21px; height:21px; padding:0 5px; border:1px solid #edc48d; border-radius:7px;
+ color:#8b470b; background:#fff0d6; font-size:10px; font-weight:750; line-height:1;
+ font-variant-numeric:tabular-nums; white-space:nowrap; animation:attention-arrive 220ms ease-out;
+}
+.admin-attention-badge.tone-red { color:#a43931; background:#fff0ee; border-color:#f0bdb7; }
+.admin-attention-badge.tone-slate { color:#526577; background:#edf2f6; border-color:#ced9e3; }
+.admin-layout .admin-sidebar nav .admin-attention-badge { position:static; margin-inline-start:auto; color:#8b470b; background:#fff0d6; }
+.admin-layout .admin-sidebar nav .admin-attention-badge.tone-red { color:#a43931; background:#fff0ee; }
+.admin-attention-notice {
+ position:fixed; z-index:900; top:calc(var(--header-height,66px) + 14px); right:20px;
+ display:flex; align-items:center; gap:11px; width:min(450px,calc(100vw - 28px)); padding:14px;
+ color:#81531b; background:#fffffff5; border:1px solid #ead3ad; border-radius:14px;
+ box-shadow:0 8px 28px #193c2c1c; backdrop-filter:blur(14px); animation:attention-arrive 250ms ease-out;
+}
+.admin-attention-notice > svg { flex:none; }
+.admin-attention-notice > div { flex:1; min-width:0; }
+.admin-attention-notice strong { display:block; color:#30473b; font-size:12px; }
+.admin-attention-notice p { margin:4px 0 0; font-size:11px; color:#627268; line-height:1.5; overflow-wrap:anywhere; }
+.admin-attention-notice button { display:flex; align-items:center; justify-content:center; gap:4px; min-height:36px; border-radius:8px; flex:none; }
+.admin-attention-notice .attention-open { padding:0 9px; font-size:12px; font-weight:650; color:#176446; background:#eaf4ed; }
+.admin-attention-notice .attention-dismiss { width:28px; color:#75867b; }
+.admin-attention-notice button:focus-visible { outline:2px solid #287856; outline-offset:2px; }
+.admin-operations .operations-tabs .admin-attention-badge { min-width:19px; height:19px; padding-inline:4px; font-size:10px; }
+.admin-operations .ops-notification-status { display:flex; gap:8px; align-items:center; margin:-3px 0 14px; color:#896126; font-size:12px; line-height:1.5; }
+.ops-notification-status button { text-decoration:underline; font-weight:600; padding:6px; }
+.ops-clean-trash { display:flex; align-items:center; gap:16px; justify-content:space-between; margin:0 22px 4px; padding:16px 0; border-top:1px solid #e5e9ec; }
+.ops-clean-trash strong { display:block; color:#354b57; font-size:13px; }
+.ops-clean-trash p { margin:5px 0 0; color:#71808b; font-size:12px; line-height:1.6; }
+.ops-clean-trash .button { flex:none; color:#a34435; border-color:#e6c1ba; background:#fff9f7; }
+.trash-cleanup-list { margin:15px 0; padding:0; list-style:none; max-height:180px; overflow-y:auto; border-block:1px solid #e5e9ec; }
+.trash-cleanup-list li { display:grid; gap:3px; padding:10px 0; border-bottom:1px solid #eef1f3; }
+.trash-cleanup-list li:last-child { border:0; }
+.trash-cleanup-list strong { font-size:13px; }
+.trash-cleanup-list small { color:#6e7f89; line-height:1.5; }
+.trash-cleanup-confirm { display:flex; align-items:flex-start; gap:10px; font-size:13px; line-height:1.6; }
+.trash-cleanup-confirm input { width:18px; height:18px; flex:none; margin-top:2px; accent-color:#a34435; }
+.trash-cleanup-result { margin:0 22px 14px; color:#27674d; font-size:13px; }
+@keyframes attention-arrive { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+@media(max-width:700px){
+ .admin-layout .admin-sidebar nav .admin-attention-badge {
+  position:absolute; top:-3px; right:0; left:auto; margin:0; min-width:16px; height:17px; padding-inline:3px;
+  border-radius:6px; font-size:9px; box-shadow:0 0 0 2px #fff;
+ }
+ .admin-attention-notice { top:auto; bottom:calc(82px + env(safe-area-inset-bottom,0px)); right:14px; padding:12px; gap:8px; }
+ .admin-attention-notice .attention-dismiss { width:24px; }
+ .ops-clean-trash { margin-inline:16px; flex-wrap:wrap; gap:12px; }
+ .ops-clean-trash .button { min-height:42px; }
+ .trash-cleanup-result { margin-inline:16px; }
+}
+@media(prefers-reduced-motion:reduce){.admin-attention-badge,.admin-attention-notice{animation:none;}}
