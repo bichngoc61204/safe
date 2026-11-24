@@ -27,11 +27,11 @@ export function ScheduleDisplay({place,t}){
   <small>{t('scheduleHint')}</small>
  </details>;
 }
-export function PlaceActions({place,saved,onSave,t,onReport}){
+export function PlaceActions({place,saved,onSave,t,onReport,onShare}){
  const [share,setShare]=useState(false);
  return <><div className="place-utility-actions">
   <button type="button" aria-pressed={saved} onClick={()=>onSave(place.id)}><Icon name="bookmark" size={17}/>{t(saved?'unsavePlace':'savePlace')}</button>
-  <button type="button" onClick={()=>setShare(true)}><Icon name="share" size={17}/>{t('shareNative')}</button>
+  <button type="button" onClick={()=>{onShare?.();setShare(true);}}><Icon name="share" size={17}/>{t('shareNative')}</button>
   {onReport&&<button type="button" data-report onClick={onReport}><Icon name="alert" size={17}/>{t('reportPlace')}</button>}
  </div>{share&&<SharePlace place={place} t={t} onClose={()=>setShare(false)}/>}</>;
 }

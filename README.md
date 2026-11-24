@@ -24,6 +24,7 @@ Bản nâng cấp có lưu/chia sẻ địa điểm và QR, lịch theo ngày, b
 
 - [Rà soát mã nguồn trước bàn giao 24/11/2026](docs/RA_SOAT_BAN_GIAO_2026-11-24.md).
 - [Cách xem lượt truy cập bằng link Vercel hiện tại](docs/HUONG_DAN_LUOT_TRUY_CAP.md).
+- [Nâng cấp dashboard thống kê, tương tác địa điểm và ảnh kiểm tra](docs/NANG_CAP_THONG_KE_2026-11-24.md).
 
 ## Chạy dự án
 
@@ -73,7 +74,7 @@ Danh mục và địa điểm được lưu cùng một document cho mỗi bản
 
 - Liên kết dự án Firebase với Google Analytics, sau đó đặt `VITE_FIREBASE_MEASUREMENT_ID` của Web App trên Vercel và deploy lại. Bản production ghi lượt mở bản đồ công cộng. Máy phát triển dùng Vite không gửi lượt xem.
 - Bật **Google Analytics Data API** trong Google Cloud, tạo service account và cấp email của tài khoản này quyền **Viewer** trong **Property access management** của GA4. Đặt ba biến server trên Vercel gồm `GA4_PROPERTY_ID` (ID thuộc tính dạng số), `GA4_CLIENT_EMAIL` và `GA4_PRIVATE_KEY`. Giữ private key trong biến bí mật phía server. Dùng `vercel dev` nếu cần chạy API cùng giao diện trên máy phát triển.
-- Mở **Tổng quan → Lượt truy cập** bằng tài khoản quản trị. Báo cáo đọc số lượt xem và người dùng trong bảy ngày đã kết thúc theo múi giờ của thuộc tính GA4. API kiểm tra quyền quản trị qua Firestore và lưu tạm báo cáo trong bộ nhớ tối đa năm phút.
+- Mở **Tổng quan → Lượt truy cập** bằng tài khoản quản trị. Báo cáo có kỳ Hôm nay / 7 ngày / 30 ngày gồm hôm nay, người dùng hoạt động 30 phút, khu vực, thiết bị và tương tác địa điểm. API kiểm tra quyền quản trị qua Firestore trước mỗi lượt đọc và lưu tạm kết quả tối đa 60 giây. Xếp hạng địa điểm cần khai báo phương diện sự kiện `place_id` trong GA4; xem [hướng dẫn](docs/HUONG_DAN_LUOT_TRUY_CAP.md).
 
 ### Nạp bản sao danh mục
 

@@ -58,7 +58,9 @@ let cloudHistory=[],cloudReports=[];
 let failSave=false;
 let accountObserver;
 let editorAccounts=[{uid:'owner',email:'owner@example.invalid',role:'superadmin',active:true},{uid:'fixture',email:'editor@example.invalid',role:'editor',active:true}];
+const trafficCalls=[];
 window.firebaseFixture={
+ trackTraffic(event,id){trafficCalls.push({event,id});},
  observeEditors(receive){accountObserver=receive;receive(editorAccounts);return ()=>{accountObserver=null;};},
  async loadEditorActivity(){return cloudHistory;},
  async createEditorAccount(input){editorAccounts=[...editorAccounts,{uid:'new-child',email:input.email,displayName:input.displayName,active:true,role:'editor'}];accountObserver?.(editorAccounts);},
@@ -206,6 +208,7 @@ try{
  const mapBeforeSearchDetail=document.querySelector('.leaflet-map');
  await click(document.querySelector('.mobile-search-preview button'));
  check(!!document.querySelector('.place-details')&&document.querySelector('.map-workspace').dataset.searchOpen==='false','A search suggestion opens details and closes the search panel');
+ check(trafficCalls.filter(call=>call.event==='place_open').length===1,'An unauthenticated search-result selection records one detail opening');
  await click(document.querySelector('.sheet-detail-bar button[aria-label="Quay lại tìm kiếm"]'));
  check(document.querySelector('.map-workspace').dataset.searchOpen==='true'&&!document.querySelector('.place-details')&&document.querySelector('.public-toolbar input').value==='phuoc thien'&&document.querySelector('.map-workspace').dataset.scope==='safe'&&document.querySelector('.leaflet-map')===mapBeforeSearchDetail,'Back from search details restores keyword, group and results without replacing the map');
  await click(document.querySelector('.mobile-search-results'));
@@ -238,6 +241,7 @@ try{
  check(document.querySelector('.detail-buttons a').href.includes('destination='),'Details provide coordinate directions');
  await click(button('Lưu địa điểm',document.querySelector('.place-utility-actions')));
  check(JSON.parse(localStorage.getItem('safemap-saved')).length===1&&button('Bỏ lưu',document.querySelector('.place-utility-actions')),'Saving a place persists locally without requiring login');
+ check(trafficCalls.some(call=>call.event==='place_save')&&trafficCalls.filter(call=>call.event==='place_open').length===2,'Saving records the action without counting a second opening from the rerender');
  await click(button('Chia sẻ',document.querySelector('.place-utility-actions')));
  check(document.querySelector('.share-place-modal input').value.includes('?place='),'Share exposes a deep link to the selected place');
  await click(document.querySelector('.share-place-modal .modal-header button'));
@@ -601,9 +605,10 @@ try{
  await input(document.querySelector('input[type=password]'),'fixture');
  await submit(document.querySelector('.login-form'));
  const actualFetch=globalThis.fetch;
+ const trafficFixture={views:12,users:8,sessions:9,newUsers:4,days:[{date:'20261108',views:12,users:8}],cities:[{city:'Da Nang',region:'Da Nang',country:'Vietnam',users:8}],devices:[{device:'mobile',users:8}],events:[{event:'place_open',count:5}],places:[],placesStatus:'setup',realtime:{users:1,minutes:[{minute:0,views:3}],minutesAvailable:true},range:'7d',timeZone:'Asia/Ho_Chi_Minh',generatedAt:'2026-11-08T12:00:00Z'};
  let trafficResponse=new Response('<html></html>',{headers:{'Content-Type':'text/html'}});
  globalThis.fetch=(url,options)=>{
-   if(url!=='/api/traffic')return actualFetch(url,options);
+   if(!String(url).startsWith('/api/traffic?'))return actualFetch(url,options);
    assert.equal(options.headers.Authorization,'Bearer fixture-editor-token');
    return Promise.resolve(trafficResponse);
  };
@@ -613,12 +618,31 @@ try{
    trafficResponse=Response.json({error:'setup'},{status:503});
    await click(button('Làm mới'));
    check(document.querySelector('.traffic-message').textContent.includes('ID thuộc tính GA4'),'Traffic identifies missing server reporting configuration');
-   trafficResponse=Response.json({views:12,users:8,days:[{date:'20261355',views:12}]});
+   trafficResponse=Response.json({...trafficFixture,days:[{date:'20261355',views:12,users:8}]});
    await click(button('Làm mới'));
    check(!!document.querySelector('.traffic-message')&&!document.querySelector('.traffic-bars'),'Malformed reporting dates show a recoverable error instead of crashing Admin');
-   trafficResponse=Response.json({views:12,users:8,days:[{date:'20261108',views:12}]});
+   trafficResponse=Response.json(trafficFixture);
    await click(button('Làm mới'));
-   check(document.querySelector('.traffic-bars li time').dateTime==='2026-11-08'&&document.querySelector('.traffic-metrics strong').textContent==='12','Traffic retry renders the reporting response');
+   check([...document.querySelectorAll('.traffic-bars li time')].at(-1).dateTime==='2026-11-08'&&document.querySelector('.traffic-metrics strong').textContent==='12','Traffic retry renders the reporting response');
+   check(document.querySelector('.traffic-live-total strong').textContent==='1'&&document.querySelector('.traffic-setup code').textContent==='place_id','Realtime works while place custom dimension is missing');
+   const point=cloudData.places.find(place=>!place.deletedAt);
+   trafficResponse=Response.json({...trafficFixture,range:'today',placesStatus:'ready',places:[{id:point.id,opens:5,routes:2,calls:1,saves:0,shares:0}]});
+   await click(button('Hôm nay'));
+   check(document.querySelector('.traffic-periods button[aria-pressed=true]').textContent==='Hôm nay'&&document.querySelectorAll('.traffic-bars li').length===1,'Today changes the query and calendar without mixing prior range');
+   check(document.querySelector('.traffic-place-link').textContent.includes(point.name)&&document.querySelector('.traffic-place-link').textContent.includes(point.address),'Traffic ranking resolves real catalog names and addresses');
+   await click(button('Xem các địa điểm trên bản đồ'));
+   const interestMap=document.querySelector('.traffic-interest-map .leaflet-map');
+   check(!!interestMap,'Interest map loads only after requesting it');
+   trafficResponse=Response.json({...trafficFixture,range:'today',placesStatus:'ready',places:[{id:point.id,opens:6,routes:2,calls:1,saves:0,shares:0}]});
+   await click(button('Làm mới'));
+   check(document.querySelector('.traffic-interest-map .leaflet-map')===interestMap,'Refreshing metrics preserves the map container instead of remounting the basemap');
+
+   trafficResponse=Response.json({error:'report'},{status:502});
+   await click(button('Làm mới'));
+   check(document.querySelector('.traffic-notice').textContent.includes('Đang giữ báo cáo')&&document.querySelector('.traffic-metrics strong').textContent==='12','Refresh failure keeps last confirmed report with a stale-data notice');
+   await click(document.querySelector('.traffic-place-link'));
+   check(document.querySelector('.admin-preview-content h3')?.textContent===point.name,'A ranked place opens its matching admin record without modifying data');
+
  } finally {
    globalThis.fetch=actualFetch;
  }

@@ -69,7 +69,7 @@ function PlaceDetails({place,categories,position,t,lang,onClose,routing,saved,on
       <span>{t('details')}</span>
       <button className="icon-button detail-panel-close" onClick={onClose} aria-label={t('close')}><Icon name="x" size={19}/></button>
     </div>
-    <PlaceActions place={place} saved={saved} onSave={onSave} t={t}/>
+    <PlaceActions place={place} saved={saved} onSave={onSave} t={t} onShare={()=>backend?.trackTraffic?.('share_place',place.id)}/>
     <PlaceGallery images={images} name={placeText(place,'name',lang)} t={t}/>
     <div className="detail-content">
       <div className="detail-category"><span className="detail-category-label"><span className="detail-category-icon" style={{color:categoryColor(c),background:categoryColor(c)+'13'}}><Icon name={categoryVisualIcon(c)} size={18}/></span>{lang==='en'?c.nameEn:c.name}</span><SupportBadge place={place} category={c} t={t} compact/></div>
@@ -79,14 +79,14 @@ function PlaceDetails({place,categories,position,t,lang,onClose,routing,saved,on
       <div className="detail-status" title={position?t('straightDistance'):undefined}><Status value={place.status} t={t}/><span>{position?formatDistance(haversine(position,place)):t('gpsHint')}</span></div>
       <div className="detail-buttons route-entry">
         <button className="button primary" onClick={routing.start}><Icon name="navigation" size={16}/>{t('routeOnMap')}</button>
-        <a className="button secondary" href={directionsUrl(place)} target="_blank" rel="noopener noreferrer">Google Maps<Icon name="arrow" size={15}/></a>
+        <a className="button secondary" href={directionsUrl(place)} onClick={()=>backend?.trackTraffic?.('directions_external',place.id)} target="_blank" rel="noopener noreferrer">Google Maps<Icon name="arrow" size={15}/></a>
       </div>
       <SupportLevelInfo place={place} category={c} t={t} showBadge={false}/>
       <ScheduleDisplay place={place} t={t}/>
       <dl className="detail-info">
         <div><dt>{t('phone')}</dt><dd className="detail-phone">
           <span>{place.phone||t('noPhone')}{demoPhone&&<small>{t('demoPhone')}</small>}</span>
-          {phone&&!demoPhone&&<a className="button secondary" href={phoneHref(phone)}><Icon name="phone" size={16}/>{t('call')}</a>}
+          {phone&&!demoPhone&&<a className="button secondary" href={phoneHref(phone)} onClick={()=>backend?.trackTraffic?.('phone_click',place.id)}><Icon name="phone" size={16}/>{t('call')}</a>}
         </dd></div>
         {[...['owner','waste'].map(key=>[key,placeText(place,key,lang)]),...placeHourRows(place,lang),['description',placeText(place,'description',lang)]].filter(([,value])=>value).map(([key,value])=><div key={key} className={key==='opensAt'||key==='closesAt'?'detail-hour':undefined}><dt>{t(key)}</dt><dd>{value}</dd></div>)}
       </dl>
@@ -175,6 +175,13 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
   })),[data]);
   const hoverPlaces=groupPreviews.find(group=>group.id===hoverScope)?.places??null;
   const place=data.places.find(p=>p.id===selected);
+  const measuredPlace=useRef(null);
+  useEffect(()=>{
+    if(!place){measuredPlace.current=null;return;}
+    if(!backend?.trackTraffic||measuredPlace.current===place.id)return;
+    measuredPlace.current=place.id;
+    backend.trackTraffic('place_open',place.id);
+  },[place?.id,backend]);
   destinationRef.current=place?.id;
   const activeRequest=request&&place?.id===request.destination.id?request:null;
   const result=activeRequest&&routeResult?.request===activeRequest?routeResult:null;
@@ -233,6 +240,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
         return;
       }
       if(gpsIntent.current?.id===place.id)return;
+      backend?.trackTraffic?.('route_request',place.id);
       cancelRoute();
       if(position&&Date.now()-position.measuredAt<=30000){requestRoute(position,routeModes[0]);return;}
       const intent={id:place.id};
@@ -464,7 +472,7 @@ export default function PublicApp({mapStyle,setMapStyle,welcomePhase,data,scope,
           {!place&&<div className="mobile-list-context"><div className="category-chips" role="group" aria-label={t('modules')}><button type="button" aria-pressed={scope==='map'&&!savedOnly} onClick={()=>openMobileGroup('map')}>{t('all')}</button>{scopes.slice(1).map(([id,label,icon])=><button type="button" key={id} style={{'--chip-color':categoryColor({kind:id})}} aria-pressed={scope===id&&!savedOnly} onClick={()=>openMobileGroup(id)}><Icon name={icon} size={13}/>{t(id==='partner'?'partnerShort':label)}</button>)}</div><button type="button" className="sheet-filter-button" aria-label={t('filterPlaces')} onClick={()=>openSearch(false)}><Icon name="filter" size={17}/>{hasFilters&&<i/>}</button></div>}
         </div>
         <div className="public-sheet-content" id="public-sheet-content">
-          {place&&<PlaceDetails key={place.id} place={place} categories={data.categories} position={position} t={t} lang={lang} routing={routing} onClose={closeDetails} saved={bookmarks.saved.includes(place.id)} onSave={bookmarks.toggle} backend={backend} now={now}/>}
+          {place&&<PlaceDetails key={place.id} place={place} categories={data.categories} position={position} t={t} lang={lang} routing={routing} onClose={closeDetails} saved={bookmarks.saved.includes(place.id)} onSave={id=>{if(!bookmarks.saved.includes(id))backend?.trackTraffic?.('place_save',id);bookmarks.toggle(id);}} backend={backend} now={now}/>}
           <PlaceCards places={visible} categories={data.categories} selected={selected} previewed={previewed}
             position={position} t={t} lang={lang} emptyTitle={savedOnly&&!bookmarks.saved.length?t('noSavedPlaces'):undefined} actions={placeCardActions} listRef={placesList}/>
         </div><div className="list-footer"><span className="live-dot"/>{t('community')}<span>{t('area')}</span></div>

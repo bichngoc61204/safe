@@ -37,7 +37,7 @@ export default function App(){
  },[]);
  useEffect(() => {
    if (mode === 'public' && import.meta.env?.PROD) {
-     firebase.backend?.enableTraffic(() => !isAdminPath()).catch(() => {});
+     firebase.backend?.enableTraffic().catch(() => {});
    }
  }, [firebase.backend, mode]);
  const data = firebase.catalog?.data ?? emptyCatalog;

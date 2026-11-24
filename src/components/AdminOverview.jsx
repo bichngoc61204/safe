@@ -64,7 +64,7 @@ export default function AdminOverview({data,t,lang,getIdToken,onNavigate,onCateg
    {[['summary','Điều hành','dashboard'],['traffic','Lượt truy cập','chart']].map(([id,label,icon])=><button key={id} type="button" role="tab" data-view={id} id={`overview-tab-${id}`} aria-selected={tab===id} aria-controls="overview-panel" tabIndex={tab===id?0:-1} onClick={()=>setTab(id)}><Icon name={icon} size={15}/>{label}</button>)}
   </div>
   <div className="ao-view" key={tab} id="overview-panel" role="tabpanel" aria-labelledby={`overview-tab-${tab}`}>
-   {tab==='traffic'?<TrafficDashboard t={t} lang={lang} getIdToken={getIdToken}/>:<>
+   {tab==='traffic'?<TrafficDashboard t={t} lang={lang} getIdToken={getIdToken} data={data} onPoint={onPoint}/>:<>
     <section className="ao-catalog-summary" aria-label="Tình hình dữ liệu địa điểm">
      <div className="ao-total"><span className="ao-section-label">Danh bạ An Thượng</span><div><strong>{places.length}</strong><span>địa điểm <br/>đang quản lý</span></div><button type="button" onClick={()=>onNavigate('places')}>Mở danh sách địa điểm <Icon name="right" size={15}/></button></div>
      <div className="ao-publication">

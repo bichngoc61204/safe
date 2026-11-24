@@ -1,11 +1,12 @@
 import { createSign } from 'node:crypto';
+import { interactionFilter, parsePlaceTraffic, parseTrafficReports, trafficEvents, trafficRanges, trafficRequests } from '../src/lib/trafficReport.js';
 
 const tokenUrl = 'https://oauth2.googleapis.com/token';
 const jsonHeaders = { 'Content-Type': 'application/json' };
 const analyticsScope = 'https://www.googleapis.com/auth/analytics.readonly';
 const timeout = () => AbortSignal.timeout(8_000);
 const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url');
-let cachedReport;
+const cachedReports = new Map();
 
 async function getEditorStatus(token, projectId) {
   const parts = token.split('.');
@@ -26,7 +27,7 @@ async function getEditorStatus(token, projectId) {
   return (await role.json()).fields?.active?.booleanValue === true ? 200 : 403;
 }
 
-async function fetchReport({ property, email, privateKey }) {
+async function fetchReport({ property, email, privateKey, range }) {
   const now = Math.floor(Date.now() / 1000);
   const unsigned = `${encode({ alg: 'RS256', typ: 'JWT' })}.${encode({
     iss: email, scope: analyticsScope, aud: tokenUrl, iat: now, exp: now + 300,
@@ -43,30 +44,42 @@ async function fetchReport({ property, email, privateKey }) {
   if (!tokenResponse.ok) throw new Error('analyticsToken');
   const { access_token: accessToken } = await tokenResponse.json();
   if (!accessToken) throw new Error('analyticsToken');
-  const common = {
-    dateRanges: [{ startDate: '7daysAgo', endDate: 'yesterday' }],
-    dimensionFilter: { filter: { fieldName: 'pagePath', stringFilter: { matchType: 'EXACT', value: '/' } } },
-  };
-  const result = await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${property}:batchRunReports`, {
-    method: 'POST',
-    headers: { ...jsonHeaders, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify({ requests: [
-      { ...common, metrics: [{ name: 'screenPageViews' }, { name: 'totalUsers' }] },
-      { ...common, dimensions: [{ name: 'date' }], metrics: [{ name: 'screenPageViews' }],
-        orderBys: [{ dimension: { dimensionName: 'date' } }], keepEmptyRows: true },
-    ] }),
-    signal: timeout(),
-  });
-  if (!result.ok) throw new Error('analyticsReport');
-  const { reports } = await result.json();
-  if (reports?.length !== 2) throw new Error('analyticsReport');
-  const totals = reports[0].rows?.[0]?.metricValues;
+  const base = `https://analyticsdata.googleapis.com/v1beta/properties/${property}`;
+  async function call(suffix, body) {
+    const response = await fetch(`${base}${suffix}`, {
+      method: body ? 'POST' : 'GET', headers: { ...jsonHeaders, Authorization: `Bearer ${accessToken}` },
+      ...(body ? { body: JSON.stringify(body) } : {}), signal: timeout(),
+    });
+    if (!response.ok) throw Error('analyticsReport');
+    return response.json();
+  }
+  // Optional panels fail independently so a realtime/custom-dimension issue cannot hide the main report.
+  const requests = trafficRequests(range);
+  const publicEvents = { filter: { fieldName: 'eventName', inListFilter: { values: ['page_view', ...trafficEvents] } } };
+  const [core, live, minutes, metadata] = await Promise.allSettled([
+    call(':batchRunReports', { requests }),
+    call(':runRealtimeReport', { metrics: [{ name: 'activeUsers' }], dimensionFilter: publicEvents, minuteRanges: [{ startMinutesAgo: 29, endMinutesAgo: 0 }] }),
+    call(':runRealtimeReport', { dimensions: [{ name: 'minutesAgo' }], metrics: [{ name: 'eventCount' }], dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { matchType: 'EXACT', value: 'page_view' } } }, minuteRanges: [{ startMinutesAgo: 29, endMinutesAgo: 0 }], limit: 30 }),
+    call('/metadata'),
+  ]);
+  if (core.status !== 'fulfilled') throw Error('analyticsReport');
+  const main = parseTrafficReports(core.value.reports);
+  let places = [], placesStatus = metadata.status === 'fulfilled' ? 'setup' : 'unavailable';
+  if (metadata.status === 'fulfilled' && metadata.value.dimensions?.some(item => item.apiName === 'customEvent:place_id')) {
+    try {
+      const result = await call(':runReport', {
+        dateRanges: requests[0].dateRanges, dimensionFilter: interactionFilter,
+        dimensions: [{ name: 'customEvent:place_id' }, { name: 'eventName' }], metrics: [{ name: 'eventCount' }], limit: 2000,
+      });
+      places = parsePlaceTraffic(result); placesStatus = 'ready';
+      main.thresholded ||= Boolean(result.metadata?.subjectToThresholding || result.metadata?.dataLossFromOtherRow);
+    } catch { placesStatus = 'unavailable'; }
+  }
+  const liveCount = Number(live.status === 'fulfilled' ? live.value.rows?.[0]?.metricValues?.[0]?.value || 0 : NaN);
+  const liveMinutes = minutes.status === 'fulfilled' ? (minutes.value.rows || []).map(row => ({ minute: Number(row.dimensionValues[0].value), views: Number(row.metricValues[0].value) })) : [];
   return {
-    views: Number(totals?.[0]?.value ?? 0),
-    users: Number(totals?.[1]?.value ?? 0),
-    days: (reports[1].rows ?? []).map(row => ({
-      date: row.dimensionValues[0].value, views: Number(row.metricValues[0].value),
-    })),
+    ...main, places, placesStatus, range, generatedAt: new Date().toISOString(),
+    realtime: Number.isSafeInteger(liveCount) && liveCount >= 0 ? { users: liveCount, minutes: liveMinutes, minutesAvailable: minutes.status === 'fulfilled' } : null,
   };
 }
 
@@ -78,16 +91,21 @@ export default async function handler(req, res) {
   }
   const token = typeof req.headers.authorization === 'string' && req.headers.authorization.match(/^Bearer ([\w.-]{1,4096})$/i)?.[1];
   if (!token) return res.status(401).json({ error: 'denied' });
+  const range = new URL(req.url || '/', 'https://safemap.invalid').searchParams.get('range') || '7d';
+  if (!Object.hasOwn(trafficRanges, range)) return res.status(400).json({ error: 'range' });
   const { VITE_FIREBASE_PROJECT_ID: projectId, GA4_PROPERTY_ID: property, GA4_CLIENT_EMAIL: email, GA4_PRIVATE_KEY: key } = process.env;
   if (!projectId) return res.status(503).json({ error: 'setup' });
 
   try {
     const status = await getEditorStatus(token, projectId);
     if (status !== 200) return res.status(status).json({ error: 'denied' });
-    if (!/^\d+$/.test(property ?? '') || !email || !key) return res.status(503).json({ error: 'setup' });
+    if (!/^\d+$/.test(property?.trim() ?? '') || !email?.trim() || !key?.trim()) return res.status(503).json({ error: 'setup' });
+    const cacheKey = `${projectId}:${property.trim()}:${email.trim()}:${range}`;
+    const cachedReport = cachedReports.get(cacheKey);
     if (cachedReport?.expires > Date.now()) return res.status(200).json(cachedReport.data);
-    const data = await fetchReport({ property, email, privateKey: key.replace(/\\n/g, '\n') });
-    cachedReport = { data, expires: Date.now() + 5 * 60_000 };
+    const data = await fetchReport({ property: property.trim(), email: email.trim(), privateKey: key.replace(/\\n/g, '\n'), range });
+    if (cachedReports.size > 12) cachedReports.clear();
+    cachedReports.set(cacheKey, { data, expires: Date.now() + 60_000 });
     return res.status(200).json(data);
   } catch {
     return res.status(502).json({ error: 'report' });

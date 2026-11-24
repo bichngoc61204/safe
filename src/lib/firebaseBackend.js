@@ -1,12 +1,16 @@
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, signInAnonymously } from 'firebase/auth';
 import { onSnapshot, collection, query, orderBy, limit, doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { catalogRefs, observeCatalog, observeManagement, writeManagedCatalog } from './firebaseCatalog.js';
-
-let trafficStarted = false;
+import { createTrafficTracker } from './trafficEvents.js';
 
 export function connectFirebase(config) {
   const refs = catalogRefs(config);
   const auth = getAuth(refs.app);
+  const traffic = createTrafficTracker({
+    enabled: Boolean(import.meta.env?.PROD && config.measurementId), app: refs.app,
+    loadSDK: () => import('firebase/analytics'),
+    isPublic: () => window.location.pathname === '/', origin: window.location.origin,
+  });
   return {
     observeCatalog: (receive, fail) => observeCatalog(refs.catalog, receive, fail),
     observeManagement:(receive,fail)=>observeManagement(refs.management,receive,fail),
@@ -44,14 +48,8 @@ export function connectFirebase(config) {
     setEditorActive:async (uid,active)=>(await import('./editorAccounts.js')).setEditorActive(refs,auth,uid,active),
     loadEditorActivity:async options=>(await import('./editorStats.js')).loadEditorActivity({projectId:config.projectId,getIdToken:()=>auth.currentUser?.getIdToken(),...options}),
     getIdToken: () => auth.currentUser?.getIdToken(),
-    async enableTraffic(isPublic) {
-      if (!config.measurementId || trafficStarted) return;
-      const { initializeAnalytics, isSupported, logEvent } = await import('firebase/analytics');
-      if (!await isSupported() || !isPublic() || trafficStarted) return;
-      const analytics = initializeAnalytics(refs.app, { config: { send_page_view: false } });
-      trafficStarted = true;
-      logEvent(analytics, 'page_view', { page_location: new URL('/', window.location.origin).href });
-    },
+    enableTraffic: () => traffic.start(),
+    trackTraffic: (event, placeId) => traffic.track(event, placeId),
     login: (email, password) => signInWithEmailAndPassword(auth, email, password),
     logout: () => signOut(auth),
     save: (data, revision) => writeManagedCatalog(refs,data,revision,auth.currentUser),

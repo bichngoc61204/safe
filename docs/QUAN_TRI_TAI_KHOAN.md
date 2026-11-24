@@ -107,9 +107,9 @@ Trong lượt kiểm tra trên Vercel ngày 22/11/2026, mục này báo **chưa 
 Luồng đã có trong mã:
 
 - Khi bản production mở trang bản đồ công cộng và có `VITE_FIREBASE_MEASUREMENT_ID`, ứng dụng gửi sự kiện GA4 `page_view` cho đường dẫn `/` một lần trong phiên bản ứng dụng đang chạy; tải lại trang có thể tạo lần ghi mới. Vite chạy phát triển không gửi. Trang admin không được chủ động gửi như lượt xem bản đồ.
-- API `/api/traffic` kiểm tra tài khoản có quyền cán bộ rồi đọc **lượt xem** và **người dùng** của đường dẫn `/` trong bảy ngày đã kết thúc gần nhất; không phải số người đang trực tuyến. Dữ liệu trả về có thể được lưu tạm trong bộ nhớ API tối đa năm phút.
+- API `/api/traffic` kiểm tra tài khoản có quyền cán bộ rồi đọc báo cáo đường dẫn `/` theo kỳ Hôm nay / 7 ngày / 30 ngày gồm hôm nay. Có thêm Realtime 30 phút, khu vực, thiết bị và tương tác địa điểm; số người trong 30 phút không phải số kết nối đang mở ngay lúc này. Kết quả lưu tạm tối đa 60 giây, quyền người đọc vẫn được kiểm tra trước mỗi lần trả dữ liệu.
 - Cần cấu hình cả đo lường phía trình duyệt và quyền đọc báo cáo phía server; chỉ thêm Measurement ID chưa đủ để dashboard đọc được báo cáo.
 
 Khi muốn bật, làm theo mục [Báo cáo lượt truy cập trong README](../README.md#báo-cáo-lượt-truy-cập): thêm `VITE_FIREBASE_MEASUREMENT_ID`, `GA4_PROPERTY_ID`, `GA4_CLIENT_EMAIL`, `GA4_PRIVATE_KEY` trên Vercel rồi deploy lại. Private key chỉ để trong biến server, không thêm tiền tố `VITE_`.
 
-Có thể thử GA4 bằng link Vercel hiện tại trước, sau đó cập nhật cấu hình luồng dữ liệu khi dùng domain chính thức. Báo cáo bảy ngày đã kết thúc không hiển thị ngay lượt thử vừa phát sinh; dùng giao diện Realtime của GA4 để đối chiếu lượt thử mới, rồi kiểm tra báo cáo admin khi dữ liệu kỳ báo cáo đã sẵn sàng.
+Có thể thử GA4 bằng link Vercel hiện tại trước, sau đó cập nhật cấu hình luồng dữ liệu khi dùng domain chính thức. Bản nâng cấp 24/11/2026 hỗ trợ Hôm nay / 7 ngày / 30 ngày gồm hôm nay và ô 30 phút gần nhất. Báo cáo ngày vẫn có độ trễ. Xem [hướng dẫn mới và cách bật xếp hạng địa điểm](HUONG_DAN_LUOT_TRUY_CAP.md).
