@@ -15,6 +15,16 @@ const actions = [
 const dateLabel = value => `${value.slice(6)}/${value.slice(4, 6)}`;
 const label = value => !value || value === '(not set)' ? 'Chưa xác định' : value;
 const deviceLabels = { mobile: 'Điện thoại', desktop: 'Máy tính', tablet: 'Máy tính bảng' };
+const realtimeMessages = {
+  INVALID_ARGUMENT: 'GA4 từ chối định dạng yêu cầu thời gian thực. Cần kiểm tra phiên bản API của bản deploy.',
+  PERMISSION_DENIED: 'Tài khoản dịch vụ chưa được phép đọc dữ liệu thời gian thực của tài sản này.',
+  UNAUTHENTICATED: 'GA4 chưa xác thực được tài khoản báo cáo. Kiểm tra lại thông tin kết nối trên Vercel.',
+  RESOURCE_EXHAUSTED: 'GA4 đang giới hạn số yêu cầu thời gian thực. Hãy thử lại sau.',
+  DEADLINE_EXCEEDED: 'GA4 phản hồi chậm. Phần thời gian thực sẽ được thử lại khi làm mới.',
+  INVALID_RESPONSE: 'Dữ liệu thời gian thực trả về chưa hợp lệ. Báo cáo theo ngày vẫn được giữ lại.',
+  UNAVAILABLE: 'Chưa kết nối được báo cáo thời gian thực của GA4. Hãy thử làm mới sau.',
+  INTERNAL: 'Dịch vụ GA4 đang gặp lỗi khi đọc thời gian thực. Hãy thử lại sau.',
+};
 
 function Panel({ title, subtitle, icon, children, className = '' }) {
   return <section className={`traffic-card ${className}`}><header><span className="traffic-section-icon"><Icon name={icon} size={18}/></span><div><h3>{title}</h3>{subtitle && <p>{subtitle}</p>}</div></header>{children}</section>;
@@ -54,6 +64,8 @@ export default function TrafficDashboard({ t, lang = 'vi', getIdToken, data = { 
   }, [attempt, getIdToken, range]);
 
   const { state, report } = result;
+  const hasLiveUsers = Number.isSafeInteger(report?.realtime?.users);
+  const realtimeIssue = report && (!hasLiveUsers ? report.realtimeIssue : report.minuteIssue);
   const number = new Intl.NumberFormat(lang);
   const format = value => number.format(value);
   const events = new Map((report?.events || []).map(row => [row.event, row.count]));
@@ -81,7 +93,8 @@ export default function TrafficDashboard({ t, lang = 'vi', getIdToken, data = { 
     {state !== 'ready' && state !== 'loading' && <p className="traffic-message traffic-notice" role="status"><Icon name="info" size={18}/>{report ? 'Chưa làm mới được. Đang giữ báo cáo tải thành công gần nhất.' : t(messages[state])}</p>}
     {!report && state === 'loading' && <><p className="traffic-message" role="status">{t('trafficLoading')}</p><div className="traffic-loading-grid" aria-hidden="true">{[1, 2, 3, 4].map(id => <div key={id}/>)}</div></>}
     {report && <>
-      <div className="traffic-live"><div className="traffic-live-total"><span className="traffic-live-label"><i/>Hoạt động gần đây</span><div><strong>{report.realtime ? format(report.realtime.users) : '—'}</strong><span>người dùng<br/>trong 30 phút qua</span></div><small>Toàn thuộc tính GA4 · không phải số người đang mở ngay lúc này</small></div><div className="traffic-live-chart"><div><strong>Lượt xem trong 30 phút</strong><span>{report.realtime ? 'Tự cập nhật mỗi phút khi đang xem' : 'Chưa tải được dữ liệu thời gian thực'}</span></div>{report.realtime?.minutesAvailable ? <ol aria-label="Lượt xem bản đồ theo phút">{Array.from({ length: 30 }, (_, index) => { const minute = 29 - index, views = report.realtime.minutes.find(row => row.minute === minute)?.views || 0; const max = Math.max(1, ...report.realtime.minutes.map(row => row.views)); return <li key={minute} title={`${minute} phút trước: ${format(views)} lượt xem`}><i style={{ height: `${Math.max(3, views / max * 100)}%` }} data-empty={!views}/><span className="sr-only">{minute} phút trước: {format(views)} lượt xem</span></li>; })}</ol> : <p>Phần này sẽ được thử lại khi làm mới báo cáo.</p>}<footer><span>30 phút trước</span><span>Hiện tại</span></footer></div></div>
+      <div className="traffic-live"><div className="traffic-live-total"><span className="traffic-live-label"><i/>Hoạt động gần đây</span><div><strong>{hasLiveUsers ? format(report.realtime.users) : '—'}</strong><span>người dùng<br/>trong 30 phút qua</span></div><small>Toàn thuộc tính GA4 · không phải số người đang mở ngay lúc này</small></div><div className="traffic-live-chart"><div><strong>Lượt xem trong 30 phút</strong><span>{report.realtime ? 'Tự cập nhật mỗi phút khi đang xem' : 'Chưa tải được dữ liệu thời gian thực'}</span></div>{report.realtime?.minutesAvailable ? <ol aria-label="Lượt xem bản đồ theo phút">{Array.from({ length: 30 }, (_, index) => { const minute = 29 - index, views = report.realtime.minutes.find(row => row.minute === minute)?.views || 0; const max = Math.max(1, ...report.realtime.minutes.map(row => row.views)); return <li key={minute} title={`${minute} phút trước: ${format(views)} lượt xem`}><i style={{ height: `${Math.max(3, views / max * 100)}%` }} data-empty={!views}/><span className="sr-only">{minute} phút trước: {format(views)} lượt xem</span></li>; })}</ol> : <p>Phần này sẽ được thử lại khi làm mới báo cáo.</p>}<footer><span>30 phút trước</span><span>Hiện tại</span></footer></div></div>
+      {realtimeIssue && <p className="traffic-api-notice" role="status"><Icon name="info" size={17}/><span>{realtimeMessages[realtimeIssue.code]}<small>Mã: {realtimeIssue.code}{realtimeIssue.status ? ` · HTTP ${realtimeIssue.status}` : ''}{report.propertyId ? ` · Tài sản ${report.propertyId}` : ''}</small></span></p>}
       <div className="traffic-report-meta"><span><Icon name="clock" size={13}/>{periodText} · {zoneLabel}</span><span role="status">{state === 'loading' ? 'Đang làm mới…' : `Cập nhật ${new Intl.DateTimeFormat(lang, { hour: '2-digit', minute: '2-digit' }).format(new Date(report.generatedAt))}`}</span></div>
       <div className="traffic-metrics">{metricCards.map(([title, value, note, icon, tone]) => <article className={`traffic-metric traffic-tone-${tone}`} key={title}><div><span>{title}</span><Icon name={icon} size={19}/></div><strong>{format(value)}</strong><small>{note}</small></article>)}</div>
       <Panel title="Nhịp truy cập" subtitle={`${periodText} · số lượt mở bản đồ theo ngày`} icon="chart" className="traffic-trend">

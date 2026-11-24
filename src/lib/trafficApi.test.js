@@ -14,7 +14,7 @@ const environment = ['VITE_FIREBASE_PROJECT_ID', 'GA4_PROPERTY_ID', 'GA4_CLIENT_
 test('traffic API authenticates before reporting, handles configuration and isolates optional reports', async () => {
   const originalFetch = globalThis.fetch;
   const previous = Object.fromEntries(environment.map(key => [key, process.env[key]]));
-  let calls = [], denied = false, failCore = false, dimensionReady = false, failLive = true;
+  let calls = [], denied = false, failCore = false, dimensionReady = false, failLive = true, failUsers = false;
   const privateKey = generateKeyPairSync('rsa', { modulusLength: 2048, privateKeyEncoding: { type: 'pkcs8', format: 'pem' }, publicKeyEncoding: { type: 'spki', format: 'pem' } }).privateKey;
   try {
     globalThis.fetch = async (url, options) => {
@@ -33,7 +33,16 @@ test('traffic API authenticates before reporting, handles configuration and isol
       }
       if (url.endsWith('/metadata')) return Response.json({ dimensions: dimensionReady ? [{ apiName: 'customEvent:place_id' }] : [] });
       if (url.endsWith(':runReport')) return Response.json({ rows: [{ dimensionValues: [{ value: 'a' }, { value: 'place_open' }], metricValues: [{ value: '6' }] }] });
-      if (url.endsWith(':runRealtimeReport')) return Response.json(failLive ? {} : { rows: [] }, { status: failLive ? 429 : 200 });
+      if (url.endsWith(':runRealtimeReport')) {
+        const query=JSON.parse(options.body);
+        assert.equal(query.dimensionFilter,undefined);
+        assert.equal(query.minuteRanges,undefined);
+        if(failUsers&&query.metrics[0].name==='activeUsers')return Response.json({error:{status:'INVALID_ARGUMENT',message:'Selected dimensions and metrics cannot be queried together.'}},{status:400});
+        if(failLive)return Response.json({error:{status:'RESOURCE_EXHAUSTED',message:'provider private details'}},{status:429});
+        return Response.json(query.metrics[0].name==='activeUsers'
+          ? {rows:[{metricValues:[{value:'2'}]}]}
+          : {rows:[{dimensionValues:[{value:'03'}],metricValues:[{value:'4'}]}]});
+      }
       assert.fail('Unexpected network request');
     };
     assert.equal((await request({ auth: false }).run()).statusCode, 401); assert.equal(calls.length, 0);
@@ -50,16 +59,27 @@ test('traffic API authenticates before reporting, handles configuration and isol
     const basic = await request().run();
     assert.equal(basic.statusCode, 200); assert.equal(basic.data.views, 9);
     assert.equal(basic.data.realtime, null); assert.equal(basic.data.placesStatus, 'setup');
+    assert.deepEqual(basic.data.realtimeIssue,{code:'RESOURCE_EXHAUSTED',status:429});
+    assert.equal(JSON.stringify(basic.data).includes('provider private details'),false);
     assert.equal(basic.headers['Cache-Control'], 'no-store');
     calls = []; await request().run();
     assert.equal(calls.length, 1, 'Cached report still verifies editor on every request');
     dimensionReady = true; failLive = false;
     const detailed = await request({ range: 'today' }).run();
     assert.equal(detailed.statusCode, 200); assert.equal(detailed.data.placesStatus, 'ready');
-    assert.equal(detailed.data.places[0].opens, 6); assert.equal(detailed.data.realtime.users, 0);
+    assert.equal(detailed.data.places[0].opens, 6); assert.equal(detailed.data.realtime.users, 2);
+    assert.deepEqual(detailed.data.realtime.minutes,[{minute:3,views:4}]);
+    assert.equal(detailed.data.realtimeIssue,null);
     failCore = true;
     const failed = await request({ range: '30d' }).run();
     assert.equal(failed.statusCode, 502); assert.equal(failed.data.error, 'report');
+    failCore=false;failUsers=true;
+    const partial=await request({range:'30d'}).run();
+    assert.equal(partial.statusCode,200);
+    assert.equal(partial.data.realtime.users,null,'Unavailable distinct users must not become a false zero');
+    assert.deepEqual(partial.data.realtime.minutes,[{minute:3,views:4}],'Page-view chart survives a separate user-query failure');
+    assert.deepEqual(partial.data.realtimeIssue,{code:'INVALID_ARGUMENT',status:400});
+
   } finally {
     globalThis.fetch = originalFetch;
     for (const key of environment) { if (previous[key] === undefined) delete process.env[key]; else process.env[key] = previous[key]; }

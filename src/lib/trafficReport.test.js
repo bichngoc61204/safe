@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { trafficRequests, parseTrafficReports, parsePlaceTraffic, trafficCalendar, validateTrafficReport } from './trafficReport.js';
+import { trafficRequests, parseTrafficReports, parsePlaceTraffic, trafficCalendar, validateTrafficReport, realtimeRequests, trafficApiIssue } from './trafficReport.js';
 import { createTrafficTracker, trafficPayload } from './trafficEvents.js';
 
 const row = (dimensions, metrics) => ({ dimensionValues: dimensions.map(value => ({ value })), metricValues: metrics.map(value => ({ value: String(value) })) });
@@ -40,6 +40,7 @@ test('GA4 parsing preserves distinct total users, groups place events and disclo
 
 test('report validation rejects bad dates, counts, timezones and malformed optional panels', () => {
   assert.equal(validateTrafficReport(complete()), true);
+  assert.equal(validateTrafficReport({...complete(),realtime:{users:null,minutes:[{minute:0,views:2}],minutesAvailable:true}}),true);
   for (const mutate of [
     data => { data.days[0].date = '20260230'; }, data => { data.users = -1; },
     data => { data.timeZone = 'Invalid/TimeZone'; }, data => { data.places = [null]; },
@@ -84,4 +85,14 @@ test('measurement disabled, unsupported, blocked, or switched to admin never bre
   let resolve, publicPage = true;
   const switched = createTrafficTracker({ enabled: true, isPublic: () => publicPage, loadSDK: () => new Promise(done => { resolve = done; }) });
   const pending = switched.start(); switched.track('place_open', 'a'); publicPage = false; resolve(sdk); await pending;
+});
+
+
+test('realtime uses native 30-minute reporting and classifies provider failures without exposing messages', () => {
+  const [users, minutes] = realtimeRequests();
+  assert.deepEqual(users, {metrics:[{name:'activeUsers'}]});
+  assert.deepEqual(minutes, {dimensions:[{name:'minutesAgo'}],metrics:[{name:'screenPageViews'}],limit:'30'});
+  assert.deepEqual(trafficApiIssue({apiCode:'INVALID_ARGUMENT',httpStatus:400,message:'private details'}), {code:'INVALID_ARGUMENT',status:400});
+  assert.deepEqual(trafficApiIssue({name:'TimeoutError'}), {code:'DEADLINE_EXCEEDED',status:0});
+  assert.deepEqual(trafficApiIssue({apiCode:'a secret'}), {code:'UNAVAILABLE',status:0});
 });

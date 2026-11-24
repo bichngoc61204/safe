@@ -72,7 +72,7 @@ Nguồn: [phương diện sự kiện qua Data API](https://developers.google.co
 
 ## 6. Đọc các phần trên dashboard
 
-- **Hoạt động gần đây:** người dùng có sự kiện trang/tương tác SafeMap trong 30 phút, không phải số kết nối đang mở ngay lúc này. Báo cáo Realtime theo toàn thuộc tính GA4; dùng thuộc tính dành riêng SafeMap để tránh trộn website khác. Biểu đồ phút đếm sự kiện `page_view`.
+- **Hoạt động gần đây:** người dùng hoạt động trong toàn thuộc tính GA4 trong 30 phút, không phải số kết nối đang mở ngay lúc này. Báo cáo Realtime theo toàn thuộc tính GA4; dùng thuộc tính dành riêng SafeMap để tránh trộn website khác. Biểu đồ phút dùng chỉ số `screenPageViews`. Truy vấn tổng người dùng không lọc theo tên sự kiện để tránh tổ hợp không tương thích.
 - **Nhịp truy cập:** lượt xem bản đồ `/` theo ngày. Số người dùng được GA4 tính trên toàn kỳ, không cộng số người từng ngày để thay thế tổng.
 - **Khách truy cập từ đâu:** tối đa 10 thành phố/khu vực do GA4 ước tính, không định vị GPS đến từng phường/đường. Một người đi qua nhiều khu vực có thể xuất hiện ở nhiều hàng.
 - **Khách dùng SafeMap thế nào:** mở chi tiết, yêu cầu chỉ đường trong web, mở Google Maps, bấm gọi, lưu điểm, mở khung chia sẻ/QR. Đây là thao tác yêu cầu, không xác nhận cuộc gọi, chuyến đi hoặc lượt chia sẻ đã hoàn tất.
@@ -81,3 +81,10 @@ Nguồn: [phương diện sự kiện qua Data API](https://developers.google.co
 - **Thiết bị truy cập:** số người dùng theo điện thoại, máy tính, máy tính bảng; không phải số thiết bị vật lý đã xác minh.
 
 GA4 có thể bị chặn bởi trình duyệt/tiện ích hoặc áp dụng ngưỡng dữ liệu. Số người dùng là số liệu ước tính theo cơ chế GA4, không phải danh sách người thật đã xác minh. Một người đổi trình duyệt/thiết bị có thể được tính khác nhau. Không cần tạo tài khoản hay nhập thông tin cá nhân chỉ để xem bản đồ.
+
+
+## 7. Khi ô 30 phút hiện dấu “—”
+
+Dấu “—” là chưa đọc được số người dùng Realtime; không phải cần đợi báo cáo ngày. Bản vá đã kiểm tra trên GA4 thật ngày 24/11/2026: truy vấn tổng người dùng cũ có bộ lọc sự kiện bị Google trả 400 `INVALID_ARGUMENT`; truy vấn mới chỉ dùng `activeUsers` trả 200. Cần deploy source có bản vá này.
+
+Nếu chỉ truy vấn số người lỗi, biểu đồ phút vẫn hiện khi có dữ liệu hợp lệ. Thông báo phía dưới phân biệt lỗi yêu cầu, quyền tài khoản dịch vụ, hạn mức, phản hồi chậm hoặc dịch vụ không khả dụng. ID tài sản hiển thị giúp đối chiếu đúng tài sản đang mở trong GA4. Không cần tạo tài khoản khách hoặc nhập GPS để xử lý lỗi API này.

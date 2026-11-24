@@ -625,6 +625,14 @@ try{
    await click(button('Làm mới'));
    check([...document.querySelectorAll('.traffic-bars li time')].at(-1).dateTime==='2026-11-08'&&document.querySelector('.traffic-metrics strong').textContent==='12','Traffic retry renders the reporting response');
    check(document.querySelector('.traffic-live-total strong').textContent==='1'&&document.querySelector('.traffic-setup code').textContent==='place_id','Realtime works while place custom dimension is missing');
+   trafficResponse=Response.json({...trafficFixture,realtime:null,realtimeIssue:{code:'PERMISSION_DENIED',status:403},propertyId:'123456789'});
+   await click(button('Làm mới'));
+   check(document.querySelector('.traffic-api-notice').textContent.includes('chưa được phép')&&document.querySelector('.traffic-api-notice').textContent.includes('HTTP 403')&&document.querySelector('.traffic-metrics strong').textContent==='12','Realtime permission errors have an actionable explanation without replacing core metrics with zeros');
+   trafficResponse=Response.json({...trafficFixture,realtime:{...trafficFixture.realtime,users:null},realtimeIssue:{code:'INVALID_ARGUMENT',status:400}});
+   await click(button('Làm mới'));
+   check(document.querySelector('.traffic-live-total strong').textContent==='—'&&document.querySelectorAll('.traffic-live-chart li').length===30,'A failed user query keeps the independent page-view chart visible without inventing a user count');
+
+
    const point=cloudData.places.find(place=>!place.deletedAt);
    trafficResponse=Response.json({...trafficFixture,range:'today',placesStatus:'ready',places:[{id:point.id,opens:5,routes:2,calls:1,saves:0,shares:0}]});
    await click(button('Hôm nay'));

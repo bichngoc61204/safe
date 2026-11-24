@@ -25,6 +25,7 @@ Bản nâng cấp có lưu/chia sẻ địa điểm và QR, lịch theo ngày, b
 - [Rà soát mã nguồn trước bàn giao 24/11/2026](docs/RA_SOAT_BAN_GIAO_2026-11-24.md).
 - [Cách xem lượt truy cập bằng link Vercel hiện tại](docs/HUONG_DAN_LUOT_TRUY_CAP.md).
 - [Nâng cấp dashboard thống kê, tương tác địa điểm và ảnh kiểm tra](docs/NANG_CAP_THONG_KE_2026-11-24.md).
+- [Kiểm tra Realtime, 15 lượt thử thật và bản sửa API](docs/KIEM_TRA_REALTIME_2026-11-24.md).
 
 ## Chạy dự án
 

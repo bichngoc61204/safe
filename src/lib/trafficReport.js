@@ -6,6 +6,21 @@ export const interactionFilter = { andGroup: { expressions: [publicTrafficFilter
   { filter: { fieldName: 'eventName', inListFilter: { values: trafficEvents } } },
 ] } };
 
+// Realtime has its own schema. Use Google's default 30-minute window and native
+// page-view metric; no event-name filter or extra dimensions are needed here.
+export function realtimeRequests() {
+  return [
+    { metrics: [{ name: 'activeUsers' }] },
+    { dimensions: [{ name: 'minutesAgo' }], metrics: [{ name: 'screenPageViews' }], limit: '30' },
+  ];
+}
+
+export function trafficApiIssue(error) {
+  const codes = ['INVALID_ARGUMENT', 'PERMISSION_DENIED', 'UNAUTHENTICATED', 'RESOURCE_EXHAUSTED', 'UNAVAILABLE', 'INTERNAL', 'DEADLINE_EXCEEDED', 'INVALID_RESPONSE'];
+  const code = codes.includes(error?.apiCode) ? error.apiCode : ['TimeoutError', 'AbortError'].includes(error?.name) ? 'DEADLINE_EXCEEDED' : 'UNAVAILABLE';
+  return { code, status: Number.isInteger(error?.httpStatus) ? error.httpStatus : 0 };
+}
+
 export function trafficRequests(range = '7d') {
   const common = { dateRanges: [{ startDate: trafficRanges[range] || trafficRanges['7d'], endDate: 'today' }], dimensionFilter: publicTrafficFilter };
   const metric = name => ({ name });
@@ -60,6 +75,7 @@ export function validateTrafficReport(report) {
   const validCount = value => Number.isSafeInteger(value) && value >= 0;
   const validRows = (items, validate, max = 40) => Array.isArray(items) && items.length <= max && items.every(validate);
   const text = value => typeof value === 'string' && value.length <= 160;
+  const validIssue = value => value == null || (typeof value.code === 'string' && trafficApiIssue({ apiCode: value.code }).code === value.code && Number.isInteger(value.status) && value.status >= 0 && value.status <= 599);
   const validDate = value => {
     if (!/^\d{8}$/.test(value)) return false;
     const stamp = `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6)}T00:00:00Z`;
@@ -68,14 +84,16 @@ export function validateTrafficReport(report) {
   };
   let validZone = false;
   try { new Intl.DateTimeFormat('en', { timeZone: report?.timeZone }).format(); validZone = typeof report?.timeZone === 'string'; } catch { /* Invalid server response. */ }
-  return !!report && validZone && ['views', 'users', 'sessions', 'newUsers'].every(key => validCount(report[key]))
+  return !!report && validZone && validIssue(report.realtimeIssue) && validIssue(report.minuteIssue)
+    && (report.propertyId === undefined || typeof report.propertyId === 'string' && /^\d+$/.test(report.propertyId))
+    && ['views', 'users', 'sessions', 'newUsers'].every(key => validCount(report[key]))
     && validRows(report.days, row => row && validDate(row.date) && validCount(row.views) && validCount(row.users), 31)
     && validRows(report.cities, row => row && ['city', 'region', 'country'].every(key => text(row[key])) && validCount(row.users))
     && validRows(report.devices, row => row && text(row.device) && validCount(row.users))
     && validRows(report.events, row => row && trafficEvents.includes(row.event) && validCount(row.count))
     && validRows(report.places, row => row && text(row.id) && ['opens', 'routes', 'calls', 'saves', 'shares'].every(key => validCount(row[key])))
     && ['ready', 'setup', 'unavailable'].includes(report.placesStatus)
-    && (report.realtime === null || (validCount(report.realtime?.users) && validRows(report.realtime?.minutes, row => row && Number.isInteger(row.minute) && row.minute >= 0 && row.minute < 30 && validCount(row.views))))
+    && (report.realtime === null || ((validCount(report.realtime?.users) || report.realtime?.users === null && report.realtime?.minutesAvailable === true) && validRows(report.realtime?.minutes, row => row && Number.isInteger(row.minute) && row.minute >= 0 && row.minute < 30 && validCount(row.views))))
     && ['today', '7d', '30d'].includes(report.range)
     && text(report.timeZone) && Number.isFinite(Date.parse(report.generatedAt));
 }

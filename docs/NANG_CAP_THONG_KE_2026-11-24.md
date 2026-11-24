@@ -27,7 +27,7 @@ SDK được tải bất đồng bộ, giữ tối đa 20 thao tác trong lúc k
 
 `/api/traffic?range=today|7d|30d` chỉ cho phép GET có token Firebase của quản trị đang hoạt động. Kiểm tra quyền qua Firestore trước mỗi lần đọc, kể cả khi dùng kết quả cache. Cache tách theo dự án, thuộc tính, service account và kỳ; tối đa 60 giây.
 
-Báo cáo chính lọc đường dẫn bản đồ `/`. Realtime là báo cáo theo toàn thuộc tính với các sự kiện trang/tương tác; nên dùng thuộc tính GA4 dành riêng SafeMap. Trang tự cập nhật mỗi phút khi đang hiển thị; không chạy bộ đếm trong Firestore và không thay đổi Firebase Rules.
+Báo cáo chính lọc đường dẫn bản đồ `/`. Realtime là báo cáo theo toàn thuộc tính, không lọc tên sự kiện ở truy vấn tổng người dùng; nên dùng thuộc tính GA4 dành riêng SafeMap. Trang tự cập nhật mỗi phút khi đang hiển thị; không chạy bộ đếm trong Firestore và không thay đổi Firebase Rules.
 
 Realtime và bảng xếp hạng là các phần tùy chọn: lỗi API hoặc chưa khai báo phương diện không làm mất báo cáo chính. Nếu làm mới thất bại, giao diện giữ báo cáo xác nhận gần nhất và hiện thông báo chưa làm mới được. Đổi kỳ báo cáo không trộn kết quả của kỳ trước; yêu cầu cũ được hủy khi chuyển kỳ hoặc rời trang.
 
@@ -70,3 +70,6 @@ Xem [hướng dẫn cấu hình và cách đọc số liệu](HUONG_DAN_LUOT_TRU
 ![Hướng dẫn GA4 trên mobile](ban-giao/traffic-2026-11-24/03-huong-dan-ga4-mobile.jpg)
 
 [Ảnh toàn bộ dashboard desktop, số liệu giả lập](ban-giao/traffic-2026-11-24/00-toan-trang-desktop.jpg).
+
+
+Bản vá Realtime và kiểm thử API thật sau nâng cấp được ghi riêng trong [báo cáo kiểm tra Realtime](KIEM_TRA_REALTIME_2026-11-24.md).

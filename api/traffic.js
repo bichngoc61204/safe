@@ -1,5 +1,5 @@
 import { createSign } from 'node:crypto';
-import { interactionFilter, parsePlaceTraffic, parseTrafficReports, trafficEvents, trafficRanges, trafficRequests } from '../src/lib/trafficReport.js';
+import { interactionFilter, parsePlaceTraffic, parseTrafficReports, realtimeRequests, trafficApiIssue, trafficRanges, trafficRequests } from '../src/lib/trafficReport.js';
 
 const tokenUrl = 'https://oauth2.googleapis.com/token';
 const jsonHeaders = { 'Content-Type': 'application/json' };
@@ -50,22 +50,26 @@ async function fetchReport({ property, email, privateKey, range }) {
       method: body ? 'POST' : 'GET', headers: { ...jsonHeaders, Authorization: `Bearer ${accessToken}` },
       ...(body ? { body: JSON.stringify(body) } : {}), signal: timeout(),
     });
-    if (!response.ok) throw Error('analyticsReport');
+    if (!response.ok) {
+      const detail = await response.json().catch(() => ({}));
+      throw Object.assign(Error('analyticsReport'), { httpStatus: response.status, apiCode: detail.error?.status });
+    }
     return response.json();
   }
   // Optional panels fail independently so a realtime/custom-dimension issue cannot hide the main report.
   const requests = trafficRequests(range);
-  const publicEvents = { filter: { fieldName: 'eventName', inListFilter: { values: ['page_view', ...trafficEvents] } } };
+  const [liveRequest, minuteRequest] = realtimeRequests();
   const [core, live, minutes, metadata] = await Promise.allSettled([
     call(':batchRunReports', { requests }),
-    call(':runRealtimeReport', { metrics: [{ name: 'activeUsers' }], dimensionFilter: publicEvents, minuteRanges: [{ startMinutesAgo: 29, endMinutesAgo: 0 }] }),
-    call(':runRealtimeReport', { dimensions: [{ name: 'minutesAgo' }], metrics: [{ name: 'eventCount' }], dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { matchType: 'EXACT', value: 'page_view' } } }, minuteRanges: [{ startMinutesAgo: 29, endMinutesAgo: 0 }], limit: 30 }),
+    call(':runRealtimeReport', liveRequest),
+    call(':runRealtimeReport', minuteRequest),
     call('/metadata'),
   ]);
   if (core.status !== 'fulfilled') throw Error('analyticsReport');
   const main = parseTrafficReports(core.value.reports);
-  let places = [], placesStatus = metadata.status === 'fulfilled' ? 'setup' : 'unavailable';
-  if (metadata.status === 'fulfilled' && metadata.value.dimensions?.some(item => item.apiName === 'customEvent:place_id')) {
+  const dimensions = metadata.status === 'fulfilled' && Array.isArray(metadata.value.dimensions) ? metadata.value.dimensions : null;
+  let places = [], placesStatus = dimensions ? 'setup' : 'unavailable';
+  if (dimensions?.some(item => item.apiName === 'customEvent:place_id')) {
     try {
       const result = await call(':runReport', {
         dateRanges: requests[0].dateRanges, dimensionFilter: interactionFilter,
@@ -75,11 +79,25 @@ async function fetchReport({ property, email, privateKey, range }) {
       main.thresholded ||= Boolean(result.metadata?.subjectToThresholding || result.metadata?.dataLossFromOtherRow);
     } catch { placesStatus = 'unavailable'; }
   }
-  const liveCount = Number(live.status === 'fulfilled' ? live.value.rows?.[0]?.metricValues?.[0]?.value || 0 : NaN);
-  const liveMinutes = minutes.status === 'fulfilled' ? (minutes.value.rows || []).map(row => ({ minute: Number(row.dimensionValues[0].value), views: Number(row.metricValues[0].value) })) : [];
+  let realtime = null, realtimeIssue = live.status === 'rejected' ? trafficApiIssue(live.reason) : null;
+  let minuteIssue = minutes.status === 'rejected' ? trafficApiIssue(minutes.reason) : null;
+  let liveMinutes = [];
+  if (minutes.status === 'fulfilled') {
+    try {
+      liveMinutes = (minutes.value.rows || []).map(row => ({ minute: Number(row.dimensionValues[0].value), views: Number(row.metricValues[0].value) }));
+      if (liveMinutes.some(row => !Number.isInteger(row.minute) || row.minute < 0 || row.minute > 29 || !Number.isSafeInteger(row.views) || row.views < 0)) throw Error('invalid');
+    } catch { minuteIssue = { code: 'INVALID_RESPONSE', status: 0 }; liveMinutes = []; }
+  }
+  if (live.status === 'fulfilled') {
+    const value = Number(live.value.rows?.[0]?.metricValues?.[0]?.value ?? 0);
+    if (Number.isSafeInteger(value) && value >= 0) realtime = { users: value, minutes: liveMinutes, minutesAvailable: !minuteIssue };
+    else realtimeIssue = { code: 'INVALID_RESPONSE', status: 0 };
+  }
+  // A failure of the distinct-user query must not hide a valid page-view chart.
+  if (!realtime && !minuteIssue) realtime = { users: null, minutes: liveMinutes, minutesAvailable: true };
   return {
     ...main, places, placesStatus, range, generatedAt: new Date().toISOString(),
-    realtime: Number.isSafeInteger(liveCount) && liveCount >= 0 ? { users: liveCount, minutes: liveMinutes, minutesAvailable: minutes.status === 'fulfilled' } : null,
+    realtime, realtimeIssue, minuteIssue, propertyId: property,
   };
 }
 
