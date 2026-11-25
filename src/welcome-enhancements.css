@@ -102,3 +102,6 @@
  .map-welcome .welcome-support-key { flex-wrap:wrap; }
  .map-welcome .welcome-support-key > span { min-height:28px; }
 }
+.map-welcome .welcome-pagination{width:100%}
+.welcome-pagination .welcome-about-link{display:flex;align-items:center;min-height:36px;margin-left:auto;padding:6px 2px;color:#47715b;font-size:11px;font-weight:600;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+.welcome-pagination .welcome-about-link:focus-visible{outline:2px solid #3c91cf;outline-offset:3px;border-radius:4px}

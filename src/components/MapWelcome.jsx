@@ -160,7 +160,7 @@ export default function MapWelcome({t, lang, onLanguageChange, onReveal, onEnter
           changeSlide(index+(event.key==='ArrowRight'?1:-1));
           return;
         }
-        if (!['ArrowDown', 'PageDown', ' '].includes(event.key)||event.target.closest('button')&&event.key===' ') return;
+        if (!['ArrowDown', 'PageDown', ' '].includes(event.key)||event.target.closest('button,a')&&event.key===' ') return;
         const {scrollHeight, clientHeight} = event.currentTarget;
         if (scrollHeight > clientHeight + 2) return;
         event.preventDefault();
@@ -215,6 +215,7 @@ export default function MapWelcome({t, lang, onLanguageChange, onReveal, onEnter
           {slides.map((item,i)=><button type="button" key={item.id} aria-label={t(item.kicker)} aria-current={i===index?'step':undefined}
             onClick={()=>changeSlide(i)}><span/></button>)}
           <span aria-hidden="true">{index+1} / {slides.length}</span>
+          <a className="welcome-about-link" href="/gioi-thieu/">{lang==='en'?'About SafeMap':'Về SafeMap'}</a>
         </nav>
         <p className="welcome-gesture"><Icon name="down" size={12}/><span className="welcome-scroll">{t('welcomeScroll')}</span><span className="welcome-swipe">{t('welcomeSwipe')}</span></p>
       </div>

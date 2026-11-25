@@ -9,7 +9,7 @@ import Admin, { Login } from './components/Admin';
 import { useFirebaseBackend } from './components/useFirebaseBackend';
 import { messages } from './lib/i18n';
 const linkedPlace=()=>new URLSearchParams(window.location.search).get('place');
-const isAdminPath = () => /^\/admin\/?$/.test(window.location.pathname);
+const isAdminPath = () => /^\/admin(?:\/|\.html)?$/.test(window.location.pathname);
 const emptyCatalog = { places: [], categories: [] };
 const catalogMessages = {
  loading: 'catalogLoading', missing: 'catalogMissing', error: 'catalogError', config: 'catalogConfig',
@@ -46,6 +46,17 @@ export default function App(){
  const adminData=adminCatalog?.data||emptyCatalog;
  const catalogNotice = catalogMessages[firebase.catalogStatus] || (firebase.catalog?.cached ? 'catalogCached' : '');
  const uiLang=mode==='admin'?'vi':lang;
+ useEffect(()=>{
+   const robots=document.querySelector('meta[name="robots"]');
+   if(robots)robots.content=mode==='admin'?'noindex, nofollow':'index, follow, max-image-preview:large';
+   document.title=mode==='admin'?'Quản trị | SafeMap An Thượng':'SafeMap An Thượng | Bản đồ an toàn và hỗ trợ cộng đồng Đà Nẵng';
+   // The built admin entry has no public metadata. Restore its public canonical
+   // when returning to the map without a full page load.
+   if(mode==='public'&&!document.querySelector('link[rel="canonical"]')){
+     const canonical=document.createElement('link');canonical.rel='canonical';
+     canonical.href='https://www.safemap-anthuong.com/';document.head.append(canonical);
+   }
+ },[mode]);
  const timer=useRef(null),mounted=useRef(true),gpsPending=useRef(null);const t=key=>messages[uiLang][key]||key;
  function notify(message){setToast(message);clearTimeout(timer.current);timer.current=setTimeout(()=>setToast(''),5500);}
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;clearTimeout(timer.current);};},[]);

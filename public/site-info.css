@@ -1,0 +1,38 @@
+.seo-intro,.info-page{font-family:"Be Vietnam Pro",system-ui,sans-serif;color:#193e32;background:#f7faf9;line-height:1.8}
+.seo-intro{max-width:720px;margin:48px auto;padding:24px;border-radius:20px}
+.seo-intro h1{font-size:clamp(24px,5vw,38px);line-height:1.4;letter-spacing:-.03em}
+.seo-intro a,.info-page a{color:#126c50;text-underline-offset:4px}
+.info-page{margin:0;font-size:16px}
+.info-page *{box-sizing:border-box}
+.info-page .info-wrap{width:min(100% - 40px,960px);margin:auto}
+.info-page header{background:#fff;border-bottom:1px solid #dce8e1}
+.info-page header .info-wrap{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-block:16px}
+.info-brand{display:inline-flex;align-items:center;gap:12px;text-decoration:none;color:#193e32!important;font-weight:800;line-height:1.4}
+.info-brand img{flex-shrink:0}
+.info-brand span{font-size:22px}
+.info-brand small{display:block;font-size:12px;font-weight:500;color:#597467}
+.info-page main{padding-block:60px 40px}
+.info-page .info-kicker{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#416c58;font-weight:700}
+.info-page h1{max-width:780px;font-size:clamp(30px,5vw,50px);line-height:1.25;letter-spacing:-.04em;margin:16px 0 24px}
+.info-page .info-lead{font-size:18px;max-width:760px;color:#405c50}
+.info-page h2{font-size:24px;line-height:1.4;margin:0 0 18px;letter-spacing:-.02em}
+.info-page h3{font-size:18px;margin:0 0 10px;line-height:1.5}
+.info-page section{margin-block:40px}
+.info-page .info-button{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:10px 20px;border-radius:12px;background:#126c50;color:white;text-decoration:none;font-size:14px;font-weight:700}
+.info-page header .info-button{white-space:nowrap;flex-shrink:0}
+.info-page .info-groups{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.info-page .info-card{background:white;border:1px solid #dce8e1;border-top:4px solid var(--accent);border-radius:14px;padding:24px}
+.info-page .info-card p{margin:0;font-size:14px;color:#405c50}
+.info-page .info-card h3{color:var(--accent)}
+.info-page .info-levels{padding:24px;background:#fff;border:1px solid #dce8e1;border-radius:14px}
+.info-page .info-levels dt{font-weight:700;margin-top:18px;color:var(--accent)}
+.info-page .info-levels dt:first-child{margin-top:0}
+.info-page .info-levels dd{margin:5px 0 0;color:#405c50}
+.info-page ol{padding-left:24px}
+.info-page li{padding-left:6px;margin:10px 0}
+.info-page .info-faq details{border-bottom:1px solid #dce8e1;padding:16px 0}
+.info-page summary{cursor:pointer;font-weight:700}
+.info-page .info-faq p{color:#405c50;margin:12px 0 0}
+.info-page footer{border-top:1px solid #dce8e1;padding:24px 0;color:#597467;font-size:13px}
+.info-page :focus-visible,.seo-intro :focus-visible{outline:3px solid #499cdb;outline-offset:4px;border-radius:4px}
+@media(max-width:650px){.info-page .info-groups{grid-template-columns:1fr}.info-page header .info-wrap{gap:12px}.info-page header .info-button{font-size:12px;padding:8px 12px}.info-page main{padding-top:32px}.info-page .info-lead{font-size:16px}.info-page section{margin-block:32px}.seo-intro{margin:16px;padding:20px}.info-brand span{font-size:19px}}
